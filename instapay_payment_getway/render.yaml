@@ -1,0 +1,81 @@
+# Render Blueprint — InstaPay Detector Payment Gateway
+# https://render.com/docs/blueprint-spec
+#
+# This file defines the infrastructure for the InstaPay Detector gateway.
+# The DATABASE is EXTERNAL (Supabase, Neon, Railway, or any managed Postgres).
+# Set the DATABASE_URL env var to your external database connection string.
+#
+# Architecture:
+#   - "instapay-gateway" (Web Service): the Next.js app (Node, port from PORT)
+#   - "instapay-notifier" (Web Service): the socket.io mini-service (Node)
+#   - Database: external (e.g. Supabase free tier — 500MB, perfect for this)
+#
+# Cost estimate (Render Starter + free Supabase):
+#   - gateway:   $7/month
+#   - notifier:  $7/month
+#   - database:  $0 (Supabase free tier)
+#   Total: ~$14/month
+#
+# To use:
+#   1. Push this repo to GitHub
+#   2. Create a free Supabase project + copy the connection string
+#   3. Go to https://dashboard.render.com/blueprints
+#   4. Create a new Blueprint and select your repo
+#   5. Fill in the env vars marked "sync: false" in the Render UI
+
+services:
+  # --- Main Next.js gateway ---
+  - type: web
+    name: instapay-gateway
+    runtime: node
+    plan: starter     # $7/month — required (free tier spins down after 15min)
+    buildCommand: |
+      cp prisma/schema.production.prisma prisma/schema.prisma &&
+      npm install &&
+      npx prisma generate &&
+      npx prisma db push --accept-data-loss &&
+      npm run build
+    startCommand: npm run start
+    envVars:
+      # External PostgreSQL database (Supabase, Neon, Railway, etc.)
+      # Set this in the Render dashboard after creating the Blueprint.
+      - key: DATABASE_URL
+        sync: false  # set manually — paste your Supabase connection string
+      # Shared secret between the Android app and the webhook.
+      # Generate with: openssl rand -hex 32
+      - key: DETECT_TOKEN
+        sync: false  # set manually — must match the notifier's DETECT_TOKEN
+      - key: MERCHANT_HANDLE
+        value: mohammedshabana77@instapay
+      - key: MERCHANT_NAME
+        value: Mohammed Shabana
+      - key: CHECKOUT_TTL_MIN
+        value: "10"
+      # The notifier service URL — replace XXXX with your actual notifier subdomain
+      # after the notifier service is created (Render assigns the subdomain).
+      - key: NOTIFIER_URL
+        sync: false  # set manually after first deploy: https://instapay-notifier-xxxx.onrender.com
+      - key: NEXT_PUBLIC_NOTIFIER_URL
+        sync: false  # same as NOTIFIER_URL (must be public for the browser)
+    healthCheckPath: /api/dashboard
+    autoDeploy: true
+
+  # --- WebSocket notifier mini-service ---
+  - type: web
+    name: instapay-notifier
+    runtime: node
+    plan: starter     # $7/month — required (always-on for WebSocket connections)
+    rootDir: mini-services/checkout-notifier
+    buildCommand: npm install
+    startCommand: npx tsx index.ts
+    envVars:
+      # PORT is set automatically by Render — no need to set it here.
+      # Restrict cross-origin socket.io to the gateway's URL.
+      # Replace XXXX with your actual gateway subdomain.
+      - key: CORS_ORIGIN
+        sync: false  # set manually after first deploy: https://instapay-gateway-xxxx.onrender.com
+      # Must match the gateway's DETECT_TOKEN.
+      - key: DETECT_TOKEN
+        sync: false  # set manually — must match the gateway's DETECT_TOKEN
+    healthCheckPath: /health
+    autoDeploy: true

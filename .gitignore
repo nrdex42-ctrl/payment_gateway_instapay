@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js build outputs
+.next/
+**/.next/
+out/
+**/.out/
+
+# Database local dev
+*.db
+*.db-journal
+prisma/db/
+
+# Logs
+*.log
+**/logs/
+dev.log
+server.log
+
+# Environment variables
+.env
+.env*.local
+!.env.example
+
+# Android build outputs & local props
+.gradle/
+**/.gradle/
+build/
+**/build/
+local.properties
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

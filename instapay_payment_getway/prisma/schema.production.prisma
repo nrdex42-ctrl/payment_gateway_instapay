@@ -1,0 +1,52 @@
+// Production Prisma schema (PostgreSQL) — used on Render with an external
+// database (Supabase, Neon, Railway, or any managed Postgres).
+//
+// The Render build command copies this over schema.prisma before building:
+//   cp prisma/schema.production.prisma prisma/schema.prisma
+//
+// The only difference from schema.prisma is the `provider` field:
+//   local dev    → provider = "sqlite"      (file:./db/custom.db)
+//   production   → provider = "postgresql"  (external Postgres)
+//
+// For Supabase: set DATABASE_URL to the Transaction Pooler URL (port 6543)
+// with ?pgbouncer=true&connection_limit=1 appended. This schema has no
+// foreign keys, so it works with PgBouncer's transaction mode without
+// needing relationMode = "prisma".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  sessionId String   @unique @default(cuid())
+
+  senderHandle    String
+  recipientHandle String
+
+  amountEgp Float
+  currency  String   @default("EGP")
+
+  status    String   @default("PENDING")
+  note      String?
+
+  deepLinkUrl  String
+  deepLinkToken String
+
+  detectedRef String?
+  detectedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([senderHandle, amountEgp, status])
+  @@index([status, expiresAt])
+  @@index([deepLinkToken])
+  @@index([createdAt])
+  @@index([status, createdAt])
+}

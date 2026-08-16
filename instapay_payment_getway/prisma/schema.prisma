@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A checkout request created by a client on the web gateway.
+// The client enters their own InstaPay username + the amount they intend to send,
+// then opens the real InstaPay APK to actually transfer the money to the
+// merchant handle (mohammedshabana77@instapay). The companion Android app
+// captures the resulting InstaPay push notification and POSTs it to the webhook,
+// which matches it back to this record.
+model Transaction {
+  id        String   @id @default(cuid())
+  // Public ID exposed to the web client for polling. Never exposes the internal id.
+  sessionId String   @unique @default(cuid())
+
+  // What the client typed (normalized to <local>@instapay). MUST match the
+  // sender handle shown in the InstaPay APK notification or no match happens.
+  senderHandle    String
+  // Fixed merchant recipient for this gateway deployment.
+  recipientHandle String
+
+  amountEgp Float
+  currency  String   @default("EGP")
+
+  // PENDING  = client has generated the request, waiting for the Android app
+  //            to report a matching InstaPay notification.
+  // CONFIRMED = webhook received a matching notification (amount + senderHandle).
+  // EXPIRED   = no matching notification arrived before expiresAt.
+  status    String   @default("PENDING")
+  note      String?
+
+  // The official InstaPay deep link URL + its trailing short token.
+  // Displayed as a QR code on the waiting screen so the client can scan
+  // it with their phone camera to open the InstaPay app pre-filled.
+  deepLinkUrl  String
+  deepLinkToken String
+
+  // Fields populated when the Android detector confirms the payment.
+  detectedRef String?
+  detectedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([senderHandle, amountEgp, status])
+  @@index([status, expiresAt])
+  @@index([deepLinkToken])
+  @@index([createdAt])
+  @@index([status, createdAt])
+}
