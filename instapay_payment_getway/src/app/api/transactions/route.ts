@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { formatEgyptTime } from '@/lib/timezone'
 
 /**
  * Paginated, searchable list of ALL transactions (confirmed + pending + expired)
  * for the merchant dashboard's "Transactions" screen.
- *
- * Query params:
- *   ?q=<search>      — filter by senderHandle, detectedRef, or note (case-insensitive)
- *   ?status=<STATUS> — filter by status (PENDING | CONFIRMED | EXPIRED). Omit for all.
- *   ?limit=<n>       — page size (default 50, max 200)
- *   ?cursor=<iso>    — pagination cursor (createdAt of the last item from the previous page)
- *
- * Returns transactions ordered by createdAt DESC. Pagination is cursor-based
- * for stable results even as new transactions arrive.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -71,8 +63,11 @@ export async function GET(request: NextRequest) {
         deepLinkToken: t.deepLinkToken,
         detectedRef: t.detectedRef,
         detectedAt: t.detectedAt?.toISOString() ?? null,
+        detectedAtEgypt: t.detectedAt ? formatEgyptTime(t.detectedAt) : null,
         createdAt: t.createdAt.toISOString(),
+        createdAtEgypt: formatEgyptTime(t.createdAt),
         expiresAt: t.expiresAt.toISOString(),
+        expiresAtEgypt: formatEgyptTime(t.expiresAt),
       })),
       pagination: {
         limit,

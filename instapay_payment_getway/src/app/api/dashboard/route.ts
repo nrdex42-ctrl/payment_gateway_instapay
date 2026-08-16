@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getMerchantConfig } from '@/lib/merchant'
+import { getStartOfTodayEgypt, formatEgyptTime, getEgyptDstMode, getEgyptOffsetMinutes } from '@/lib/timezone'
 
 /**
  * Merchant dashboard stats:
- *   - Today's confirmed total + count
+ *   - Today's confirmed total + count (calculated based on Egypt Midnight)
  *   - Last 7 days confirmed total + count
  *   - Currently pending checkouts (awaiting payment)
  *   - Last 10 confirmed payments (for the recent-activity list)
@@ -14,8 +15,7 @@ export async function GET() {
     const config = getMerchantConfig()
 
     const now = new Date()
-    const startOfToday = new Date(now)
-    startOfToday.setHours(0, 0, 0, 0)
+    const startOfToday = getStartOfTodayEgypt(now)
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
     const [
@@ -61,8 +61,17 @@ export async function GET() {
       }),
     ])
 
+    const dstMode = getEgyptDstMode()
+    const offsetMinutes = getEgyptOffsetMinutes(now, dstMode)
+
     return NextResponse.json({
       ok: true,
+      timezoneInfo: {
+        timeZone: 'Africa/Cairo',
+        dstMode,
+        dstActive: offsetMinutes === 180,
+        currentEgyptTime: formatEgyptTime(now),
+      },
       merchant: {
         handle: config.handle,
         name: config.name,
@@ -91,7 +100,9 @@ export async function GET() {
         note: t.note,
         detectedRef: t.detectedRef,
         detectedAt: t.detectedAt?.toISOString() ?? null,
+        detectedAtEgypt: t.detectedAt ? formatEgyptTime(t.detectedAt) : null,
         createdAt: t.createdAt.toISOString(),
+        createdAtEgypt: formatEgyptTime(t.createdAt),
       })),
     })
   } catch (err) {

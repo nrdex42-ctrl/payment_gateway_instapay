@@ -16,6 +16,12 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface DashboardData {
   ok: boolean
+  timezoneInfo?: {
+    timeZone: string
+    dstMode: 'AUTO' | 'SUMMER' | 'WINTER'
+    dstActive: boolean
+    currentEgyptTime: string
+  }
   merchant: { handle: string; name: string }
   stats: {
     today: { count: number; totalEgp: number }
@@ -29,6 +35,7 @@ interface DashboardData {
     currency: string
     detectedRef: string | null
     detectedAt: string | null
+    detectedAtEgypt?: string | null
     note: string | null
   }>
 }
@@ -36,6 +43,7 @@ interface DashboardData {
 export function MerchantDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [updatingDst, setUpdatingDst] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -49,6 +57,24 @@ export function MerchantDashboard() {
       // ignore
     } finally {
       setLoading(false)
+    }
+  }
+
+  const updateDstMode = async (dstMode: 'AUTO' | 'SUMMER' | 'WINTER') => {
+    setUpdatingDst(true)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dstMode }),
+      })
+      if (res.ok) {
+        await load()
+      }
+    } catch {
+      // ignore
+    } finally {
+      setUpdatingDst(false)
     }
   }
 
@@ -98,6 +124,59 @@ export function MerchantDashboard() {
           <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
+      </div>
+
+      {/* Egypt Time & Summer Time (DST) Owner Control Widget */}
+      <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                Egypt Time & Summer Time (DST) Control
+              </h3>
+            </div>
+            <p className="mt-1 text-sm font-semibold text-emerald-950">
+              {data.timezoneInfo?.currentEgyptTime || 'Africa/Cairo Local Time'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white p-1">
+            <button
+              onClick={() => updateDstMode('AUTO')}
+              disabled={updatingDst}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                data.timezoneInfo?.dstMode === 'AUTO'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-neutral-600 hover:bg-neutral-100'
+              }`}
+            >
+              Auto (Africa/Cairo)
+            </button>
+            <button
+              onClick={() => updateDstMode('SUMMER')}
+              disabled={updatingDst}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                data.timezoneInfo?.dstMode === 'SUMMER'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-neutral-600 hover:bg-neutral-100'
+              }`}
+            >
+              ☀️ Summer (+3h)
+            </button>
+            <button
+              onClick={() => updateDstMode('WINTER')}
+              disabled={updatingDst}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                data.timezoneInfo?.dstMode === 'WINTER'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-neutral-600 hover:bg-neutral-100'
+              }`}
+            >
+              ❄️ Winter (+2h)
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Stats grid */}
@@ -176,8 +255,8 @@ export function MerchantDashboard() {
                         <span className="truncate text-xs text-neutral-500">
                           {tx.detectedRef || tx.sessionId.slice(0, 12)}
                         </span>
-                        <span className="shrink-0 text-[11px] text-neutral-400">
-                          {tx.detectedAt ? formatRelative(tx.detectedAt) : ''}
+                        <span className="shrink-0 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                          {tx.detectedAtEgypt || (tx.detectedAt ? formatRelative(tx.detectedAt) : '')}
                         </span>
                       </div>
                       {tx.note && (

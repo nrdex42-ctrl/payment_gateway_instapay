@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getEgyptDayKey } from '@/lib/timezone'
 
 /**
- * Returns a daily revenue series for the merchant dashboard's chart.
+ * Returns a daily revenue series for the merchant dashboard's chart in Egypt Local Time.
  *
  * Query params:
  *   ?days=<n>  — number of days to include (default 30, max 90)
- *
- * Returns an array of { date: 'YYYY-MM-DD', totalEgp: number, count: number }
- * for each day in the range, including days with zero revenue (so the chart
- * shows continuous bars/lines).
  */
 export async function GET(request: Request) {
   try {
@@ -33,23 +30,23 @@ export async function GET(request: Request) {
       },
     })
 
-    // Build a map of date -> { total, count }
+    // Build a map of date -> { total, count } in Egypt Local Date
     const dayMap = new Map<string, { totalEgp: number; count: number }>()
 
     for (const row of rows) {
       if (!row.detectedAt) continue
-      const dayKey = row.detectedAt.toISOString().slice(0, 10) // YYYY-MM-DD
+      const dayKey = getEgyptDayKey(row.detectedAt)
       const entry = dayMap.get(dayKey) || { totalEgp: 0, count: 0 }
       entry.totalEgp += row.amountEgp
       entry.count += 1
       dayMap.set(dayKey, entry)
     }
 
-    // Build the full series (including zero-revenue days)
+    // Build the full series (including zero-revenue days) in Egypt Local Time
     const series: Array<{ date: string; totalEgp: number; count: number }> = []
     const cursor = new Date(startDate)
     while (cursor <= now) {
-      const dayKey = cursor.toISOString().slice(0, 10)
+      const dayKey = getEgyptDayKey(cursor)
       const entry = dayMap.get(dayKey) || { totalEgp: 0, count: 0 }
       series.push({
         date: dayKey,
