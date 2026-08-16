@@ -11,6 +11,11 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
     const tx = await db.transaction.findUnique({
       where: { sessionId },
+      include: {
+        client: {
+          select: { businessName: true },
+        },
+      },
     })
 
     if (!tx) {
@@ -43,6 +48,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         sessionId: tx.sessionId,
         senderHandle: tx.senderHandle,
         recipientHandle: tx.recipientHandle,
+        merchantName: tx.client.businessName, // Map client businessName to merchantName
         amountEgp: tx.amountEgp,
         currency: tx.currency,
         status,

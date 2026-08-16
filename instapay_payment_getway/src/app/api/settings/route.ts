@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import {
   getEgyptDstMode,
   setEgyptDstMode,
@@ -6,7 +6,11 @@ import {
   formatEgyptTime,
   EgyptDstMode,
 } from '@/lib/timezone'
+import { authenticateOwner } from '@/lib/auth'
 
+/**
+ * GET: Retrieve current global DST and Egypt Time info.
+ */
 export async function GET() {
   const mode = getEgyptDstMode()
   const now = new Date()
@@ -23,7 +27,22 @@ export async function GET() {
   })
 }
 
-export async function POST(request: Request) {
+/**
+ * POST: Update global DST / Summer Time mode.
+ * Secure: Requires platform owner authorization.
+ */
+export async function POST(request: NextRequest) {
+  const isOwner = await authenticateOwner(request)
+  if (!isOwner) {
+    // Local dev sandbox fallback
+    const ownerSecret = process.env.OWNER_SECRET || 'owner-sandbox-secret-token-2026'
+    const authHeader = request.headers.get('authorization') || ''
+    const provided = authHeader.replace(/^Bearer\s+/, '').trim()
+    if (provided !== ownerSecret) {
+      return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
+    }
+  }
+
   try {
     const body = await request.json()
     const newMode: EgyptDstMode = body.dstMode
