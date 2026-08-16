@@ -47,6 +47,29 @@ class SettingsFragment : Fragment() {
             }
         }
 
+        // Load preferences
+        val prefs = requireContext().getSharedPreferences("instapay_settings", android.content.Context.MODE_PRIVATE)
+
+        // Theme Spinner Setup
+        val themesText = arrayOf(getString(R.string.pref_theme_system), getString(R.string.pref_theme_light), getString(R.string.pref_theme_dark))
+        val themesValue = arrayOf("system", "light", "dark")
+        val themeAdapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, themesText)
+        themeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.themeSpinner.adapter = themeAdapter
+        val currentTheme = prefs.getString("pref_theme", "system") ?: "system"
+        val themeIndex = themesValue.indexOf(currentTheme).coerceAtLeast(0)
+        binding.themeSpinner.setSelection(themeIndex)
+
+        // Language Spinner Setup
+        val langsText = arrayOf(getString(R.string.pref_lang_en), getString(R.string.pref_lang_ar))
+        val langsValue = arrayOf("en", "ar")
+        val langAdapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, langsText)
+        langAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.languageSpinner.adapter = langAdapter
+        val currentLang = LocaleHelper.getLanguage(requireContext())
+        val langIndex = langsValue.indexOf(currentLang).coerceAtLeast(0)
+        binding.languageSpinner.setSelection(langIndex)
+
         // Load saved config
         binding.gatewayUrlInput.setText(config.gatewayUrl)
         binding.authTokenInput.setText(config.authToken)
@@ -61,19 +84,49 @@ class SettingsFragment : Fragment() {
             val merchantHandle = binding.merchantHandleInput.text.toString().trim()
 
             if (url.isEmpty()) {
-                Toast.makeText(requireContext(), "Please enter the gateway URL", Toast.LENGTH_SHORT).show()
+                val errText = if (currentLang == "ar") "يرجى إدخال رابط بوابة الدفع" else "Please enter the gateway URL"
+                Toast.makeText(requireContext(), errText, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (token.isEmpty()) {
-                Toast.makeText(requireContext(), "Please enter the auth token", Toast.LENGTH_SHORT).show()
+                val errText = if (currentLang == "ar") "يرجى إدخال رمز المصادقة" else "Please enter the auth token"
+                Toast.makeText(requireContext(), errText, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             config.gatewayUrl = url
             config.authToken = token
             config.merchantHandle = merchantHandle
             
-            binding.monitoredHandleLabel.text = "Reporting payments received by: $merchantHandle"
-            Toast.makeText(requireContext(), "Config Saved", Toast.LENGTH_SHORT).show()
+            // Save preferences
+            val selectedTheme = themesValue[binding.themeSpinner.selectedItemPosition]
+            val selectedLang = langsValue[binding.languageSpinner.selectedItemPosition]
+
+            prefs.edit().putString("pref_theme", selectedTheme).apply()
+            
+            val themeChanged = selectedTheme != currentTheme
+            val langChanged = selectedLang != currentLang
+
+            if (langChanged) {
+                LocaleHelper.setLocale(requireContext(), selectedLang)
+            }
+
+            if (themeChanged) {
+                val nightMode = when (selectedTheme) {
+                    "light" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                    "dark" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                    else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                }
+                androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(nightMode)
+            }
+
+            val confirmationText = if (selectedLang == "ar") "تم حفظ الإعدادات بنجاح" else "Config Saved Successfully"
+            Toast.makeText(requireContext(), confirmationText, Toast.LENGTH_SHORT).show()
+
+            if (themeChanged || langChanged) {
+                activity?.recreate()
+            } else {
+                binding.monitoredHandleLabel.text = getString(R.string.monitored_handle_label).replace("mohammedshabana77@instapay", merchantHandle)
+            }
         }
 
         binding.monitoredHandleLabel.text = "Reporting payments received by: ${config.merchantHandle}"

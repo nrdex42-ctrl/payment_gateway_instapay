@@ -72,4 +72,14 @@
 
     <string name="settings_about_title">About</string>
     <string name="settings_about_body">InstaPay Detector v2.0.0 — Merchant dashboard. Real-time payment detection via InstaPay notifications. Sandbox build.</string>
+
+    <!-- Theme & Language preferences -->
+    <string name="pref_category_title">App Preferences</string>
+    <string name="pref_theme_label">Theme Mode</string>
+    <string name="pref_theme_light">Light</string>
+    <string name="pref_theme_dark">Dark</string>
+    <string name="pref_theme_system">System Default</string>
+    <string name="pref_lang_label">Application Language</string>
+    <string name="pref_lang_en">English</string>
+    <string name="pref_lang_ar">العربية (Arabic)</string>
 </resources>

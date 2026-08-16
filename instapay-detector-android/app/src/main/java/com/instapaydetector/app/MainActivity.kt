@@ -21,7 +21,21 @@ class MainActivity : AppCompatActivity() {
     val paymentFeedback by lazy { PaymentFeedback(this) }
     val wsClient by lazy { DashboardWebSocketClient(this) }
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(LocaleHelper.onAttach(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply saved Theme before onCreate
+        val prefs = getSharedPreferences("instapay_settings", MODE_PRIVATE)
+        val savedTheme = prefs.getString("pref_theme", "system") ?: "system"
+        val nightMode = when (savedTheme) {
+            "light" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+            "dark" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+            else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(nightMode)
+
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
