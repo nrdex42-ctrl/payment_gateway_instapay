@@ -1,0 +1,92 @@
+// Multi-tenant Paymob-Style Payment Gateway — Prisma Schema (PostgreSQL for production)
+//
+// The Render build command copies this over schema.prisma before building:
+//   cp prisma/schema.production.prisma prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Platform owner (admin) ────────────────────────────────────────
+model Owner {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// ─── Client / Merchant Account (Self-Service) ──────────────────────
+model Client {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  businessName   String
+  instapayHandle String
+
+  // Self-registration fields
+  email          String   @unique
+  passwordHash   String
+
+  // Authentication keys (Generated ONLY after Admin Approval)
+  apiKey      String? @unique
+  detectToken String? @unique
+
+  // Status: PENDING | APPROVED | REJECTED
+  approvalStatus String  @default("PENDING")
+  isActive       Boolean @default(false)
+
+  // Webhook integration
+  webhookUrl    String?
+  webhookSecret String?
+
+  // Settings
+  checkoutTtlMin Int @default(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@index([instapayHandle])
+  @@index([apiKey])
+  @@index([detectToken])
+}
+
+// ─── Checkout / payment transaction ────────────────────────────────
+model Transaction {
+  id        String @id @default(cuid())
+  sessionId String @unique @default(cuid())
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  senderHandle    String
+  recipientHandle String
+
+  amountEgp Float
+  currency  String   @default("EGP")
+
+  status String @default("PENDING")
+  note   String?
+
+  deepLinkUrl   String
+  deepLinkToken String
+
+  detectedRef String?
+  detectedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([clientId, status, createdAt])
+  @@index([clientId, senderHandle, amountEgp, status])
+  @@index([status, expiresAt])
+  @@index([deepLinkToken])
+  @@index([createdAt])
+}

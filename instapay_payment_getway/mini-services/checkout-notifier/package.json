@@ -1,0 +1,15 @@
+{
+  "name": "checkout-notifier",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "npx tsx index.ts",
+    "start:bun": "bun index.ts"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.3",
+    "tsx": "^4.19.0",
+    "@types/node": "^20.14.0"
+  }
+}

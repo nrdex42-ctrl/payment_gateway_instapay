@@ -1,0 +1,75 @@
+<resources>
+    <string name="app_name">InstaPay Detector</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_transactions">Transactions</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Dashboard -->
+    <string name="dash_today">Today</string>
+    <string name="dash_7days">Last 7 days</string>
+    <string name="dash_pending">Pending</string>
+    <string name="dash_avg">Avg/day</string>
+    <string name="dash_revenue_trend">Revenue trend (30 days)</string>
+    <string name="dash_recent">Recent payments</string>
+    <string name="dash_view_all">View all</string>
+    <string name="dash_no_recent">No payments yet</string>
+    <string name="dash_live">Live</string>
+    <string name="dash_offline">Offline</string>
+    <string name="dash_best_day">Best day</string>
+    <string name="dash_total_30d">30-day total</string>
+    <string name="dash_payments">payments</string>
+    <string name="dash_payment">payment</string>
+
+    <!-- Transactions -->
+    <string name="tx_search_hint">Search by sender, ref, note…</string>
+    <string name="tx_filter_all">All</string>
+    <string name="tx_filter_confirmed">Confirmed</string>
+    <string name="tx_filter_pending">Pending</string>
+    <string name="tx_filter_expired">Expired</string>
+    <string name="tx_empty">No transactions found</string>
+    <string name="tx_export">Export CSV</string>
+    <string name="tx_loading">Loading…</string>
+    <string name="tx_load_more">Load more</string>
+
+    <!-- Transaction detail -->
+    <string name="tx_detail_from">From</string>
+    <string name="tx_detail_to">To</string>
+    <string name="tx_detail_amount">Amount</string>
+    <string name="tx_detail_status">Status</string>
+    <string name="tx_detail_reference">Reference</string>
+    <string name="tx_detail_date">Date</string>
+    <string name="tx_detail_note">Note</string>
+    <string name="tx_detail_session">Session ID</string>
+    <string name="tx_detail_close">Close</string>
+
+    <!-- Settings -->
+    <string name="title_settings">Settings</string>
+    <string name="title_status">Status</string>
+
+    <string name="gateway_url_label">Gateway webhook URL</string>
+    <string name="gateway_url_hint">https://your-gateway.example.com/api/webhooks/instapay</string>
+    <string name="auth_token_label">Auth token (Bearer)</string>
+    <string name="auth_token_hint">Must match DETECT_TOKEN on the gateway</string>
+    <string name="save_button">Save</string>
+
+    <string name="permission_status_unknown">Notification access: unknown</string>
+    <string name="permission_status_granted">Notification access: granted ✓</string>
+    <string name="permission_status_denied">Notification access: not granted ✗</string>
+    <string name="grant_permission_button">Grant notification access</string>
+
+    <string name="listener_running">Listening for InstaPay notifications…</string>
+    <string name="listener_idle">Listener idle</string>
+
+    <string name="test_button">Send test notification</string>
+
+    <string name="monitored_package_label">Monitored package: com.egyptianbanks.instapay</string>
+    <string name="monitored_handle_label">Reporting payments received by: mohammedshabana77@instapay</string>
+
+    <string name="last_detection_label">Last detection</string>
+    <string name="last_detection_none">No detections yet</string>
+
+    <string name="settings_about_title">About</string>
+    <string name="settings_about_body">InstaPay Detector v2.0.0 — Merchant dashboard. Real-time payment detection via InstaPay notifications. Sandbox build.</string>
+</resources>

@@ -1,0 +1,85 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { hashPassword, generateSlug } from '@/lib/auth'
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { businessName, instapayHandle, email, password } = body || {}
+
+    if (!businessName?.trim() || !instapayHandle?.trim() || !email?.trim() || !password?.trim()) {
+      return NextResponse.json({ ok: false, error: 'All fields are required.' }, { status: 400 })
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      return NextResponse.json({ ok: false, error: 'Invalid email address.' }, { status: 400 })
+    }
+
+    // Validate password strength
+    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      return NextResponse.json(
+        { ok: false, error: 'Password must be at least 8 characters long and contain both letters and numbers.' },
+        { status: 400 }
+      )
+    }
+
+    // Normalize handle
+    let handle = instapayHandle.trim().toLowerCase().replace(/^@/, '')
+    if (!handle.endsWith('@instapay')) {
+      handle = `${handle.split('@')[0]}@instapay`
+    }
+
+    // Check if email already registered
+    const existingEmail = await db.client.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    })
+    if (existingEmail) {
+      return NextResponse.json(
+        { ok: false, error: 'This email is already registered.' },
+        { status: 400 }
+      )
+    }
+
+    let slug = generateSlug(businessName)
+    let existingSlug = await db.client.findUnique({ where: { slug } })
+    let count = 1
+    while (existingSlug) {
+      slug = `${generateSlug(businessName)}-${count}`
+      existingSlug = await db.client.findUnique({ where: { slug } })
+      count++
+    }
+
+    const passwordHash = hashPassword(password)
+
+    const client = await db.client.create({
+      data: {
+        businessName: businessName.trim(),
+        slug,
+        instapayHandle: handle,
+        email: email.trim().toLowerCase(),
+        passwordHash,
+        approvalStatus: 'PENDING',
+        isActive: false, // inactive until approved
+        apiKey: null,
+        detectToken: null,
+      },
+    })
+
+    return NextResponse.json({
+      ok: true,
+      message: 'Registration successful! Your account is pending admin approval.',
+      client: {
+        id: client.id,
+        businessName: client.businessName,
+        slug: client.slug,
+        email: client.email,
+        approvalStatus: client.approvalStatus,
+      },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return NextResponse.json({ ok: false, error: `Registration failed: ${message}` }, { status: 500 })
+  }
+}
