@@ -33,14 +33,15 @@ services:
       cp prisma/schema.production.prisma prisma/schema.prisma &&
       npm install &&
       npx prisma generate &&
-      npx prisma db push --accept-data-loss &&
       npm run build
-    startCommand: npm run start
+    startCommand: npx prisma db push --accept-data-loss && npm run start
     envVars:
       # External PostgreSQL database (Supabase, Neon, Railway, etc.)
       # Set this in the Render dashboard after creating the Blueprint.
       - key: DATABASE_URL
-        sync: false  # set manually — paste your Supabase connection string
+        sync: false  # set manually — paste your Supabase connection string (Port 5432)
+      - key: DIRECT_URL
+        sync: false  # optional: set to Port 5432 if DATABASE_URL uses transaction pooler (Port 6543)
       # Shared secret between the Android app and the webhook.
       # Generate with: openssl rand -hex 32
       - key: DETECT_TOKEN

@@ -16,13 +16,14 @@ services:
       cp prisma/schema.production.prisma prisma/schema.prisma &&
       npm install &&
       npx prisma generate &&
-      npx prisma db push --accept-data-loss &&
       npm run build
-    startCommand: npm run start
+    startCommand: npx prisma db push --accept-data-loss && npm run start
     envVars:
       # External PostgreSQL database (Supabase, Neon, Railway, etc.)
       - key: DATABASE_URL
-        sync: false  # set manually in Render dashboard
+        sync: false  # set manually in Render dashboard (use Port 5432 or direct connection)
+      - key: DIRECT_URL
+        sync: false  # optional: set to Port 5432 if DATABASE_URL uses transaction pooler (Port 6543)
       # Shared secret between the Android app and the webhook.
       - key: DETECT_TOKEN
         sync: false  # set manually — must match notifier & Android app
