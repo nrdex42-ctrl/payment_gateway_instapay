@@ -1,10 +1,9 @@
-// Multi-tenant InstaPay Payment Gateway — Prisma Schema (SQLite for local dev)
+// Multi-tenant Paymob-Style Payment Gateway — Prisma Schema (SQLite for local dev)
 //
 // Roles:
-//   Owner  = platform admin (you). Creates & manages clients.
-//   Client = a business/individual who integrates the gateway.
-//            Each client has their own InstaPay handle, API key,
-//            detect token, and an Android APK on their phone.
+//   Owner  = platform admin (Shabana). Hidden portal, approves clients.
+//   Client = a business/individual who self-registers. Gets access to dashboard
+//            and keys ONLY after admin approval.
 
 generator client {
   provider = "prisma-client-js"
@@ -24,23 +23,28 @@ model Owner {
   createdAt    DateTime @default(now())
 }
 
-// ─── Client (business / individual using the gateway) ──────────────
+// ─── Client / Merchant Account (Self-Service) ──────────────────────
 model Client {
   id             String   @id @default(cuid())
   slug           String   @unique  // URL-safe identifier, e.g. "ahmed-electronics"
   businessName   String
   instapayHandle String             // their InstaPay handle, e.g. "ahmed_shop@instapay"
 
-  // Authentication
-  apiKey      String @unique        // for API calls (checkout create, status)
-  detectToken String @unique        // for the Android APK webhook auth
+  // Self-registration fields
+  email          String   @unique
+  passwordHash   String
 
-  // Optional callback — gateway POSTs confirmed events here
+  // Authentication keys (Generated ONLY after Admin Approval)
+  apiKey      String? @unique       // for API checkout creations
+  detectToken String? @unique       // for the Android APK webhook auth
+
+  // Status: PENDING | APPROVED | REJECTED
+  approvalStatus String  @default("PENDING")
+  isActive       Boolean @default(false) // becomes true upon approval
+
+  // Webhook integration
   webhookUrl    String?
-  webhookSecret String?             // HMAC-SHA256 secret for signing payloads
-
-  // Status
-  isActive Boolean @default(true)
+  webhookSecret String?             // HMAC secret for signature headers
 
   // Settings
   checkoutTtlMin Int @default(10)
@@ -60,7 +64,6 @@ model Transaction {
   id        String @id @default(cuid())
   sessionId String @unique @default(cuid())
 
-  // Multi-tenant: every transaction belongs to a client
   clientId String
   client   Client @relation(fields: [clientId], references: [id])
 
@@ -70,15 +73,12 @@ model Transaction {
   amountEgp Float
   currency  String   @default("EGP")
 
-  // PENDING → CONFIRMED | EXPIRED
   status String @default("PENDING")
   note   String?
 
-  // InstaPay deep link for this checkout
   deepLinkUrl   String
   deepLinkToken String
 
-  // Populated when the Android detector confirms the payment
   detectedRef String?
   detectedAt  DateTime?
 

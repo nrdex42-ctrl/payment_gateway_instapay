@@ -1,13 +1,7 @@
-// Multi-tenant InstaPay Payment Gateway — Prisma Schema (PostgreSQL for production)
+// Multi-tenant Paymob-Style Payment Gateway — Prisma Schema (PostgreSQL for production)
 //
 // The Render build command copies this over schema.prisma before building:
 //   cp prisma/schema.production.prisma prisma/schema.prisma
-//
-// Roles:
-//   Owner  = platform admin. Creates & manages clients.
-//   Client = a business/individual who integrates the gateway.
-//            Each client has their own InstaPay handle, API key,
-//            detect token, and an Android APK on their phone.
 
 generator client {
   provider = "prisma-client-js"
@@ -28,21 +22,30 @@ model Owner {
   createdAt    DateTime @default(now())
 }
 
-// ─── Client (business / individual using the gateway) ──────────────
+// ─── Client / Merchant Account (Self-Service) ──────────────────────
 model Client {
   id             String   @id @default(cuid())
   slug           String   @unique
   businessName   String
   instapayHandle String
 
-  apiKey      String @unique
-  detectToken String @unique
+  // Self-registration fields
+  email          String   @unique
+  passwordHash   String
 
+  // Authentication keys (Generated ONLY after Admin Approval)
+  apiKey      String? @unique
+  detectToken String? @unique
+
+  // Status: PENDING | APPROVED | REJECTED
+  approvalStatus String  @default("PENDING")
+  isActive       Boolean @default(false)
+
+  // Webhook integration
   webhookUrl    String?
   webhookSecret String?
 
-  isActive Boolean @default(true)
-
+  // Settings
   checkoutTtlMin Int @default(10)
 
   createdAt DateTime @default(now())

@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'
+import { notFound } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Activity,
@@ -19,7 +20,10 @@ import {
   ChevronRight,
   Key,
   Globe,
-  AlertCircle
+  AlertCircle,
+  ThumbsUp,
+  ThumbsDown,
+  UserCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,10 +35,12 @@ interface ClientStats {
   slug: string
   businessName: string
   instapayHandle: string
-  apiKey: string
-  detectToken: string
+  email: string
+  apiKey: string | null
+  detectToken: string | null
   webhookUrl: string | null
   isActive: boolean
+  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED'
   checkoutTtlMin: number
   createdAt: string
   totalTransactions: number
@@ -61,7 +67,15 @@ interface RecentTx {
   createdAt: string
 }
 
-export default function AdminPage() {
+export default function AdminPortalPage({ params }: { params: Promise<{ hash: string }> }) {
+  const { hash } = use(params)
+  const expectedHash = process.env.NEXT_PUBLIC_ADMIN_PORTAL_PATH || 'secure-control-shabana-88123'
+
+  // Security through obscurity verification
+  if (hash !== expectedHash) {
+    notFound()
+  }
+
   const [token, setToken] = useState<string | null>(null)
   const [secretInput, setSecretInput] = useState('')
   const [authError, setAuthError] = useState<string | null>(null)
@@ -70,23 +84,21 @@ export default function AdminPage() {
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null)
   const [clients, setClients] = useState<ClientStats[]>([])
   const [recentTx, setRecentTx] = useState<RecentTx[]>([])
-  const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
-  // Client creation dialog state
+  // Client creation modal state
   const [showAddModal, setShowAddModal] = useState(false)
   const [businessName, setBusinessName] = useState('')
   const [instapayHandle, setInstapayHandle] = useState('')
+  const [emailInput, setEmailInput] = useState('')
   const [webhookUrl, setWebhookUrl] = useState('')
   const [checkoutTtlMin, setCheckoutTtlMin] = useState('10')
   const [modalError, setModalError] = useState<string | null>(null)
   const [savingClient, setSavingClient] = useState(false)
 
-  // Copy helper
   const [copiedText, setCopiedText] = useState<string | null>(null)
 
   useEffect(() => {
-    // Check if token exists in localStorage
     const saved = localStorage.getItem('owner_secret_token')
     if (saved) {
       setToken(saved)
@@ -132,11 +144,9 @@ export default function AdminPage() {
     try {
       const headers = { Authorization: `Bearer ${token}` }
       
-      // Load platform stats
       const statsRes = await fetch('/api/admin/dashboard', { headers })
       const statsData = await statsRes.json()
       
-      // Load clients
       const clientsRes = await fetch('/api/admin/clients', { headers })
       const clientsData = await clientsRes.json()
 
@@ -170,6 +180,7 @@ export default function AdminPage() {
         body: JSON.stringify({
           businessName,
           instapayHandle,
+          email: emailInput,
           webhookUrl: webhookUrl || null,
           checkoutTtlMin: parseInt(checkoutTtlMin) || 10,
         }),
@@ -179,6 +190,7 @@ export default function AdminPage() {
         setShowAddModal(false)
         setBusinessName('')
         setInstapayHandle('')
+        setEmailInput('')
         setWebhookUrl('')
         setCheckoutTtlMin('10')
         loadData()
@@ -189,6 +201,31 @@ export default function AdminPage() {
       setModalError('Connection error.')
     } finally {
       setSavingClient(false)
+    }
+  }
+
+  const handleApproveClient = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/clients/${id}/approve`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) loadData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleRejectClient = async (id: string) => {
+    if (!confirm('Are you sure you want to reject this registration?')) return
+    try {
+      const res = await fetch(`/api/admin/clients/${id}/reject`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) loadData()
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -209,7 +246,7 @@ export default function AdminPage() {
   }
 
   const handleDeleteClient = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this client? This will delete all their transactions.')) return
+    if (!confirm('Are you sure you want to delete this merchant account?')) return
     try {
       const res = await fetch(`/api/admin/clients/${id}`, {
         method: 'DELETE',
@@ -227,10 +264,13 @@ export default function AdminPage() {
     setTimeout(() => setCopiedText(null), 2000)
   }
 
+  const pendingApprovals = clients.filter((c) => c.approvalStatus === 'PENDING')
+  const activeMerchants = clients.filter((c) => c.approvalStatus === 'APPROVED')
+
   // --- Render Login Page ---
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-indigo-950 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-indigo-950 p-4 font-sans">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -241,9 +281,9 @@ export default function AdminPage() {
             <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-indigo-400 shadow-md">
               <Shield className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Platform Admin login</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight">Platform Admin Login</h1>
             <p className="text-sm text-neutral-400">
-              Enter your platform administrative secret key to access settings
+              Enter platform owner secret key to access setup controls.
             </p>
           </div>
 
@@ -277,12 +317,6 @@ export default function AdminPage() {
               Sign In
             </Button>
           </form>
-
-          <div className="text-center">
-            <p className="text-[10px] text-neutral-500">
-              Default Sandbox Key: <span className="font-mono bg-neutral-950 px-1 py-0.5 rounded text-neutral-400">owner-sandbox-secret-token-2026</span>
-            </p>
-          </div>
         </motion.div>
       </div>
     )
@@ -305,7 +339,7 @@ export default function AdminPage() {
                   Platform Admin
                 </span>
               </div>
-              <p className="text-xs text-neutral-500">Egypt Instant Network Manager</p>
+              <p className="text-xs text-neutral-500">Secure Obscured Router Panel</p>
             </div>
           </div>
 
@@ -371,6 +405,55 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Pending Approvals Section */}
+        {pendingApprovals.length > 0 && (
+          <div className="rounded-2xl border border-amber-900/50 bg-amber-950/5 p-5 space-y-4">
+            <div className="flex items-center gap-2 text-amber-400">
+              <UserCheck className="h-5 w-5 animate-pulse" />
+              <h2 className="text-base font-bold">Pending Merchant Approvals ({pendingApprovals.length})</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {pendingApprovals.map((c) => (
+                <div
+                  key={c.id}
+                  className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 flex flex-col justify-between gap-3"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-white text-sm">{c.businessName}</h4>
+                      <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full font-semibold">
+                        Awaiting Approval
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-400">Email: <span className="text-neutral-300 font-mono">{c.email}</span></p>
+                    <p className="text-xs text-neutral-400">InstaPay: <span className="text-neutral-300 font-mono">{c.instapayHandle}</span></p>
+                  </div>
+                  
+                  <div className="flex items-center justify-end gap-2 border-t border-neutral-900/60 pt-3">
+                    <Button
+                      size="sm"
+                      onClick={() => handleRejectClient(c.id)}
+                      className="bg-neutral-800 hover:bg-red-950/20 text-neutral-400 hover:text-red-400 border border-neutral-700 h-8 rounded-lg text-xs"
+                    >
+                      <ThumbsDown className="h-3 w-3 mr-1" />
+                      Reject
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleApproveClient(c.id)}
+                      className="bg-violet-600 hover:bg-violet-700 text-white h-8 rounded-lg text-xs font-semibold"
+                    >
+                      <ThumbsUp className="h-3 w-3 mr-1" />
+                      Approve & Activate
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Clients List */}
@@ -378,7 +461,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-neutral-400" />
-                <h2 className="text-base font-bold text-white">Merchant Clients</h2>
+                <h2 className="text-base font-bold text-white">Active Merchants</h2>
               </div>
               <Button
                 size="sm"
@@ -386,21 +469,20 @@ export default function AdminPage() {
                 className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl"
               >
                 <Plus className="mr-1 h-4 w-4" />
-                Add Client
+                Create Merchant (Direct)
               </Button>
             </div>
 
             {/* Clients Cards */}
             <div className="space-y-3">
-              {clients.length === 0 ? (
+              {activeMerchants.length === 0 ? (
                 <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-8 text-center text-neutral-500">
-                  No clients created yet. Click &ldquo;Add Client&rdquo; to get started.
+                  No active approved merchants found. Approved clients will show up here.
                 </div>
               ) : (
-                clients.map((c) => (
-                  <motion.div
+                activeMerchants.map((c) => (
+                  <div
                     key={c.id}
-                    layoutId={c.id}
                     className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 hover:border-neutral-800 transition-all flex flex-col md:flex-row justify-between gap-4"
                   >
                     <div className="space-y-2 flex-1 min-w-0">
@@ -427,56 +509,58 @@ export default function AdminPage() {
                           <span className="font-mono font-semibold text-neutral-300">{c.instapayHandle}</span>
                         </div>
                         <div>
-                          <span className="text-neutral-600 font-medium">Checkout TTL:</span>{' '}
-                          <span className="font-semibold text-neutral-300">{c.checkoutTtlMin} mins</span>
+                          <span className="text-neutral-600 font-medium">Email Address:</span>{' '}
+                          <span className="font-mono font-semibold text-neutral-300">{c.email}</span>
                         </div>
                       </div>
 
                       {/* Keys & Tokens */}
-                      <div className="space-y-1 bg-neutral-950/60 p-3 rounded-xl border border-neutral-900 text-xs">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-neutral-500 flex items-center gap-1 font-medium">
-                            <Key className="h-3 w-3" /> API Key (apiKey)
-                          </span>
-                          <div className="flex items-center gap-1.5 font-mono text-neutral-400 select-all">
-                            <span>{c.apiKey}</span>
-                            <button
-                              onClick={() => copyToClipboard(c.apiKey, `api-${c.id}`)}
-                              className="text-neutral-600 hover:text-neutral-300 transition-colors"
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                            </button>
-                            {copiedText === `api-${c.id}` && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
+                      {c.apiKey && c.detectToken && (
+                        <div className="space-y-1 bg-neutral-950/60 p-3 rounded-xl border border-neutral-900 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-neutral-500 flex items-center gap-1 font-medium">
+                              <Key className="h-3 w-3" /> API Key (apiKey)
+                            </span>
+                            <div className="flex items-center gap-1.5 font-mono text-neutral-400 select-all">
+                              <span>{c.apiKey}</span>
+                              <button
+                                onClick={() => copyToClipboard(c.apiKey!, `api-${c.id}`)}
+                                className="text-neutral-600 hover:text-neutral-300 transition-colors"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                              {copiedText === `api-${c.id}` && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="flex items-center justify-between gap-2 border-t border-neutral-900/60 pt-1.5 mt-1.5">
-                          <span className="text-neutral-500 flex items-center gap-1 font-medium">
-                            <Smartphone className="h-3 w-3" /> APK Token (detectToken)
-                          </span>
-                          <div className="flex items-center gap-1.5 font-mono text-neutral-400 select-all">
-                            <span>{c.detectToken}</span>
-                            <button
-                              onClick={() => copyToClipboard(c.detectToken, `det-${c.id}`)}
-                              className="text-neutral-600 hover:text-neutral-300 transition-colors"
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                            </button>
-                            {copiedText === `det-${c.id}` && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
-                          </div>
-                        </div>
-
-                        {c.webhookUrl && (
                           <div className="flex items-center justify-between gap-2 border-t border-neutral-900/60 pt-1.5 mt-1.5">
                             <span className="text-neutral-500 flex items-center gap-1 font-medium">
-                              <Globe className="h-3 w-3" /> Webhook URL
+                              <Smartphone className="h-3 w-3" /> APK Token (detectToken)
                             </span>
-                            <span className="font-mono text-neutral-400 truncate max-w-[200px]" title={c.webhookUrl}>
-                              {c.webhookUrl}
-                            </span>
+                            <div className="flex items-center gap-1.5 font-mono text-neutral-400 select-all">
+                              <span>{c.detectToken}</span>
+                              <button
+                                onClick={() => copyToClipboard(c.detectToken!, `det-${c.id}`)}
+                                className="text-neutral-600 hover:text-neutral-300 transition-colors"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                              {copiedText === `det-${c.id}` && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
+                            </div>
                           </div>
-                        )}
-                      </div>
+
+                          {c.webhookUrl && (
+                            <div className="flex items-center justify-between gap-2 border-t border-neutral-900/60 pt-1.5 mt-1.5">
+                              <span className="text-neutral-500 flex items-center gap-1 font-medium">
+                                <Globe className="h-3 w-3" /> Webhook URL
+                              </span>
+                              <span className="font-mono text-neutral-400 truncate max-w-[200px]" title={c.webhookUrl}>
+                                {c.webhookUrl}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Stats & Actions */}
@@ -520,13 +604,13 @@ export default function AdminPage() {
                         </Button>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 ))
               )}
             </div>
           </div>
 
-          {/* Right Column: Platform Recent Activity */}
+          {/* Right Column: Platform Activity */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-neutral-400" />
@@ -583,14 +667,7 @@ export default function AdminPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-neutral-900 bg-neutral-950 py-5">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 text-center text-xs text-neutral-600">
-          InstaPay Detector Platform Gateway Admin Panel · Sandbox Mode
-        </div>
-      </footer>
-
-      {/* --- Add Client Dialog Modal --- */}
+      {/* Add Client Dialog Modal */}
       <AnimatePresence>
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -608,21 +685,21 @@ export default function AdminPage() {
               className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative z-10 space-y-4"
             >
               <div>
-                <h3 className="text-lg font-bold text-white">Create Client Account</h3>
+                <h3 className="text-lg font-bold text-white">Register Merchant (Direct Setup)</h3>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Add an individual or business to let them integrate the gateway on their project.
+                  Create a pre-approved active merchant account.
                 </p>
               </div>
 
               <form onSubmit={handleCreateClient} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="businessName" className="text-xs text-neutral-300">
-                    Business / Client Name
+                    Business / Merchant Name
                   </Label>
                   <Input
                     id="businessName"
                     type="text"
-                    placeholder="e.g. Ahmed Electronics, Book Shop"
+                    placeholder="e.g. Ahmed Electronics"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
@@ -632,7 +709,7 @@ export default function AdminPage() {
 
                 <div className="space-y-1.5">
                   <Label htmlFor="instapayHandle" className="text-xs text-neutral-300">
-                    InstaPay Handle (Where customer funds are received)
+                    InstaPay Handle
                   </Label>
                   <Input
                     id="instapayHandle"
@@ -646,8 +723,23 @@ export default function AdminPage() {
                 </div>
 
                 <div className="space-y-1.5">
+                  <Label htmlFor="emailInput" className="text-xs text-neutral-300">
+                    Merchant Email Address
+                  </Label>
+                  <Input
+                    id="emailInput"
+                    type="email"
+                    placeholder="e.g. shop@merchant.com"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
                   <Label htmlFor="webhookUrl" className="text-xs text-neutral-300">
-                    Webhook URL (Optional callback to their project server)
+                    Webhook URL (Optional)
                   </Label>
                   <Input
                     id="webhookUrl"
@@ -696,7 +788,7 @@ export default function AdminPage() {
                     disabled={savingClient}
                     className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-semibold"
                   >
-                    {savingClient ? 'Saving…' : 'Create Client'}
+                    {savingClient ? 'Saving…' : 'Create Merchant'}
                   </Button>
                 </div>
               </form>

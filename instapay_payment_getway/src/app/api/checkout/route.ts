@@ -35,9 +35,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!client.isActive) {
+    if (!client.isActive || client.approvalStatus !== 'APPROVED') {
       return NextResponse.json(
-        { ok: false, error: 'This merchant account is currently inactive.' },
+        { ok: false, error: 'This merchant account is currently inactive or pending approval.' },
         { status: 403 }
       )
     }

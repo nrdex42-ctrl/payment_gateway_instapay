@@ -3,12 +3,11 @@ import { db } from '@/lib/db'
 import { authenticateOwner, generateSecureToken, generateSlug } from '@/lib/auth'
 
 /**
- * GET: List all clients on the platform with summarized stats.
+ * GET: List all clients on the platform (approved, pending, rejected) with summarized stats.
  */
 export async function GET(request: NextRequest) {
   const isOwner = await authenticateOwner(request)
   if (!isOwner) {
-    // Also support fallback local check if OWNER_SECRET is unset during sandbox dev
     const ownerSecret = process.env.OWNER_SECRET || 'owner-sandbox-secret-token-2026'
     const authHeader = request.headers.get('authorization') || ''
     const provided = authHeader.replace(/^Bearer\s+/, '').trim()
@@ -27,7 +26,6 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
-    // Get aggregated confirmed amount for each client
     const clientStats = await Promise.all(
       clients.map(async (client) => {
         const confirmedSum = await db.transaction.aggregate({
@@ -43,10 +41,12 @@ export async function GET(request: NextRequest) {
           slug: client.slug,
           businessName: client.businessName,
           instapayHandle: client.instapayHandle,
+          email: client.email,
           apiKey: client.apiKey,
           detectToken: client.detectToken,
           webhookUrl: client.webhookUrl,
           isActive: client.isActive,
+          approvalStatus: client.approvalStatus,
           checkoutTtlMin: client.checkoutTtlMin,
           createdAt: client.createdAt.toISOString(),
           totalTransactions: client._count.transactions,
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST: Create a new client.
+ * POST: Create/Register a new client directly by Admin (Pre-approved).
  */
 export async function POST(request: NextRequest) {
   const isOwner = await authenticateOwner(request)
@@ -78,45 +78,52 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { businessName, instapayHandle, webhookUrl, checkoutTtlMin } = body || {}
+    const { businessName, instapayHandle, email, password, webhookUrl, checkoutTtlMin } = body || {}
 
-    if (!businessName || typeof businessName !== 'string' || !businessName.trim()) {
-      return NextResponse.json({ ok: false, error: 'businessName is required.' }, { status: 400 })
+    if (!businessName?.trim() || !instapayHandle?.trim() || !email?.trim()) {
+      return NextResponse.json({ ok: false, error: 'businessName, instapayHandle, and email are required.' }, { status: 400 })
     }
 
-    if (!instapayHandle || typeof instapayHandle !== 'string' || !instapayHandle.trim()) {
-      return NextResponse.json({ ok: false, error: 'instapayHandle is required.' }, { status: 400 })
-    }
-
-    // Clean and normalize handle
     let handle = instapayHandle.trim().toLowerCase().replace(/^@/, '')
     if (!handle.endsWith('@instapay')) {
       handle = `${handle.split('@')[0]}@instapay`
     }
 
+    const existingEmail = await db.client.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    })
+    if (existingEmail) {
+      return NextResponse.json({ ok: false, error: 'Email already registered.' }, { status: 400 })
+    }
+
     let slug = generateSlug(businessName)
-    // Avoid slug collisions
-    let existing = await db.client.findUnique({ where: { slug } })
+    let existingSlug = await db.client.findUnique({ where: { slug } })
     let count = 1
-    while (existing) {
+    while (existingSlug) {
       slug = `${generateSlug(businessName)}-${count}`
-      existing = await db.client.findUnique({ where: { slug } })
+      existingSlug = await db.client.findUnique({ where: { slug } })
       count++
     }
 
     const apiKey = generateSecureToken('ipk')
     const detectToken = generateSecureToken('det')
+    
+    // Hash password (or default password for admin-created clients)
+    const passwordHash = generateSecureToken('pwd') // default random pwd if none passed
 
     const client = await db.client.create({
       data: {
         slug,
         businessName: businessName.trim(),
         instapayHandle: handle,
+        email: email.trim().toLowerCase(),
+        passwordHash,
         apiKey,
         detectToken,
         webhookUrl: webhookUrl?.trim() || null,
         checkoutTtlMin: Number(checkoutTtlMin || 10),
         isActive: true,
+        approvalStatus: 'APPROVED',
       },
     })
 
@@ -127,11 +134,13 @@ export async function POST(request: NextRequest) {
         slug: client.slug,
         businessName: client.businessName,
         instapayHandle: client.instapayHandle,
+        email: client.email,
         apiKey: client.apiKey,
         detectToken: client.detectToken,
         webhookUrl: client.webhookUrl,
         checkoutTtlMin: client.checkoutTtlMin,
         isActive: client.isActive,
+        approvalStatus: client.approvalStatus,
       },
     })
   } catch (err) {

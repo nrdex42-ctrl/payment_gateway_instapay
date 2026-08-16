@@ -19,12 +19,11 @@ export default function LandingPage() {
   useEffect(() => {
     async function loadMerchants() {
       try {
-        // Fetch clients list using the public API or custom route
-        const res = await fetch('/api/admin/clients') // in local sandbox, we can check this
+        const res = await fetch('/api/merchants')
         if (res.ok) {
           const data = await res.json()
           if (data.ok) {
-            setMerchants(data.clients.filter((c: any) => c.isActive))
+            setMerchants(data.merchants)
           }
         }
       } catch {
@@ -61,9 +60,9 @@ export default function LandingPage() {
             size="sm"
             className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl"
           >
-            <a href="/admin">
+            <a href="/login">
               <LayoutDashboard className="mr-1.5 h-4 w-4" />
-              Admin Portal
+              Merchant Portal
             </a>
           </Button>
         </div>
@@ -95,15 +94,15 @@ export default function LandingPage() {
           {/* Admin panel promo */}
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900/30 p-6 flex flex-col justify-between space-y-4">
             <div className="space-y-2">
-              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider block">Owner Management</span>
-              <h3 className="text-lg font-bold text-white">Platform Admin Console</h3>
+              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider block">Developer Integration</span>
+              <h3 className="text-lg font-bold text-white">Get Started in Minutes</h3>
               <p className="text-xs text-neutral-400 leading-relaxed">
-                As the platform owner (Shabana), access the dashboard to create new merchants, monitor aggregate transactions, manage webhook configurations, and look up API integration credentials.
+                Register your business account today to receive custom API integration keys, APK tokens, and sandbox callback credentials. Accounts activate instantly upon admin approval.
               </p>
             </div>
             <Button asChild className="w-full bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl">
-              <a href="/admin">
-                Open Admin Portal
+              <a href="/register">
+                Register Merchant Account
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
