@@ -19,12 +19,12 @@ interface Props {
   submitting: boolean
   errorMessage?: string | null
   onSubmit: (values: CheckoutFormValues) => void
+  recipientHandle?: string
 }
 
 const QUICK_AMOUNTS = [25, 50, 100, 250, 500, 1000]
-const MERCHANT_HANDLE = 'mohammedshabana77@instapay'
 
-export function CheckoutForm({ submitting, errorMessage, onSubmit }: Props) {
+export function CheckoutForm({ submitting, errorMessage, onSubmit, recipientHandle = 'mohammedshabana77@instapay' }: Props) {
   const [values, setValues] = useState<CheckoutFormValues>({
     senderHandle: '',
     amountEgp: '',
@@ -159,7 +159,7 @@ export function CheckoutForm({ submitting, errorMessage, onSubmit }: Props) {
           </span>
         </div>
         <p className="mt-1 break-all font-mono text-sm font-semibold text-neutral-900">
-          {MERCHANT_HANDLE}
+          {recipientHandle}
         </p>
       </div>
 

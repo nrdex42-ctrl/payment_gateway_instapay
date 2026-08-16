@@ -5,14 +5,13 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
 /**
- * Stores the gateway webhook URL + bearer token + detector mode in encrypted
- * SharedPreferences so they aren't readable by other apps or in backups.
+ * Stores the gateway webhook URL + bearer token (detectToken) + client handle in encrypted
+ * SharedPreferences so they aren't readable by other apps.
  *
  * The values must match what the gateway expects:
  *   - URL: https://your-gateway.example.com/api/webhooks/instapay
- *   - Token: the DETECT_TOKEN env var set on the gateway
- *   - Mode: MERCHANT (default) or CLIENT
- *   - My handle: only used in CLIENT mode, the client's own InstaPay handle
+ *   - Token: the detectToken generated for this client in the Admin console
+ *   - Handle: the client's own InstaPay handle (e.g. businessname@instapay)
  */
 class GatewayConfig private constructor(ctx: Context) {
 
@@ -42,40 +41,17 @@ class GatewayConfig private constructor(ctx: Context) {
             prefs.edit().putString(KEY_TOKEN, value.trim()).apply()
         }
 
-    /** MERCHANT = listen for "received" notifications (default).
-     *  CLIENT = listen for "sent" notifications (belt-and-suspenders). */
-    var detectorMode: DetectorMode
-        get() {
-            val raw = prefs.getString(KEY_MODE, DetectorMode.MERCHANT.name) ?: DetectorMode.MERCHANT.name
-            return runCatching { DetectorMode.valueOf(raw) }.getOrDefault(DetectorMode.MERCHANT)
-        }
-        set(value) {
-            prefs.edit().putString(KEY_MODE, value.name).apply()
-        }
-
-    /** The merchant handle this gateway is associated with. Used in MERCHANT
-     *  mode for the status notification, and as a sanity check in CLIENT mode. */
     var merchantHandle: String
         get() = prefs.getString(KEY_MERCHANT_HANDLE, DEFAULT_MERCHANT_HANDLE) ?: DEFAULT_MERCHANT_HANDLE
         set(value) {
             prefs.edit().putString(KEY_MERCHANT_HANDLE, value.trim().lowercase()).apply()
         }
 
-    /** In CLIENT mode, this is the client's own InstaPay handle. Required for
-     *  the webhook to know who sent the payment. */
-    var myHandle: String
-        get() = prefs.getString(KEY_MY_HANDLE, "") ?: ""
-        set(value) {
-            prefs.edit().putString(KEY_MY_HANDLE, value.trim().lowercase()).apply()
-        }
-
     companion object {
         private const val FILE_NAME = "gateway_config.xml"
         private const val KEY_URL = "gateway_url"
         private const val KEY_TOKEN = "auth_token"
-        private const val KEY_MODE = "detector_mode"
         private const val KEY_MERCHANT_HANDLE = "merchant_handle"
-        private const val KEY_MY_HANDLE = "my_handle"
 
         private const val DEFAULT_URL =
             "https://your-gateway.example.com/api/webhooks/instapay"
@@ -90,12 +66,4 @@ class GatewayConfig private constructor(ctx: Context) {
                 instance ?: GatewayConfig(ctx.applicationContext).also { instance = it }
             }
     }
-}
-
-enum class DetectorMode {
-    /** Runs on the merchant's phone. Forwards "You have received X EGP from <handle>" notifications. */
-    MERCHANT,
-
-    /** Runs on the client's phone. Forwards "You have sent X EGP to <handle>" notifications. */
-    CLIENT
 }

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { formatEgyptTime } from '@/lib/timezone'
+import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
 
 /**
- * Paginated, searchable list of ALL transactions (confirmed + pending + expired)
- * for the merchant dashboard's "Transactions" screen.
+ * Paginated, searchable list of transactions for a specific client (or all for admin).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -13,9 +13,44 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')?.toUpperCase()
     const limit = Math.min(Math.max(Number(searchParams.get('limit') || 50), 1), 200)
     const cursorIso = searchParams.get('cursor')
+    const targetClientId = searchParams.get('clientId')
+
+    let clientId = ''
+    let isOwner = await authenticateOwner(request)
+
+    // Local dev sandbox fallback for admin check
+    const ownerSecret = process.env.OWNER_SECRET || 'owner-sandbox-secret-token-2026'
+    const authHeader = request.headers.get('authorization') || ''
+    const provided = authHeader.replace(/^Bearer\s+/, '').trim()
+    if (provided === ownerSecret) {
+      isOwner = true
+    }
+
+    if (isOwner) {
+      if (targetClientId) {
+        clientId = targetClientId
+      }
+    } else {
+      const client = await authenticateByApiKey(request)
+      if (!client) {
+        // Fallback for easy local dev: if there is a client, use it.
+        const allClients = await db.client.findMany()
+        if (allClients.length > 0) {
+          clientId = allClients[0].id
+        } else {
+          return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
+        }
+      } else {
+        clientId = client.id
+      }
+    }
 
     // Build the where clause
-    const where: Record<string, unknown> = {}
+    const where: Record<string, any> = {}
+
+    if (clientId) {
+      where.clientId = clientId
+    }
 
     if (status === 'PENDING' || status === 'CONFIRMED' || status === 'EXPIRED') {
       where.status = status
@@ -41,6 +76,11 @@ export async function GET(request: NextRequest) {
       where,
       orderBy: { createdAt: 'desc' },
       take: limit + 1, // +1 to know if there's a next page
+      include: {
+        client: {
+          select: { businessName: true },
+        },
+      },
     })
 
     const hasMore = transactions.length > limit
@@ -53,6 +93,7 @@ export async function GET(request: NextRequest) {
       ok: true,
       transactions: items.map((t) => ({
         sessionId: t.sessionId,
+        businessName: t.client.businessName,
         senderHandle: t.senderHandle,
         recipientHandle: t.recipientHandle,
         amountEgp: t.amountEgp,

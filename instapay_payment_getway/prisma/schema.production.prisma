@@ -1,17 +1,13 @@
-// Production Prisma schema (PostgreSQL) — used on Render with an external
-// database (Supabase, Neon, Railway, or any managed Postgres).
+// Multi-tenant InstaPay Payment Gateway — Prisma Schema (PostgreSQL for production)
 //
 // The Render build command copies this over schema.prisma before building:
 //   cp prisma/schema.production.prisma prisma/schema.prisma
 //
-// The only difference from schema.prisma is the `provider` field:
-//   local dev    → provider = "sqlite"      (file:./db/custom.db)
-//   production   → provider = "postgresql"  (external Postgres)
-//
-// For Supabase: set DATABASE_URL to the Transaction Pooler URL (port 6543)
-// with ?pgbouncer=true&connection_limit=1 appended. This schema has no
-// foreign keys, so it works with PgBouncer's transaction mode without
-// needing relationMode = "prisma".
+// Roles:
+//   Owner  = platform admin. Creates & manages clients.
+//   Client = a business/individual who integrates the gateway.
+//            Each client has their own InstaPay handle, API key,
+//            detect token, and an Android APK on their phone.
 
 generator client {
   provider = "prisma-client-js"
@@ -23,9 +19,49 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ─── Platform owner (admin) ────────────────────────────────────────
+model Owner {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// ─── Client (business / individual using the gateway) ──────────────
+model Client {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  businessName   String
+  instapayHandle String
+
+  apiKey      String @unique
+  detectToken String @unique
+
+  webhookUrl    String?
+  webhookSecret String?
+
+  isActive Boolean @default(true)
+
+  checkoutTtlMin Int @default(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@index([instapayHandle])
+  @@index([apiKey])
+  @@index([detectToken])
+}
+
+// ─── Checkout / payment transaction ────────────────────────────────
 model Transaction {
-  id        String   @id @default(cuid())
-  sessionId String   @unique @default(cuid())
+  id        String @id @default(cuid())
+  sessionId String @unique @default(cuid())
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
 
   senderHandle    String
   recipientHandle String
@@ -33,10 +69,10 @@ model Transaction {
   amountEgp Float
   currency  String   @default("EGP")
 
-  status    String   @default("PENDING")
-  note      String?
+  status String @default("PENDING")
+  note   String?
 
-  deepLinkUrl  String
+  deepLinkUrl   String
   deepLinkToken String
 
   detectedRef String?
@@ -45,9 +81,9 @@ model Transaction {
   createdAt DateTime @default(now())
   expiresAt DateTime
 
-  @@index([senderHandle, amountEgp, status])
+  @@index([clientId, status, createdAt])
+  @@index([clientId, senderHandle, amountEgp, status])
   @@index([status, expiresAt])
   @@index([deepLinkToken])
   @@index([createdAt])
-  @@index([status, createdAt])
 }

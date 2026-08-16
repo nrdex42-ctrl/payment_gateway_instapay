@@ -38,33 +38,27 @@ class SettingsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         config = GatewayConfig.get(requireContext())
 
+        // Hide mode toggle card since APK is always client-specific received mode now
+        binding.modeToggleGroup.visibility = View.GONE
+        // Hide the description and label next to it
+        binding.modeToggleGroup.parent?.let { parentView ->
+            if (parentView is View) {
+                parentView.visibility = View.GONE
+            }
+        }
+
         // Load saved config
         binding.gatewayUrlInput.setText(config.gatewayUrl)
         binding.authTokenInput.setText(config.authToken)
         binding.merchantHandleInput.setText(config.merchantHandle)
-        binding.myHandleInput.setText(config.myHandle)
-
-        // Mode toggle
-        when (config.detectorMode) {
-            DetectorMode.MERCHANT -> binding.modeToggleGroup.check(R.id.merchantModeButton)
-            DetectorMode.CLIENT -> binding.modeToggleGroup.check(R.id.clientModeButton)
-        }
-        refreshModeDependentFields()
-
-        binding.modeToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked) return@addOnButtonCheckedListener
-            config.detectorMode = when (checkedId) {
-                R.id.clientModeButton -> DetectorMode.CLIENT
-                else -> DetectorMode.MERCHANT
-            }
-            refreshModeDependentFields()
-        }
+        
+        // Always hide myHandle input since CLIENT mode is removed
+        binding.myHandleInputLayout.visibility = View.GONE
 
         binding.saveButton.setOnClickListener {
             val url = binding.gatewayUrlInput.text.toString().trim()
             val token = binding.authTokenInput.text.toString().trim()
             val merchantHandle = binding.merchantHandleInput.text.toString().trim()
-            val myHandle = binding.myHandleInput.text.toString().trim()
 
             if (url.isEmpty()) {
                 Toast.makeText(requireContext(), "Please enter the gateway URL", Toast.LENGTH_SHORT).show()
@@ -77,10 +71,12 @@ class SettingsFragment : Fragment() {
             config.gatewayUrl = url
             config.authToken = token
             config.merchantHandle = merchantHandle
-            config.myHandle = myHandle
-            Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show()
+            
+            binding.monitoredHandleLabel.text = "Reporting payments received by: $merchantHandle"
+            Toast.makeText(requireContext(), "Config Saved", Toast.LENGTH_SHORT).show()
         }
 
+        binding.monitoredHandleLabel.text = "Reporting payments received by: ${config.merchantHandle}"
         binding.grantPermissionButton.setOnClickListener { openNotificationAccessSettings() }
         binding.testButton.setOnClickListener { sendTestNotification() }
     }
@@ -88,16 +84,6 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         refreshPermissionStatus()
-    }
-
-    private fun refreshModeDependentFields() {
-        val isClient = config.detectorMode == DetectorMode.CLIENT
-        binding.myHandleInputLayout.visibility = if (isClient) View.VISIBLE else View.GONE
-        binding.monitoredHandleLabel.text = if (isClient) {
-            "Reporting payments sent by: ${binding.myHandleInput.text}"
-        } else {
-            "Reporting payments received by: ${binding.merchantHandleInput.text}"
-        }
     }
 
     private fun refreshPermissionStatus() {
@@ -114,10 +100,7 @@ class SettingsFragment : Fragment() {
             )
         )
         binding.listenerStatusText.text = if (granted) {
-            when (config.detectorMode) {
-                DetectorMode.MERCHANT -> "Merchant mode · listening for received payments"
-                DetectorMode.CLIENT -> "Client mode · listening for sent payments"
-            }
+            "Active · listening for received payments"
         } else {
             getString(R.string.listener_idle)
         }
@@ -145,10 +128,7 @@ class SettingsFragment : Fragment() {
         }
 
         val fakeAmount = 1.00
-        val fakeSender = when (config.detectorMode) {
-            DetectorMode.MERCHANT -> "testuser@instapay"
-            DetectorMode.CLIENT -> config.myHandle.ifBlank { "myhandle@instapay" }
-        }
+        val fakeSender = "testuser@instapay"
         val fakeRecipient = config.merchantHandle
 
         val lastDetection = "TEST: $fakeAmount EGP from $fakeSender → $fakeRecipient (sent to webhook)"

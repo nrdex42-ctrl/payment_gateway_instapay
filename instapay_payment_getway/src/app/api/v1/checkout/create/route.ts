@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getMerchantConfig, buildInstaPayDeepLink } from '@/lib/merchant'
-
-function normalizeHandle(raw: string): string {
-  let h = (raw || '').trim().toLowerCase().replace(/^@/, '')
-  if (!h) return ''
-  const local = h.split('@')[0]
-  if (!local) return ''
-  return `${local}@instapay`
-}
+import { authenticateByApiKey } from '@/lib/auth'
+import { buildInstaPayDeepLink, normalizeHandle } from '@/lib/merchant'
 
 export async function POST(request: NextRequest) {
   try {
-    const config = getMerchantConfig()
-    const body = await request.json()
+    // --- Authenticate Client by API Key ---
+    const client = await authenticateByApiKey(request)
+    if (!client) {
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized. Invalid API Key.' },
+        { status: 401 }
+      )
+    }
 
+    const body = await request.json()
     const { amountEgp, senderHandle, note } = body || {}
 
     if (!amountEgp || typeof amountEgp !== 'number' || amountEgp <= 0) {
@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!senderHandle || typeof senderHandle !== 'string') {
+    if (!senderHandle || typeof senderHandle !== 'string' || !senderHandle.trim()) {
       return NextResponse.json(
-        { ok: false, error: 'senderHandle is required (e.g. "user@instapay").' },
+        { ok: false, error: 'senderHandle is required (e.g. "customer@instapay").' },
         { status: 400 }
       )
     }
@@ -39,13 +39,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { deepLinkUrl, token } = buildInstaPayDeepLink(config.handle)
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes TTL
+    // Build the deep link to the client's InstaPay handle
+    const { deepLinkUrl, token } = buildInstaPayDeepLink(client.instapayHandle)
+    const expiresAt = new Date(Date.now() + client.checkoutTtlMin * 60 * 1000)
 
     const transaction = await db.transaction.create({
       data: {
+        clientId: client.id,
         senderHandle: normalizedSender,
-        recipientHandle: config.handle,
+        recipientHandle: client.instapayHandle,
         amountEgp: Math.round(amountEgp * 100) / 100,
         currency: 'EGP',
         status: 'PENDING',

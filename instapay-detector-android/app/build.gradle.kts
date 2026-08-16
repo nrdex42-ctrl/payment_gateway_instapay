@@ -14,6 +14,7 @@ android {
         targetSdk = 34
         versionCode = 2
         versionName = "2.0.0"
+        resValue("string", "app_name", "InstaPay Detector")
     }
 
     // Sign both debug and release builds with a bundled keystore so the
@@ -43,24 +44,7 @@ android {
         }
     }
 
-    flavorDimensions += "role"
 
-    productFlavors {
-        create("owner") {
-            dimension = "role"
-            applicationId = "com.instapaydetector.app.owner"
-            versionNameSuffix = "-owner"
-            resValue("string", "app_name", "InstaPay Owner Console")
-            buildConfigField("String", "APP_ROLE", "\"OWNER\"")
-        }
-        create("client") {
-            dimension = "role"
-            applicationId = "com.instapaydetector.app.client"
-            versionNameSuffix = "-client"
-            resValue("string", "app_name", "InstaPay Client Integration")
-            buildConfigField("String", "APP_ROLE", "\"CLIENT\"")
-        }
-    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

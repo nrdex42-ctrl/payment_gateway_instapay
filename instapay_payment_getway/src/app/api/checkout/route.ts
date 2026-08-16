@@ -2,30 +2,45 @@ import { NextRequest, NextResponse } from 'next/server'
 import QRCode from 'qrcode'
 import { db } from '@/lib/db'
 import {
-  buildDeepLink,
-  generateShortToken,
-  getMerchantConfig,
+  buildInstaPayDeepLink,
+  getLocalPart,
+  normalizeHandle,
 } from '@/lib/merchant'
 
 interface CreateCheckoutBody {
   senderHandle: string
   amountEgp: number
   note?: string
-}
-
-// Normalize whatever the client typed into a canonical <local>@instapay handle.
-function normalizeHandle(raw: string): string {
-  let h = (raw || '').trim().toLowerCase().replace(/^@/, '')
-  if (!h) return ''
-  const local = h.split('@')[0]
-  if (!local) return ''
-  return `${local}@instapay`
+  clientSlug?: string
+  clientId?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const config = getMerchantConfig()
     const body = (await request.json()) as CreateCheckoutBody
+    const { clientSlug, clientId } = body || {}
+
+    // Find the client we are paying to
+    let client = null
+    if (clientSlug) {
+      client = await db.client.findUnique({ where: { slug: clientSlug } })
+    } else if (clientId) {
+      client = await db.client.findUnique({ where: { id: clientId } })
+    }
+
+    if (!client) {
+      return NextResponse.json(
+        { ok: false, error: 'Merchant client not found.' },
+        { status: 404 }
+      )
+    }
+
+    if (!client.isActive) {
+      return NextResponse.json(
+        { ok: false, error: 'This merchant account is currently inactive.' },
+        { status: 403 }
+      )
+    }
 
     const senderHandle = normalizeHandle(body.senderHandle)
     const amountEgp = Number(body.amountEgp)
@@ -37,7 +52,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    if (senderHandle === config.handle) {
+    if (senderHandle === client.instapayHandle) {
       return NextResponse.json(
         { ok: false, error: 'You cannot send money to yourself.' },
         { status: 400 }
@@ -58,16 +73,13 @@ export async function POST(request: NextRequest) {
 
     const now = new Date()
     const expiresAt = new Date(
-      now.getTime() + config.checkoutTtlMinutes * 60 * 1000
+      now.getTime() + client.checkoutTtlMin * 60 * 1000
     )
 
-    // Build the official InstaPay deep link for this checkout.
-    const shortToken = generateShortToken()
-    const deepLinkUrl = buildDeepLink(config.localPart, shortToken)
+    // Build the official InstaPay deep link for this client
+    const { deepLinkUrl, token: shortToken } = buildInstaPayDeepLink(client.instapayHandle)
 
-    // Render the deep link as a QR code (data URL, PNG base64).
-    // The QR encodes the deep link URL so scanning it opens the InstaPay app
-    // with the recipient pre-filled.
+    // Render the deep link as a QR code
     const qrCodeDataUrl = await QRCode.toDataURL(deepLinkUrl, {
       errorCorrectionLevel: 'M',
       margin: 2,
@@ -80,8 +92,9 @@ export async function POST(request: NextRequest) {
 
     const tx = await db.transaction.create({
       data: {
+        clientId: client.id,
         senderHandle,
-        recipientHandle: config.handle,
+        recipientHandle: client.instapayHandle,
         amountEgp: Math.round(amountEgp * 100) / 100,
         currency: 'EGP',
         status: 'PENDING',
@@ -99,7 +112,7 @@ export async function POST(request: NextRequest) {
         sessionId: tx.sessionId,
         senderHandle: tx.senderHandle,
         recipientHandle: tx.recipientHandle,
-        merchantName: config.name,
+        merchantName: client.businessName,
         amountEgp: tx.amountEgp,
         currency: tx.currency,
         status: tx.status,
@@ -109,7 +122,7 @@ export async function POST(request: NextRequest) {
         qrCodeDataUrl,
         createdAt: tx.createdAt.toISOString(),
         expiresAt: tx.expiresAt.toISOString(),
-        ttlSeconds: config.checkoutTtlMinutes * 60,
+        ttlSeconds: client.checkoutTtlMin * 60,
       },
     })
   } catch (err) {
@@ -120,3 +133,53 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const slug = searchParams.get('slug')?.trim()
+
+    if (!slug) {
+      return NextResponse.json(
+        { ok: false, error: 'slug parameter is required.' },
+        { status: 400 }
+      )
+    }
+
+    const client = await db.client.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        slug: true,
+        businessName: true,
+        instapayHandle: true,
+        isActive: true,
+      },
+    })
+
+    if (!client) {
+      return NextResponse.json(
+        { ok: false, error: 'Merchant not found.' },
+        { status: 404 }
+      )
+    }
+
+    if (!client.isActive) {
+      return NextResponse.json(
+        { ok: false, error: 'Merchant account is inactive.' },
+        { status: 403 }
+      )
+    }
+
+    return NextResponse.json({
+      ok: true,
+      client,
+    })
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: 'Failed to fetch merchant details.' },
+      { status: 500 }
+    )
+  }
+}
+

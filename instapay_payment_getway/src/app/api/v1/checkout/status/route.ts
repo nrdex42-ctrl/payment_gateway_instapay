@@ -15,6 +15,11 @@ export async function GET(request: NextRequest) {
 
     const transaction = await db.transaction.findUnique({
       where: { sessionId },
+      include: {
+        client: {
+          select: { businessName: true, instapayHandle: true },
+        },
+      },
     })
 
     if (!transaction) {
@@ -39,6 +44,7 @@ export async function GET(request: NextRequest) {
       ok: true,
       checkout: {
         sessionId: transaction.sessionId,
+        businessName: transaction.client.businessName,
         senderHandle: transaction.senderHandle,
         recipientHandle: transaction.recipientHandle,
         amountEgp: transaction.amountEgp,
@@ -48,6 +54,7 @@ export async function GET(request: NextRequest) {
         detectedAt: transaction.detectedAt?.toISOString() ?? null,
         createdAt: transaction.createdAt.toISOString(),
         expiresAt: transaction.expiresAt.toISOString(),
+        note: transaction.note,
       },
     })
   } catch (err) {
