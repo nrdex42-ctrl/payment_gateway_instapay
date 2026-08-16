@@ -22,7 +22,8 @@ services:
       # External PostgreSQL database (Supabase, Neon, Railway, etc.)
       - key: DATABASE_URL
         sync: false  # set manually in Render dashboard (use Port 5432 or direct connection)
-
+      - key: DIRECT_URL
+        sync: false  # optional: set to Port 5432 if DATABASE_URL uses transaction pooler (Port 6543)
       # Shared secret between the Android app and the webhook.
       - key: DETECT_TOKEN
         sync: false  # set manually — must match notifier & Android app
@@ -37,7 +38,7 @@ services:
         sync: false  # set manually after deploy: https://instapay-notifier-xxxx.onrender.com
       - key: NEXT_PUBLIC_NOTIFIER_URL
         sync: false  # same as NOTIFIER_URL
-    healthCheckPath: /api/dashboard
+    healthCheckPath: /
     autoDeploy: true
 
   # --- WebSocket notifier mini-service ---

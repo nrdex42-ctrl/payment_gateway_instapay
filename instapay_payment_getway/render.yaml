@@ -40,7 +40,8 @@ services:
       # Set this in the Render dashboard after creating the Blueprint.
       - key: DATABASE_URL
         sync: false  # set manually — paste your Supabase connection string (Port 5432)
-
+      - key: DIRECT_URL
+        sync: false  # optional: set to Port 5432 if DATABASE_URL uses transaction pooler (Port 6543)
       # Shared secret between the Android app and the webhook.
       # Generate with: openssl rand -hex 32
       - key: DETECT_TOKEN
@@ -57,7 +58,7 @@ services:
         sync: false  # set manually after first deploy: https://instapay-notifier-xxxx.onrender.com
       - key: NEXT_PUBLIC_NOTIFIER_URL
         sync: false  # same as NOTIFIER_URL (must be public for the browser)
-    healthCheckPath: /api/dashboard
+    healthCheckPath: /
     autoDeploy: true
 
   # --- WebSocket notifier mini-service ---
