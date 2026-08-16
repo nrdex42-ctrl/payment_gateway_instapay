@@ -38,7 +38,7 @@ services:
         sync: false  # set manually after deploy: https://instapay-notifier-xxxx.onrender.com
       - key: NEXT_PUBLIC_NOTIFIER_URL
         sync: false  # same as NOTIFIER_URL
-    healthCheckPath: /api/dashboard
+    healthCheckPath: /
     autoDeploy: true
 
   # --- WebSocket notifier mini-service ---
