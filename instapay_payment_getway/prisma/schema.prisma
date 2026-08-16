@@ -1,0 +1,93 @@
+// Multi-tenant Paymob-Style Payment Gateway — Prisma Schema (SQLite for local dev)
+//
+// Roles:
+//   Owner  = platform admin (Shabana). Hidden portal, approves clients.
+//   Client = a business/individual who self-registers. Gets access to dashboard
+//            and keys ONLY after admin approval.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Platform owner (admin) ────────────────────────────────────────
+model Owner {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// ─── Client / Merchant Account (Self-Service) ──────────────────────
+model Client {
+  id             String   @id @default(cuid())
+  slug           String   @unique  // URL-safe identifier, e.g. "ahmed-electronics"
+  businessName   String
+  instapayHandle String             // their InstaPay handle, e.g. "ahmed_shop@instapay"
+
+  // Self-registration fields
+  email          String   @unique
+  passwordHash   String
+
+  // Authentication keys (Generated ONLY after Admin Approval)
+  apiKey      String? @unique       // for API checkout creations
+  detectToken String? @unique       // for the Android APK webhook auth
+
+  // Status: PENDING | APPROVED | REJECTED
+  approvalStatus String  @default("PENDING")
+  isActive       Boolean @default(false) // becomes true upon approval
+
+  // Webhook integration
+  webhookUrl    String?
+  webhookSecret String?             // HMAC secret for signature headers
+
+  // Settings
+  checkoutTtlMin Int @default(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@index([instapayHandle])
+  @@index([apiKey])
+  @@index([detectToken])
+}
+
+// ─── Checkout / payment transaction ────────────────────────────────
+model Transaction {
+  id        String @id @default(cuid())
+  sessionId String @unique @default(cuid())
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  senderHandle    String
+  recipientHandle String
+
+  amountEgp Float
+  currency  String   @default("EGP")
+
+  status String @default("PENDING")
+  note   String?
+
+  deepLinkUrl   String
+  deepLinkToken String
+
+  detectedRef String?
+  detectedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([clientId, status, createdAt])
+  @@index([clientId, senderHandle, amountEgp, status])
+  @@index([status, expiresAt])
+  @@index([deepLinkToken])
+  @@index([createdAt])
+}
