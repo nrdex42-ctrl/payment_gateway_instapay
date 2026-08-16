@@ -9,7 +9,6 @@ services:
   # --- Main Next.js gateway ---
   - type: web
     name: instapay-gateway
-    repo: https://github.com/nrdex42-ctrl/payment_getway_instapay
     runtime: node
     plan: starter     # $7/month — required (free tier spins down after 15min)
     rootDir: instapay_payment_getway
@@ -45,7 +44,6 @@ services:
   # --- WebSocket notifier mini-service ---
   - type: web
     name: instapay-notifier
-    repo: https://github.com/nrdex42-ctrl/payment_getway_instapay
     runtime: node
     plan: starter     # $7/month — required (always-on for WebSocket connections)
     rootDir: instapay_payment_getway/mini-services/checkout-notifier
