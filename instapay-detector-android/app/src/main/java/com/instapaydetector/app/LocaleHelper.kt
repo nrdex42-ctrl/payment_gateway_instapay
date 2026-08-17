@@ -14,6 +14,31 @@ object LocaleHelper {
         return setLocale(context, lang)
     }
 
+    fun applyLocale(context: Context) {
+        val lang = getLanguage(context)
+        val locale = Locale(lang)
+        Locale.setDefault(locale)
+        val resources = context.resources
+        val config = resources.configuration
+        config.setLocale(locale)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            config.setLayoutDirection(locale)
+        }
+        resources.updateConfiguration(config, resources.displayMetrics)
+        
+        // Update application context resources configuration
+        val appContext = context.applicationContext
+        if (appContext != null && appContext != context) {
+            val appResources = appContext.resources
+            val appConfig = appResources.configuration
+            appConfig.setLocale(locale)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                appConfig.setLayoutDirection(locale)
+            }
+            appResources.updateConfiguration(appConfig, appResources.displayMetrics)
+        }
+    }
+
     fun getLanguage(context: Context): String {
         return getPersistedData(context, Locale.getDefault().language)
     }

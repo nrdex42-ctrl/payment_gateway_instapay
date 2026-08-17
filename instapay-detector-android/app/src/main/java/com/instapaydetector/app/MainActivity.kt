@@ -26,41 +26,62 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Apply saved Theme before onCreate
+        // Apply saved Language
+        LocaleHelper.applyLocale(this)
+
+        // Apply saved Theme before onCreate (check to prevent recreation loop)
         val prefs = getSharedPreferences("instapay_settings", MODE_PRIVATE)
         val savedTheme = prefs.getString("pref_theme", "system") ?: "system"
-        val nightMode = when (savedTheme) {
+        val targetMode = when (savedTheme) {
             "light" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
             "dark" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
             else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         }
-        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(nightMode)
+        if (androidx.appcompat.app.AppCompatDelegate.getDefaultNightMode() != targetMode) {
+            androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(targetMode)
+        }
 
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        val pagerAdapter = object : androidx.viewpager2.adapter.FragmentStateAdapter(this) {
+            override fun getItemCount(): Int = 3
+            override fun createFragment(position: Int): Fragment {
+                return when (position) {
+                    0 -> DashboardFragment()
+                    1 -> TransactionsFragment()
+                    else -> SettingsFragment()
+                }
+            }
+        }
+        binding.viewPager.adapter = pagerAdapter
+        binding.viewPager.offscreenPageLimit = 2
+
         binding.bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_dashboard -> {
-                    swapFragment(DashboardFragment())
+                    binding.viewPager.currentItem = 0
                     true
                 }
                 R.id.nav_transactions -> {
-                    swapFragment(TransactionsFragment())
+                    binding.viewPager.currentItem = 1
                     true
                 }
                 R.id.nav_settings -> {
-                    swapFragment(SettingsFragment())
+                    binding.viewPager.currentItem = 2
                     true
                 }
                 else -> false
             }
         }
 
-        if (savedInstanceState == null) {
-            binding.bottomNav.selectedItemId = R.id.nav_dashboard
-        }
+        binding.viewPager.registerOnPageChangeCallback(object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                binding.bottomNav.menu.getItem(position).isChecked = true
+            }
+        })
 
         // Start the WebSocket client for real-time updates
         MainScope().launch { wsClient.start() }
@@ -69,12 +90,5 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         wsClient.stop()
-    }
-
-    private fun swapFragment(fragment: Fragment) {
-        supportFragmentManager
-            .beginTransaction()
-            .replace(R.id.fragment_container, fragment)
-            .commit()
     }
 }

@@ -108,6 +108,7 @@ class SettingsFragment : Fragment() {
 
             if (langChanged) {
                 LocaleHelper.setLocale(requireContext(), selectedLang)
+                LocaleHelper.applyLocale(requireContext())
             }
 
             if (themeChanged) {
