@@ -83,8 +83,20 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        // Restore tab position if saved instance exists
+        val savedTab = savedInstanceState?.getInt("selected_tab", 0) ?: 0
+        binding.viewPager.setCurrentItem(savedTab, false)
+        binding.bottomNav.menu.getItem(savedTab).isChecked = true
+
         // Start the WebSocket client for real-time updates
         MainScope().launch { wsClient.start() }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (::binding.isInitialized) {
+            outState.putInt("selected_tab", binding.viewPager.currentItem)
+        }
     }
 
     override fun onDestroy() {

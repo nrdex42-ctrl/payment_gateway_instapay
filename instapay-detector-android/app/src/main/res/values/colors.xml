@@ -19,4 +19,5 @@
     <color name="status_expired_bg">#F3F4F6</color>
     <color name="live_green">#22C55E</color>
     <color name="chart_grid">#E5E7EB</color>
+    <color name="bg_live_status">#ECFDF5</color>
 </resources>

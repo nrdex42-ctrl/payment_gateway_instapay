@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:text="@string/tx_export"
             android:textSize="12sp"
-            app:icon="@android:drawable/ic_menu_save" />
+            app:icon="@drawable/ic_export" />
     </LinearLayout>
 
     <!-- Search bar -->
@@ -45,7 +45,7 @@
         app:boxCornerRadiusBottomStart="12dp"
         app:boxCornerRadiusTopEnd="12dp"
         app:boxCornerRadiusTopStart="12dp"
-        app:startIconDrawable="@android:drawable/ic_menu_search">
+        app:startIconDrawable="@drawable/ic_search">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/searchInput"
@@ -59,47 +59,43 @@
 
     <!-- Filter chips -->
     <com.google.android.material.chip.ChipGroup
+        android:id="@+id/filterGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
         android:paddingVertical="8dp"
-        app:singleLine="false">
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:singleLine="true">
 
-        <com.google.android.material.button.MaterialButton
+        <com.google.android.material.chip.Chip
             android:id="@+id/filterAll"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/tx_filter_all"
-            android:textSize="12sp"
-            android:minHeight="36dp" />
+            android:checked="true" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.google.android.material.chip.Chip
             android:id="@+id/filterConfirmed"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/tx_filter_confirmed"
-            android:textSize="12sp"
-            android:minHeight="36dp" />
+            android:text="@string/tx_filter_confirmed" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.google.android.material.chip.Chip
             android:id="@+id/filterPending"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/tx_filter_pending"
-            android:textSize="12sp"
-            android:minHeight="36dp" />
+            android:text="@string/tx_filter_pending" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.google.android.material.chip.Chip
             android:id="@+id/filterExpired"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/tx_filter_expired"
-            android:textSize="12sp"
-            android:minHeight="36dp" />
+            android:text="@string/tx_filter_expired" />
     </com.google.android.material.chip.ChipGroup>
 
     <!-- Error banner -->

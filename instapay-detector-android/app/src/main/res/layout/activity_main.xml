@@ -22,8 +22,8 @@
         android:background="@color/bg_card"
         app:menu="@menu/bottom_nav"
         app:labelVisibilityMode="labeled"
-        app:itemIconTint="@color/brand_primary"
-        app:itemTextColor="@color/brand_primary"
+        app:itemIconTint="@color/nav_item_tint"
+        app:itemTextColor="@color/nav_item_tint"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

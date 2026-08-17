@@ -6,18 +6,20 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <androidx.cardview.widget.CardView
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="1dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="@color/border_subtle"
         app:cardBackgroundColor="@color/bg_card">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="14dp">
+            android:padding="16dp">
 
             <TextView
                 android:id="@+id/statLabel"
@@ -25,17 +27,18 @@
                 android:layout_height="wrap_content"
                 android:textColor="@color/text_secondary"
                 android:textSize="11sp"
+                android:textStyle="bold"
                 android:textAllCaps="true"
-                android:letterSpacing="0.05"
+                android:letterSpacing="0.08"
                 tools:text="TODAY" />
 
             <TextView
                 android:id="@+id/statValue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="6dp"
                 android:textColor="@color/text_primary"
-                android:textSize="20sp"
+                android:textSize="22sp"
                 android:textStyle="bold"
                 tools:text="EGP 1,234.56" />
 
@@ -43,10 +46,10 @@
                 android:id="@+id/statSub"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="4dp"
                 android:textColor="@color/text_tertiary"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 tools:text="5 payments" />
         </LinearLayout>
-    </androidx.cardview.widget.CardView>
+    </com.google.android.material.card.MaterialCardView>
 </LinearLayout>

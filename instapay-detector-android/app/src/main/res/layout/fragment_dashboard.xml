@@ -27,10 +27,20 @@
                 android:orientation="horizontal"
                 android:paddingBottom="16dp">
 
-                <View
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/ic_brand_logo" />
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    app:cardCornerRadius="22dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1.5dp"
+                    app:strokeColor="@color/border_subtle"
+                    app:cardBackgroundColor="@color/bg_card">
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:src="@drawable/ic_brand_logo"
+                        android:scaleType="centerCrop" />
+                </com.google.android.material.card.MaterialCardView>
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -147,13 +157,14 @@
                     android:layout_marginStart="6dp" />
             </LinearLayout>
 
-            <!-- Revenue chart -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="1dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/border_subtle"
                 app:cardBackgroundColor="@color/bg_card">
 
                 <LinearLayout
@@ -195,7 +206,7 @@
                         android:textSize="11sp"
                         tools:text="Total EGP 1,234 • 5 payments • Avg EGP 41/day" />
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Recent transactions section -->
             <LinearLayout
