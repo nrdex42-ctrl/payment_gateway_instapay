@@ -2,8 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateByApiKey } from '@/lib/auth'
 import { buildInstaPayDeepLink, normalizeHandle } from '@/lib/merchant'
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
+  // Enforce Rate Limit: max 60 checkout creations per 1 minute
+  const rl = checkRateLimit(request, 60, 60 * 1000)
+  if (!rl.success) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many checkout requests. Please try again later.' },
+      { status: 429, headers: getRateLimitHeaders(rl) }
+    )
+  }
   try {
     // --- Authenticate Client by API Key ---
     const client = await authenticateByApiKey(request)
@@ -58,7 +67,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       ok: true,
       checkout: {
         sessionId: transaction.sessionId,
@@ -74,6 +83,13 @@ export async function POST(request: NextRequest) {
         expiresAt: transaction.expiresAt.toISOString(),
       },
     })
+
+    const rlHeaders = getRateLimitHeaders(rl)
+    Object.entries(rlHeaders).forEach(([k, v]) => {
+      response.headers.set(k, v)
+    })
+
+    return response
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json(

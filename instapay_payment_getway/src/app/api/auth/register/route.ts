@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { hashPassword, generateSlug } from '@/lib/auth'
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
+  // Enforce Rate Limit: max 5 merchant registrations per 10 minutes
+  const rl = checkRateLimit(request, 5, 10 * 60 * 1000)
+  if (!rl.success) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many registration requests. Please try again later.' },
+      { status: 429, headers: getRateLimitHeaders(rl) }
+    )
+  }
   try {
     const body = await request.json()
     const { businessName, instapayHandle, email, password } = body || {}
@@ -67,7 +76,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       ok: true,
       message: 'Registration successful! Your account is pending admin approval.',
       client: {
@@ -78,6 +87,13 @@ export async function POST(request: NextRequest) {
         approvalStatus: client.approvalStatus,
       },
     })
+
+    const rlHeaders = getRateLimitHeaders(rl)
+    Object.entries(rlHeaders).forEach(([k, v]) => {
+      response.headers.set(k, v)
+    })
+
+    return response
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ ok: false, error: `Registration failed: ${message}` }, { status: 500 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateByDetectToken, signPayload } from '@/lib/auth'
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
 
 interface WebhookBody {
   amountEgp?: number
@@ -123,6 +124,15 @@ export async function forwardToClientWebhook(
 }
 
 export async function POST(request: NextRequest) {
+  // Enforce Rate Limit: max 120 detector reports per 1 minute
+  const rl = checkRateLimit(request, 120, 60 * 1000)
+  if (!rl.success) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many notification reports. Please try again later.' },
+      { status: 429, headers: getRateLimitHeaders(rl) }
+    )
+  }
+
   try {
     // --- Auth Client APK ---
     const client = await authenticateByDetectToken(request)
@@ -188,7 +198,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!match) {
-      return NextResponse.json({
+      const response = NextResponse.json({
         ok: true,
         matched: false,
         reason: 'NO_PENDING_CHECKOUT',
@@ -199,6 +209,11 @@ export async function POST(request: NextRequest) {
           notificationTimestamp: notificationTimestamp.toISOString(),
         },
       })
+      const rlHeaders = getRateLimitHeaders(rl)
+      Object.entries(rlHeaders).forEach(([k, v]) => {
+        response.headers.set(k, v)
+      })
+      return response
     }
 
     // Update transaction to CONFIRMED
@@ -242,7 +257,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       ok: true,
       matched: true,
       checkout: {
@@ -255,6 +270,11 @@ export async function POST(request: NextRequest) {
         detectedAt: updated.detectedAt?.toISOString() ?? null,
       },
     })
+    const rlHeaders = getRateLimitHeaders(rl)
+    Object.entries(rlHeaders).forEach(([k, v]) => {
+      response.headers.set(k, v)
+    })
+    return response
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json(

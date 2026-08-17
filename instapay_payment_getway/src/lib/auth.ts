@@ -26,12 +26,19 @@ export function hashPassword(password: string): string {
 
 /**
  * Verifies a password against a stored scrypt hash.
+ * Utilizes a constant timing check path to prevent user enumeration timings.
  */
 export function verifyPassword(password: string, storedHash: string): boolean {
-  if (!storedHash || !storedHash.includes('.')) return false
-  const [salt, hash] = storedHash.split('.')
+  const dummyHash = 'd7d8e8b0a9c8d7e6f5.a1b2c3d4e5f60708090a0b0c0d0e0f102030405060708090a0b0c0d0e0f0'
+  const hasFormat = storedHash && storedHash.includes('.')
+  const targetHash = hasFormat ? storedHash : dummyHash
+
+  const [salt, hash] = targetHash.split('.')
   const derivedKey = crypto.scryptSync(password, salt, 64)
-  return derivedKey.toString('hex') === hash
+  const isMatch = timingSafeCompare(derivedKey.toString('hex'), hash)
+
+  if (!hasFormat) return false
+  return isMatch
 }
 
 // ─── Session Management (Signed Payload) ───────────────────────────
@@ -169,12 +176,8 @@ export async function authenticateOwner(request: NextRequest): Promise<boolean> 
     token = authHeader.slice('Bearer '.length).trim()
   }
 
-  if (!token) {
-    const cookie = request.cookies.get('instapay_admin_session')
-    token = cookie ? cookie.value : null
-  }
-
-  return token === ownerSecret
+  if (!token) return false
+  return timingSafeCompare(token, ownerSecret)
 }
 
 // ─── Token Generation & Utilities ──────────────────────────────────
@@ -199,4 +202,14 @@ export async function signPayload(payload: string, secret: string): Promise<stri
   const hmac = crypto.createHmac('sha256', secret)
   hmac.update(payload)
   return hmac.digest('hex')
+}
+
+/**
+ * Timing-safe string comparison helper.
+ * Hashes strings using SHA-256 to allow timingSafeEqual on strings of different lengths.
+ */
+export function timingSafeCompare(a: string, b: string): boolean {
+  const hashA = crypto.createHash('sha256').update(a).digest()
+  const hashB = crypto.createHash('sha256').update(b).digest()
+  return crypto.timingSafeEqual(hashA, hashB)
 }
