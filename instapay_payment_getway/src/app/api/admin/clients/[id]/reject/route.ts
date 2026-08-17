@@ -30,6 +30,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     })
 
+    await db.auditLog.create({
+      data: {
+        action: 'REJECT_MERCHANT',
+        details: `Rejected merchant registration: ${updated.businessName} (ID: ${updated.id})`,
+      }
+    }).catch(() => {})
+
     return NextResponse.json({
       ok: true,
       message: `Merchant account registration rejected.`,

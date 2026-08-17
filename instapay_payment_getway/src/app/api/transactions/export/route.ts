@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { formatEgyptTime, getEgyptDstMode } from '@/lib/timezone'
 import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
+import { formatEgyptTime, getEgyptDstMode } from '@/lib/timezone'
 
-/**
- * Paginated, searchable list of transactions for a specific client (or all for admin).
- */
 export async function GET(request: NextRequest) {
   try {
-    const dstMode = await getEgyptDstMode()
     const { searchParams } = new URL(request.url)
     const q = searchParams.get('q')?.trim().toLowerCase() || ''
     const status = searchParams.get('status')?.toUpperCase()
-    const limit = Math.min(Math.max(Number(searchParams.get('limit') || 50), 1), 200)
-    const cursorIso = searchParams.get('cursor')
     const targetClientId = searchParams.get('clientId')
     const minAmount = searchParams.get('minAmount') ? Number(searchParams.get('minAmount')) : null
     const maxAmount = searchParams.get('maxAmount') ? Number(searchParams.get('maxAmount')) : null
@@ -38,7 +32,7 @@ export async function GET(request: NextRequest) {
     } else {
       const client = await authenticateByApiKey(request)
       if (!client) {
-        // Fallback for easy local dev: if there is a client, use it.
+        // Fallback for sandbox dev
         const allClients = await db.client.findMany()
         if (allClients.length > 0) {
           clientId = allClients[0].id
@@ -49,6 +43,8 @@ export async function GET(request: NextRequest) {
         clientId = client.id
       }
     }
+
+    const dstMode = await getEgyptDstMode()
 
     // Build the where clause
     const where: Record<string, any> = {}
@@ -90,17 +86,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (cursorIso) {
-      const cursorDate = new Date(cursorIso)
-      if (!isNaN(cursorDate.getTime())) {
-        where.createdAt = { ...where.createdAt, lt: cursorDate }
-      }
-    }
-
     const transactions = await db.transaction.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      take: limit + 1, // +1 to know if there's a next page
+      take: 5000,
       include: {
         client: {
           select: { businessName: true },
@@ -108,44 +97,55 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const hasMore = transactions.length > limit
-    const items = hasMore ? transactions.slice(0, limit) : transactions
-    const nextCursor = hasMore && items.length > 0
-      ? items[items.length - 1].createdAt.toISOString()
-      : null
+    const headers = [
+      'Session ID',
+      'Merchant Name',
+      'Sender Handle',
+      'Recipient Handle',
+      'Amount (EGP)',
+      'Status',
+      'Reference Code',
+      'Detected At',
+      'Created At'
+    ]
 
-    return NextResponse.json({
-      ok: true,
-      transactions: items.map((t) => ({
-        sessionId: t.sessionId,
-        businessName: t.client.businessName,
-        senderHandle: t.senderHandle,
-        recipientHandle: t.recipientHandle,
-        amountEgp: t.amountEgp,
-        currency: t.currency,
-        status: t.status,
-        note: t.note,
-        deepLinkUrl: t.deepLinkUrl,
-        deepLinkToken: t.deepLinkToken,
-        detectedRef: t.detectedRef,
-        detectedAt: t.detectedAt?.toISOString() ?? null,
-        detectedAtEgypt: t.detectedAt ? formatEgyptTime(t.detectedAt, dstMode) : null,
-        createdAt: t.createdAt.toISOString(),
-        createdAtEgypt: formatEgyptTime(t.createdAt, dstMode),
-        expiresAt: t.expiresAt.toISOString(),
-        expiresAtEgypt: formatEgyptTime(t.expiresAt, dstMode),
-      })),
-      pagination: {
-        limit,
-        hasMore,
-        nextCursor,
-        count: items.length,
+    const csvRows = [headers.join(',')]
+
+    for (const t of transactions) {
+      const detectedAtStr = t.detectedAt ? formatEgyptTime(t.detectedAt, dstMode).replace(/"/g, '""') : 'N/A'
+      const createdAtStr = formatEgyptTime(t.createdAt, dstMode).replace(/"/g, '""')
+
+      const row = [
+        t.sessionId,
+        t.client.businessName.replace(/"/g, '""'),
+        t.senderHandle,
+        t.recipientHandle,
+        t.amountEgp.toFixed(2),
+        t.status,
+        t.detectedRef || 'N/A',
+        `"${detectedAtStr}"`,
+        `"${createdAtStr}"`
+      ]
+      csvRows.push(row.map(val => {
+        if (typeof val === 'string' && (val.includes(',') || val.includes('\n') || val.includes('"'))) {
+          return `"${val.replace(/"/g, '""')}"`
+        }
+        return val
+      }).join(','))
+    }
+
+    const csvString = csvRows.join('\n')
+
+    return new Response(csvString, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename=instapay_transactions_${Date.now()}.csv`,
       },
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json(
-      { ok: false, error: `Failed to load transactions: ${message}` },
+      { ok: false, error: `Failed to export CSV: ${message}` },
       { status: 500 }
     )
   }

@@ -48,6 +48,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       data,
     })
 
+    await db.auditLog.create({
+      data: {
+        action: 'UPDATE_MERCHANT',
+        details: `Updated merchant ${updated.businessName} (ID: ${id}). Settings updated: ${JSON.stringify(data)}`,
+      }
+    }).catch(() => {})
+
     return NextResponse.json({ ok: true, client: updated })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -85,6 +92,13 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await db.client.delete({
       where: { id },
     })
+
+    await db.auditLog.create({
+      data: {
+        action: 'DELETE_MERCHANT',
+        details: `Deleted merchant ${client.businessName} (ID: ${id}) and all their associated transactions.`,
+      }
+    }).catch(() => {})
 
     return NextResponse.json({ ok: true, message: 'Client deleted successfully.' })
   } catch (err) {

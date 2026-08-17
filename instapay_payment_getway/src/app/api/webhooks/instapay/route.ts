@@ -37,13 +37,13 @@ function extractAmountFromText(text: string): number | null {
 /**
  * Notify the waiting client screen via real-time WebSocket connection.
  */
-async function emitCheckoutUpdate(payload: {
-  sessionId: string
-  status: 'CONFIRMED' | 'EXPIRED'
-  amountEgp?: number
-  senderHandle?: string
-  detectedRef?: string | null
-  detectedAt?: string | null
+export async function emitCheckoutUpdate(payload: {
+  sessionId: string,
+  status: 'CONFIRMED' | 'EXPIRED',
+  amountEgp?: number,
+  senderHandle?: string,
+  detectedRef?: string | null,
+  detectedAt?: string | null,
 }) {
   const notifierUrl = process.env.NOTIFIER_URL || 'http://localhost:3003'
   try {
@@ -65,11 +65,16 @@ async function emitCheckoutUpdate(payload: {
 /**
  * Optional Callback to Client's Server Webhook Endpoint.
  */
-async function forwardToClientWebhook(
+export async function forwardToClientWebhook(
+  clientId: string,
   url: string,
   secret: string | null,
   payload: Record<string, unknown>
 ) {
+  let statusCode: number | null = null
+  let responseText = ''
+  let isSuccess = false
+
   try {
     const bodyStr = JSON.stringify(payload)
     const headers: Record<string, string> = {
@@ -88,11 +93,32 @@ async function forwardToClientWebhook(
       body: bodyStr,
     })
 
+    statusCode = res.status
+    isSuccess = res.ok
+    responseText = (await res.text()).slice(0, 1000)
+
     if (!res.ok) {
       console.warn(`[webhook] client endpoint returned non-OK status: ${res.status}`)
     }
   } catch (err) {
+    responseText = err instanceof Error ? err.message : 'Connection failed'
     console.error('[webhook] failed to forward to client webhook:', err)
+  } finally {
+    try {
+      await db.webhookLog.create({
+        data: {
+          clientId,
+          url,
+          event: (payload.event as string) || 'payment.confirmed',
+          payload: JSON.stringify(payload),
+          statusCode,
+          response: responseText,
+          isSuccess,
+        }
+      })
+    } catch (dbErr) {
+      console.error('[webhook] failed to save WebhookLog to DB:', dbErr)
+    }
   }
 }
 
@@ -197,7 +223,7 @@ export async function POST(request: NextRequest) {
 
     // If client has custom callback webhook, trigger it
     if (client.webhookUrl) {
-      void forwardToClientWebhook(client.webhookUrl, client.webhookSecret, {
+      void forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
         event: 'payment.confirmed',
         clientId: client.id,
         businessName: client.businessName,

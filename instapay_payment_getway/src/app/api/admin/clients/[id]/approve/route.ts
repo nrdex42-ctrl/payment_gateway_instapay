@@ -40,6 +40,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     })
 
+    await db.auditLog.create({
+      data: {
+        action: 'APPROVE_MERCHANT',
+        details: `Approved merchant: ${updated.businessName} (ID: ${updated.id})`,
+      }
+    }).catch(() => {})
+
     return NextResponse.json({
       ok: true,
       message: `Merchant account approved successfully.`,
