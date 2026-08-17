@@ -14,14 +14,10 @@
 
         <!-- Mode toggle card -->
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/border_subtle"
-            app:cardBackgroundColor="@color/bg_card">
+            android:layout_marginBottom="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -40,10 +36,10 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="4dp"
                     android:text="Merchant: runs on the merchant's phone, listens for received payments.\nClient: runs on the payer's phone, listens for sent payments (optional backup)."
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
+                    android:textSize="11sp" />
 
                 <com.google.android.material.button.MaterialButtonToggleGroup
                     android:id="@+id/modeToggleGroup"
@@ -73,14 +69,10 @@
 
         <!-- Permission status card -->
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/border_subtle"
-            app:cardBackgroundColor="@color/bg_card">
+            android:layout_marginBottom="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -104,7 +96,7 @@
                     android:layout_marginTop="4dp"
                     android:text="@string/listener_idle"
                     android:textColor="@color/text_secondary"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/grantPermissionButton"
@@ -112,20 +104,17 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="@string/grant_permission_button"
+                    android:textColor="@color/text_on_primary"
                     app:backgroundTint="@color/brand_primary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <!-- Gateway settings card -->
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/border_subtle"
-            app:cardBackgroundColor="@color/bg_card">
+            android:layout_marginBottom="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -138,13 +127,13 @@
                     android:layout_height="wrap_content"
                     android:text="@string/title_settings"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
 
                 <!-- Webhook URL Field -->
                 <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    style="@style/Widget.InstapayDetector.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="10dp"
@@ -155,29 +144,32 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textUri"
+                        android:textColor="@color/text_primary"
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Auth Token Field -->
                 <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    style="@style/Widget.InstapayDetector.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="10dp"
                     android:hint="@string/auth_token_label"
-                    app:passwordToggleEnabled="true">
+                    app:passwordToggleEnabled="true"
+                    app:passwordToggleTint="@color/text_tertiary">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/authTokenInput"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textPassword"
+                        android:textColor="@color/text_primary"
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Merchant Handle Field -->
                 <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    style="@style/Widget.InstapayDetector.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="10dp"
@@ -188,13 +180,14 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="text"
+                        android:textColor="@color/text_primary"
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Hidden legacy handle field -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/myHandleInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    style="@style/Widget.InstapayDetector.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="10dp"
@@ -206,6 +199,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="text"
+                        android:textColor="@color/text_primary"
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -215,20 +209,19 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/save_button"
+                    android:textColor="@color/text_on_primary"
                     app:backgroundTint="@color/brand_primary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <!-- Monitored info card -->
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="#F59E0B"
-            app:cardBackgroundColor="#FFFBEB">
+            app:strokeColor="@color/status_pending"
+            app:cardBackgroundColor="@color/status_pending_bg">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -240,8 +233,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/monitored_package_label"
-                    android:textColor="#92400E"
-                    android:textSize="13sp" />
+                    android:textColor="@color/status_pending"
+                    android:textSize="12sp" />
 
                 <TextView
                     android:id="@+id/monitoredHandleLabel"
@@ -249,21 +242,17 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="@string/monitored_handle_label"
-                    android:textColor="#92400E"
-                    android:textSize="13sp" />
+                    android:textColor="@color/status_pending"
+                    android:textSize="12sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <!-- Last detection card -->
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/border_subtle"
-            app:cardBackgroundColor="@color/bg_card">
+            android:layout_marginBottom="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -276,7 +265,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/last_detection_label"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -287,7 +276,7 @@
                     android:fontFamily="monospace"
                     android:text="@string/last_detection_none"
                     android:textColor="@color/text_secondary"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/testButton"
@@ -295,20 +284,18 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="@string/test_button" />
+                    android:text="@string/test_button"
+                    android:textColor="@color/brand_primary"
+                    app:strokeColor="@color/brand_primary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <!-- Preferences card -->
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/border_subtle"
-            app:cardBackgroundColor="@color/bg_card">
+            android:layout_marginBottom="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -331,7 +318,7 @@
                     android:layout_marginTop="12dp"
                     android:text="@string/pref_theme_label"
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
+                    android:textSize="11sp" />
 
                 <Spinner
                     android:id="@+id/themeSpinner"
@@ -347,7 +334,7 @@
                     android:layout_marginTop="12dp"
                     android:text="@string/pref_lang_label"
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
+                    android:textSize="11sp" />
 
                 <Spinner
                     android:id="@+id/languageSpinner"
@@ -360,13 +347,9 @@
 
         <!-- About card -->
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/border_subtle"
-            app:cardBackgroundColor="@color/bg_card">
+            android:layout_height="wrap_content">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -388,7 +371,7 @@
                     android:layout_marginTop="4dp"
                     android:text="@string/settings_about_body"
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
+                    android:textSize="11sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

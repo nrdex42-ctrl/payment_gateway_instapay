@@ -1,23 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Dark carbon brand theme colors by default -->
     <color name="brand_primary">#7C3AED</color>
-    <color name="brand_secondary">#D946EF</color>
-    <color name="brand_accent">#10B981</color>
-    <color name="bg_light">#F9FAFB</color>
-    <color name="bg_card">#FFFFFF</color>
+    <color name="brand_secondary">#4F46E5</color>
+    <color name="brand_accent">#8B5CF6</color>
+    
+    <color name="bg_light">#0B0D14</color>
+    <color name="bg_card">#1A1E2E</color>
     <color name="bg_chart_fill">#7C3AED</color>
-    <color name="text_primary">#111827</color>
-    <color name="text_secondary">#6B7280</color>
-    <color name="text_tertiary">#9CA3AF</color>
-    <color name="border_subtle">#F3F4F6</color>
+    
+    <color name="text_primary">#F1F5F9</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="text_tertiary">#64748B</color>
+    <color name="text_on_primary">#FFFFFF</color>
+    
+    <color name="border_subtle">#1E293B</color>
+    <color name="border_medium">#334155</color>
+    
     <color name="status_pending">#F59E0B</color>
-    <color name="status_pending_bg">#FFFBEB</color>
+    <color name="status_pending_bg">#3B2D0A</color>
     <color name="status_confirmed">#10B981</color>
-    <color name="status_confirmed_bg">#ECFDF5</color>
+    <color name="status_confirmed_bg">#0D3B2F</color>
     <color name="status_denied">#EF4444</color>
-    <color name="status_expired">#6B7280</color>
-    <color name="status_expired_bg">#F3F4F6</color>
+    <color name="status_expired">#64748B</color>
+    <color name="status_expired_bg">#1E293B</color>
+    
     <color name="live_green">#22C55E</color>
-    <color name="chart_grid">#E5E7EB</color>
-    <color name="bg_live_status">#ECFDF5</color>
+    <color name="live_green_bg">#0D3B22</color>
+    <color name="bg_live_status">#0D3B22</color>
+    <color name="chart_grid">#1E293B</color>
 </resources>
