@@ -3,10 +3,11 @@ package com.instapaydetector.admin
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.instapaydetector.admin.databinding.ActivitySetupBinding
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,12 +48,12 @@ class SetupActivity : AppCompatActivity() {
         val ownerSecret = binding.etOwnerSecret.text?.toString()?.trim() ?: ""
 
         if (gatewayUrl.isEmpty() || portalHash.isEmpty() || ownerSecret.isEmpty()) {
-            Toast.makeText(this, R.string.error_invalid_fields, Toast.LENGTH_LONG).show()
+            showError(getString(R.string.error_invalid_fields))
             return
         }
 
         if (!gatewayUrl.startsWith("http://") && !gatewayUrl.startsWith("https://")) {
-            Toast.makeText(this, "URL must start with http:// or https://", Toast.LENGTH_LONG).show()
+            showError("URL must start with http:// or https://")
             return
         }
 
@@ -61,29 +62,34 @@ class SetupActivity : AppCompatActivity() {
         val cleanHash = portalHash.removePrefix("/").removeSuffix("/")
 
         binding.btnConnect.isEnabled = false
-        binding.btnConnect.text = "Verifying..."
+        binding.btnConnect.text = getString(R.string.btn_verifying)
+        binding.tvError.visibility = View.GONE
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val isValid = verifyCredentials(cleanUrl, ownerSecret)
-            withContext(Dispatchers.Main) {
+        lifecycleScope.launch {
+            val isValid = withContext(Dispatchers.IO) {
+                verifyCredentials(cleanUrl, ownerSecret)
+            }
+            if (isValid) {
+                val prefs = getSharedPreferences("admin_prefs", Context.MODE_PRIVATE)
+                prefs.edit()
+                    .putString("gateway_url", cleanUrl)
+                    .putString("portal_hash", cleanHash)
+                    .putString("owner_secret", ownerSecret)
+                    .apply()
+
+                Toast.makeText(this@SetupActivity, "Setup Completed Successfully!", Toast.LENGTH_SHORT).show()
+                startMainActivity()
+            } else {
                 binding.btnConnect.isEnabled = true
                 binding.btnConnect.text = getString(R.string.btn_connect)
-
-                if (isValid) {
-                    val prefs = getSharedPreferences("admin_prefs", Context.MODE_PRIVATE)
-                    prefs.edit()
-                        .putString("gateway_url", cleanUrl)
-                        .putString("portal_hash", cleanHash)
-                        .putString("owner_secret", ownerSecret)
-                        .apply()
-
-                    Toast.makeText(this@SetupActivity, "Setup Completed Successfully!", Toast.LENGTH_SHORT).show()
-                    startMainActivity()
-                } else {
-                    Toast.makeText(this@SetupActivity, R.string.error_connection_failed, Toast.LENGTH_LONG).show()
-                }
+                showError(getString(R.string.error_connection_failed))
             }
         }
+    }
+
+    private fun showError(message: String) {
+        binding.tvError.text = message
+        binding.tvError.visibility = View.VISIBLE
     }
 
     private fun verifyCredentials(url: String, secret: String): Boolean {

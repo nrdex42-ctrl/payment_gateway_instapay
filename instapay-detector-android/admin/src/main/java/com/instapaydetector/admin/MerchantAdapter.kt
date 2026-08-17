@@ -1,0 +1,129 @@
+package com.instapaydetector.admin
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.recyclerview.widget.RecyclerView
+import com.instapaydetector.admin.databinding.ItemMerchantCardBinding
+import org.json.JSONObject
+
+class MerchantAdapter(
+    private val context: Context,
+    private var items: List<JSONObject>,
+    private val onToggleActive: (id: String, currentActive: Boolean) -> Unit,
+    private val onDelete: (id: String) -> Unit
+) : RecyclerView.Adapter<MerchantAdapter.ViewHolder>() {
+
+    // Set of merchant IDs whose details are expanded
+    private val expandedIds = mutableSetOf<String>()
+
+    fun updateItems(newItems: List<JSONObject>) {
+        items = newItems
+        notifyDataSetChanged()
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val binding = ItemMerchantCardBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return ViewHolder(binding)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val item = items[position]
+        holder.bind(item)
+    }
+
+    override fun getItemCount(): Int = items.size
+
+    inner class ViewHolder(private val binding: ItemMerchantCardBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: JSONObject) {
+            val id = item.optString("id")
+            val businessName = item.optString("businessName")
+            val slug = item.optString("slug")
+            val instapayHandle = item.optString("instapayHandle")
+            val email = item.optString("email")
+            val apiKey = item.optString("apiKey", "")
+            val detectToken = item.optString("detectToken", "")
+            val isActive = item.optBoolean("isActive", true)
+            val approvalStatus = item.optString("approvalStatus", "APPROVED")
+            val confirmedVolume = item.optDouble("confirmedVolume", 0.0)
+            val totalTransactions = item.optInt("totalTransactions", 0)
+
+            binding.tvBusinessName.text = businessName
+            binding.tvSlug.text = "/$slug"
+            binding.tvHandle.text = instapayHandle
+            binding.tvEmail.text = email
+            binding.tvRevenue.text = String.format("%.2f", confirmedVolume)
+            binding.tvTxCount.text = context.getString(R.string.label_transactions_count, totalTransactions)
+
+            // Status styling
+            when (approvalStatus) {
+                "APPROVED" -> {
+                    binding.tvStatus.text = if (isActive) "ACTIVE" else "DISABLED"
+                    binding.tvStatus.setTextColor(context.getColor(if (isActive) R.color.status_confirmed else R.color.status_expired))
+                    binding.tvStatus.setBackgroundColor(context.getColor(if (isActive) R.color.status_confirmed_bg else R.color.status_expired_bg))
+                }
+                "PENDING" -> {
+                    binding.tvStatus.text = "PENDING"
+                    binding.tvStatus.setTextColor(context.getColor(R.color.status_pending))
+                    binding.tvStatus.setBackgroundColor(context.getColor(R.color.status_pending_bg))
+                }
+                else -> {
+                    binding.tvStatus.text = "REJECTED"
+                    binding.tvStatus.setTextColor(context.getColor(R.color.status_denied))
+                    binding.tvStatus.setBackgroundColor(context.getColor(R.color.status_denied_bg))
+                }
+            }
+
+            // Expanded logic for keys
+            val isExpanded = expandedIds.contains(id)
+            if (isExpanded && apiKey.isNotEmpty()) {
+                binding.keysSection.visibility = View.VISIBLE
+                binding.tvApiKey.text = apiKey
+                binding.tvDetectToken.text = detectToken
+            } else {
+                binding.keysSection.visibility = View.GONE
+            }
+
+            binding.root.setOnClickListener {
+                if (isExpanded) {
+                    expandedIds.remove(id)
+                } else {
+                    expandedIds.add(id)
+                }
+                notifyItemChanged(adapterPosition)
+            }
+
+            // Copy operations
+            binding.btnCopyApi.setOnClickListener {
+                copyToClipboard("InstaPay API Key", apiKey)
+            }
+
+            binding.btnCopyToken.setOnClickListener {
+                copyToClipboard("InstaPay APK Token", detectToken)
+            }
+
+            // Active/Inactive state toggle button representation
+            binding.btnToggle.setImageResource(if (isActive) R.drawable.ic_check_circle else R.drawable.ic_x_circle)
+            binding.btnToggle.setColorFilter(context.getColor(if (isActive) R.color.status_confirmed else R.color.status_expired))
+            binding.btnToggle.setOnClickListener {
+                onToggleActive(id, isActive)
+            }
+
+            // Delete operation
+            binding.btnDelete.setOnClickListener {
+                onDelete(id)
+            }
+        }
+
+        private fun copyToClipboard(label: String, text: String) {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText(label, text)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(context, context.getString(R.string.toast_copied), Toast.LENGTH_SHORT).show()
+        }
+    }
+}

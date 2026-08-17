@@ -1,12 +1,109 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">InstaPay Admin</string>
+
+    <!-- Setup Screen -->
     <string name="title_setup">InstaPay Admin Console</string>
     <string name="desc_setup">Connect this Android console to your hosted payment gateway instance.</string>
-    <string name="hint_gateway_url">Gateway Base URL (https://...)</string>
+    <string name="hint_gateway_url">Gateway Base URL (https://…)</string>
     <string name="hint_portal_hash">Admin Portal Hash (e.g. portal-path-hash)</string>
     <string name="hint_owner_secret">Owner Secret (OWNER_SECRET)</string>
     <string name="btn_connect">Connect &amp; Authenticate</string>
+    <string name="btn_verifying">Verifying…</string>
     <string name="error_invalid_fields">All fields are required and must be valid.</string>
     <string name="error_connection_failed">Connection failed. Check Server URL and credentials.</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_merchants">Merchants</string>
+    <string name="nav_transactions">Transactions</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Platform Overview</string>
+    <string name="dashboard_subtitle">Real-time gateway metrics</string>
+    <string name="stat_total_clients">Total Clients</string>
+    <string name="stat_revenue_today">Revenue (Today)</string>
+    <string name="stat_volume_7d">Volume (7 Days)</string>
+    <string name="stat_pending">Pending</string>
+    <string name="unit_egp">EGP</string>
+    <string name="label_active_accounts">%d active accounts</string>
+    <string name="label_transactions_count">%d transactions</string>
+    <string name="label_transaction_singular">%d transaction</string>
+    <string name="section_recent_transactions">Recent Transactions</string>
+    <string name="section_pending_approvals">Pending Approvals</string>
+    <string name="empty_recent_tx">No recent transactions found.</string>
+    <string name="empty_pending">No pending approvals.</string>
+
+    <!-- Merchants -->
+    <string name="merchants_title">Merchant Accounts</string>
+    <string name="btn_create_merchant">Create Merchant</string>
+    <string name="search_merchants">Search merchants…</string>
+    <string name="chip_all">All</string>
+    <string name="chip_active">Active</string>
+    <string name="chip_pending">Pending</string>
+    <string name="chip_rejected">Rejected</string>
+    <string name="label_instapay_handle">InstaPay Handle</string>
+    <string name="label_email">Email</string>
+    <string name="label_api_key">API Key</string>
+    <string name="label_detect_token">APK Token</string>
+    <string name="label_webhook_url">Webhook URL</string>
+    <string name="label_total_revenue">Total Revenue</string>
+    <string name="btn_approve">Approve</string>
+    <string name="btn_reject">Reject</string>
+    <string name="btn_delete">Delete</string>
+    <string name="btn_toggle_active">Toggle Active</string>
+    <string name="toast_copied">Copied to clipboard</string>
+    <string name="empty_merchants">No merchants found.</string>
+    <string name="confirm_delete_merchant">Are you sure you want to delete this merchant account?</string>
+    <string name="confirm_reject_merchant">Are you sure you want to reject this registration?</string>
+
+    <!-- Create Merchant Dialog -->
+    <string name="dialog_create_title">Create New Merchant</string>
+    <string name="hint_business_name">Business Name</string>
+    <string name="hint_instapay_handle">InstaPay Handle</string>
+    <string name="hint_email">Email Address</string>
+    <string name="hint_webhook_url">Webhook URL (optional)</string>
+    <string name="hint_checkout_ttl">Checkout TTL (minutes)</string>
+    <string name="btn_save_merchant">Save Merchant</string>
+    <string name="btn_cancel">Cancel</string>
+
+    <!-- Transactions -->
+    <string name="transactions_title">Platform Transactions</string>
+    <string name="search_transactions">Search by reference or handle…</string>
+    <string name="chip_confirmed">Confirmed</string>
+    <string name="chip_expired">Expired</string>
+    <string name="btn_export_csv">Export CSV</string>
+    <string name="btn_force_confirm">Force Confirm</string>
+    <string name="confirm_force_confirm">Are you sure you want to manually force-confirm this payment? This will directly confirm the transaction and trigger webhook notifications.</string>
+    <string name="toast_confirmed">Transaction confirmed successfully.</string>
+    <string name="toast_export_failed">Failed to export transactions.</string>
+    <string name="empty_transactions">No transactions found.</string>
+    <string name="label_sender">Sender</string>
+    <string name="label_recipient">Recipient</string>
+    <string name="label_amount">Amount</string>
+    <string name="label_reference">Reference</string>
+    <string name="label_detected_at">Detected At</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="section_timezone">Timezone &amp; DST Mode</string>
+    <string name="label_current_egypt_time">Current Egypt Time</string>
+    <string name="dst_auto">AUTO</string>
+    <string name="dst_summer">SUMMER</string>
+    <string name="dst_winter">WINTER</string>
+    <string name="section_connection">Server Connection</string>
+    <string name="label_gateway_url">Gateway URL</string>
+    <string name="label_portal_hash">Portal Hash</string>
+    <string name="section_account">Account</string>
+    <string name="btn_logout">Sign Out</string>
+    <string name="btn_reset_setup">Reset &amp; Reconnect</string>
+    <string name="confirm_logout">Are you sure you want to sign out?</string>
+    <string name="label_app_version">App Version</string>
+
+    <!-- General -->
+    <string name="btn_refresh">Refresh</string>
+    <string name="loading">Loading…</string>
+    <string name="error_network">Network error. Please try again.</string>
+    <string name="error_unauthorized">Session expired. Please sign in again.</string>
 </resources>
