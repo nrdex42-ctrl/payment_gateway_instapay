@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { formatEgyptTime } from '@/lib/timezone'
+import { formatEgyptTime, getEgyptDstMode } from '@/lib/timezone'
 import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
 
 /**
@@ -8,6 +8,7 @@ import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
  */
 export async function GET(request: NextRequest) {
   try {
+    const dstMode = await getEgyptDstMode()
     const { searchParams } = new URL(request.url)
     const q = searchParams.get('q')?.trim().toLowerCase() || ''
     const status = searchParams.get('status')?.toUpperCase()
@@ -104,11 +105,11 @@ export async function GET(request: NextRequest) {
         deepLinkToken: t.deepLinkToken,
         detectedRef: t.detectedRef,
         detectedAt: t.detectedAt?.toISOString() ?? null,
-        detectedAtEgypt: t.detectedAt ? formatEgyptTime(t.detectedAt) : null,
+        detectedAtEgypt: t.detectedAt ? formatEgyptTime(t.detectedAt, dstMode) : null,
         createdAt: t.createdAt.toISOString(),
-        createdAtEgypt: formatEgyptTime(t.createdAt),
+        createdAtEgypt: formatEgyptTime(t.createdAt, dstMode),
         expiresAt: t.expiresAt.toISOString(),
-        expiresAtEgypt: formatEgyptTime(t.expiresAt),
+        expiresAtEgypt: formatEgyptTime(t.expiresAt, dstMode),
       })),
       pagination: {
         limit,

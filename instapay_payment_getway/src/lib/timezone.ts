@@ -12,34 +12,43 @@ import { db } from '@/lib/db'
 export type EgyptDstMode = 'AUTO' | 'SUMMER' | 'WINTER'
 
 let activeDstMode: EgyptDstMode = 'AUTO'
-let isInitialized = false
+let cachedDstMode: EgyptDstMode | null = null
+let cacheExpiresAt = 0
 
-export function getEgyptDstMode(): EgyptDstMode {
-  if (!isInitialized) {
-    isInitialized = true
-    db.owner.findFirst({ select: { dstMode: true } })
-      .then((owner) => {
-        if (owner && owner.dstMode) {
-          activeDstMode = owner.dstMode as EgyptDstMode
-        }
-      })
-      .catch(() => {
-        // Database not initialized yet or in build phase
-      })
+export async function getEgyptDstMode(): Promise<EgyptDstMode> {
+  const now = Date.now()
+  if (cachedDstMode && now < cacheExpiresAt) {
+    activeDstMode = cachedDstMode
+    return cachedDstMode
   }
-  return activeDstMode
+  try {
+    const owner = await db.owner.findFirst({ select: { dstMode: true } })
+    if (owner && owner.dstMode) {
+      cachedDstMode = owner.dstMode as EgyptDstMode
+    } else {
+      cachedDstMode = 'AUTO'
+    }
+  } catch {
+    cachedDstMode = cachedDstMode || 'AUTO'
+  }
+  activeDstMode = cachedDstMode
+  cacheExpiresAt = now + 5000 // Cache for 5 seconds to avoid DB spam
+  return cachedDstMode
 }
 
-export function setEgyptDstMode(mode: EgyptDstMode): EgyptDstMode {
+export async function setEgyptDstMode(mode: EgyptDstMode): Promise<EgyptDstMode> {
   if (['AUTO', 'SUMMER', 'WINTER'].includes(mode)) {
+    cachedDstMode = mode
     activeDstMode = mode
-    db.owner.updateMany({
-      data: { dstMode: mode }
-    }).catch(() => {
+    try {
+      await db.owner.updateMany({
+        data: { dstMode: mode }
+      })
+    } catch {
       // ignore
-    })
+    }
   }
-  return activeDstMode
+  return mode
 }
 
 /**

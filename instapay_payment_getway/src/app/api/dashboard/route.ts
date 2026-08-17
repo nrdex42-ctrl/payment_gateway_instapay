@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
     }
 
     const now = new Date()
-    const startOfToday = getStartOfTodayEgypt(now)
+    const dstMode = await getEgyptDstMode()
+    const startOfToday = getStartOfTodayEgypt(now, dstMode)
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
     const whereClause: Record<string, unknown> = {
@@ -105,7 +106,6 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
-    const dstMode = getEgyptDstMode()
     const offsetMinutes = getEgyptOffsetMinutes(now, dstMode)
 
     return NextResponse.json({
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
         timeZone: 'Africa/Cairo',
         dstMode,
         dstActive: offsetMinutes === 180,
-        currentEgyptTime: formatEgyptTime(now),
+        currentEgyptTime: formatEgyptTime(now, dstMode),
       },
       merchant: {
         handle: client ? client.instapayHandle : 'All Clients',
@@ -144,9 +144,9 @@ export async function GET(request: NextRequest) {
         note: t.note,
         detectedRef: t.detectedRef,
         detectedAt: t.detectedAt?.toISOString() ?? null,
-        detectedAtEgypt: t.detectedAt ? formatEgyptTime(t.detectedAt) : null,
+        detectedAtEgypt: t.detectedAt ? formatEgyptTime(t.detectedAt, dstMode) : null,
         createdAt: t.createdAt.toISOString(),
-        createdAtEgypt: formatEgyptTime(t.createdAt),
+        createdAtEgypt: formatEgyptTime(t.createdAt, dstMode),
       })),
     })
   } catch (err) {

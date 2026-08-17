@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getEgyptDayKey } from '@/lib/timezone'
+import { getEgyptDayKey, getEgyptDstMode } from '@/lib/timezone'
 import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
 
 /**
@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     const now = new Date()
+    const dstMode = await getEgyptDstMode()
     const startDate = new Date(now)
     startDate.setDate(startDate.getDate() - (days - 1))
     startDate.setHours(0, 0, 0, 0)
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     for (const row of rows) {
       if (!row.detectedAt) continue
-      const dayKey = getEgyptDayKey(row.detectedAt)
+      const dayKey = getEgyptDayKey(row.detectedAt, dstMode)
       const entry = dayMap.get(dayKey) || { totalEgp: 0, count: 0 }
       entry.totalEgp += row.amountEgp
       entry.count += 1
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
     const series: Array<{ date: string; totalEgp: number; count: number }> = []
     const cursor = new Date(startDate)
     while (cursor <= now) {
-      const dayKey = getEgyptDayKey(cursor)
+      const dayKey = getEgyptDayKey(cursor, dstMode)
       const entry = dayMap.get(dayKey) || { totalEgp: 0, count: 0 }
       series.push({
         date: dayKey,
