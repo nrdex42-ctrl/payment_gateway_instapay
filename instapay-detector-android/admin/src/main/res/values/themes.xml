@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme. -->
+    <style name="Theme.InstaPayAdmin" parent="Theme.MaterialComponents.DayNight">
+        <!-- Dark sleek branding colors -->
+        <item name="colorPrimary">#0D0E12</item>
+        <item name="colorPrimaryVariant">#1A1D24</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#3B82F6</item>
+        <item name="colorSecondaryVariant">#2563EB</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        
+        <!-- Status bar styling -->
+        <item name="android:statusBarColor">#0D0E12</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Support transparent/NoActionBar layout -->
+    <style name="Theme.InstaPayAdmin.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="colorPrimary">#0D0E12</item>
+        <item name="colorPrimaryVariant">#1A1D24</item>
+        <item name="colorSecondary">#3B82F6</item>
+        <item name="android:statusBarColor">#0D0E12</item>
+    </style>
+</resources>

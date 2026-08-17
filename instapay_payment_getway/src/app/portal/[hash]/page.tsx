@@ -1283,6 +1283,29 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
               </div>
             </div>
 
+            {/* Admin App download card */}
+            <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-neutral-400" />
+                <h3 className="text-sm font-bold text-white">Administrative Android App</h3>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <p className="text-neutral-400 leading-normal">
+                  Manage approved merchants, view system transaction feeds, and override checkout statuses directly from your phone.
+                </p>
+
+                <a
+                  href="/apks/InstaPay-Admin.apk"
+                  download
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-neutral-950 hover:bg-neutral-900 border border-neutral-900 text-white transition-all"
+                >
+                  <Download className="h-3.5 w-3.5 text-blue-500" />
+                  Download Admin APK
+                </a>
+              </div>
+            </div>
+
           </div>
         </div>
       </main>

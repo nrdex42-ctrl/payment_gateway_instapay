@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">InstaPay Admin</string>
+    <string name="title_setup">InstaPay Admin Console</string>
+    <string name="desc_setup">Connect this Android console to your hosted payment gateway instance.</string>
+    <string name="hint_gateway_url">Gateway Base URL (https://...)</string>
+    <string name="hint_portal_hash">Admin Portal Hash (e.g. portal-path-hash)</string>
+    <string name="hint_owner_secret">Owner Secret (OWNER_SECRET)</string>
+    <string name="btn_connect">Connect &amp; Authenticate</string>
+    <string name="error_invalid_fields">All fields are required and must be valid.</string>
+    <string name="error_connection_failed">Connection failed. Check Server URL and credentials.</string>
+</resources>
