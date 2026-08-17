@@ -19,6 +19,7 @@ model Owner {
   email        String   @unique
   name         String
   passwordHash String
+  dstMode      String   @default("AUTO")
   createdAt    DateTime @default(now())
 }
 

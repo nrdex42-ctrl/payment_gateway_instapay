@@ -99,6 +99,10 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
 
   const [copiedText, setCopiedText] = useState<string | null>(null)
 
+  const [dstMode, setDstMode] = useState<'AUTO' | 'SUMMER' | 'WINTER'>('AUTO')
+  const [currentEgyptTime, setCurrentEgyptTime] = useState('')
+  const [updatingSettings, setUpdatingSettings] = useState(false)
+
   useEffect(() => {
     const saved = localStorage.getItem('owner_secret_token')
     if (saved) {
@@ -151,6 +155,9 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
       const clientsRes = await fetch('/api/admin/clients', { headers })
       const clientsData = await clientsRes.json()
 
+      const settingsRes = await fetch('/api/settings', { headers })
+      const settingsData = await settingsRes.json()
+
       if (statsData.ok && clientsData.ok) {
         setPlatformStats(statsData.stats)
         setRecentTx(statsData.recent)
@@ -159,6 +166,11 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
         if (statsRes.status === 401 || clientsRes.status === 401) {
           handleLogout()
         }
+      }
+
+      if (settingsData && settingsData.ok) {
+        setDstMode(settingsData.dstMode)
+        setCurrentEgyptTime(settingsData.currentEgyptTime)
       }
     } catch (err) {
       console.error(err)
@@ -202,6 +214,30 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
       setModalError('Connection error.')
     } finally {
       setSavingClient(false)
+    }
+  }
+
+  const handleUpdateDstMode = async (newMode: 'AUTO' | 'SUMMER' | 'WINTER') => {
+    setUpdatingSettings(true)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ dstMode: newMode }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setDstMode(data.dstMode)
+        setCurrentEgyptTime(data.currentEgyptTime)
+        loadData()
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setUpdatingSettings(false)
     }
   }
 
@@ -664,6 +700,52 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                 </div>
               </ScrollArea>
             </div>
+
+            {/* System settings card */}
+            <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Settings className="h-4 w-4 text-neutral-400" />
+                <h3 className="text-sm font-bold text-white">System Timezone & DST</h3>
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div className="bg-neutral-950/60 p-3.5 rounded-xl border border-neutral-900 space-y-2">
+                  <div className="flex justify-between text-neutral-400">
+                    <span>Region Timezone</span>
+                    <span className="text-white font-semibold">Africa/Cairo</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-400 border-t border-neutral-900/60 pt-2">
+                    <span>Current Egypt Time</span>
+                    <span className="text-violet-400 font-mono font-bold">{currentEgyptTime || 'Loading...'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-neutral-400 block font-medium">Egypt DST / Summer Time Control</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['AUTO', 'SUMMER', 'WINTER'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        disabled={updatingSettings}
+                        onClick={() => handleUpdateDstMode(mode)}
+                        className={`py-2 px-1 rounded-xl text-[10px] font-bold border transition-all ${
+                          dstMode === mode
+                            ? 'bg-violet-600/10 border-violet-500 text-violet-400'
+                            : 'bg-neutral-950/40 border-neutral-900 text-neutral-400 hover:border-neutral-800'
+                        }`}
+                      >
+                        {mode === 'AUTO' ? 'Auto (Cairo)' : mode === 'SUMMER' ? 'Forced Summer' : 'Forced Winter'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-neutral-600 leading-normal">
+                    * AUTO uses standard laws (UTC+3 Summer, UTC+2 Winter). Force overrides DST mode globally across dashboard statistics and lists.
+                  </p>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </main>

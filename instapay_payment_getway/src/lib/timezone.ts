@@ -7,17 +7,37 @@
  *   - 'WINTER' : Forced Egypt Winter Time (UTC+2 / EET)
  */
 
+import { db } from '@/lib/db'
+
 export type EgyptDstMode = 'AUTO' | 'SUMMER' | 'WINTER'
 
 let activeDstMode: EgyptDstMode = 'AUTO'
+let isInitialized = false
 
 export function getEgyptDstMode(): EgyptDstMode {
+  if (!isInitialized) {
+    isInitialized = true
+    db.owner.findFirst({ select: { dstMode: true } })
+      .then((owner) => {
+        if (owner && owner.dstMode) {
+          activeDstMode = owner.dstMode as EgyptDstMode
+        }
+      })
+      .catch(() => {
+        // Database not initialized yet or in build phase
+      })
+  }
   return activeDstMode
 }
 
 export function setEgyptDstMode(mode: EgyptDstMode): EgyptDstMode {
   if (['AUTO', 'SUMMER', 'WINTER'].includes(mode)) {
     activeDstMode = mode
+    db.owner.updateMany({
+      data: { dstMode: mode }
+    }).catch(() => {
+      // ignore
+    })
   }
   return activeDstMode
 }
