@@ -50,6 +50,11 @@ model Client {
   // Settings
   checkoutTtlMin Int @default(10)
 
+  // Subscription & Free Trial
+  subscriptionPlan   String    @default("FREE_TRIAL")
+  subscriptionEndsAt DateTime?
+  isFreeTrial        Boolean   @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

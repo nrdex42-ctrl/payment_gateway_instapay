@@ -143,6 +143,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (client.subscriptionEndsAt && new Date(client.subscriptionEndsAt).getTime() < Date.now()) {
+      return NextResponse.json(
+        { ok: false, error: 'Payment Required. Your subscription or free trial has ended.' },
+        { status: 402 }
+      )
+    }
+
     // --- Parse incoming payload ---
     const body = (await request.json()) as WebhookBody
 

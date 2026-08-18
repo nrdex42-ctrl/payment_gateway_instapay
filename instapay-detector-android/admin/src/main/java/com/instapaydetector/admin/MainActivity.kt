@@ -17,7 +17,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // Load configs
-        val prefs = getSharedPreferences("admin_prefs", Context.MODE_PRIVATE)
+        val prefs = ApiClient.getPrefs(this)
         val gatewayUrl = prefs.getString("gateway_url", "") ?: ""
         val portalHash = prefs.getString("portal_hash", "") ?: ""
 

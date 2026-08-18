@@ -91,7 +91,11 @@ class TransactionsFragment : Fragment() {
     private fun loadTransactions() {
         lifecycleScope.launch {
             val encodedQuery = URLEncoder.encode(searchQuery, "UTF-8")
-            val path = "/api/transactions?q=$encodedQuery&status=$statusFilter"
+            var path = "/api/transactions?q=$encodedQuery&status=$statusFilter"
+            val clientId = arguments?.getString("clientId")
+            if (!clientId.isNullOrEmpty()) {
+                path += "&clientId=$clientId"
+            }
             val response = ApiClient.get(requireContext(), path)
             binding.swipeRefresh.isRefreshing = false
             if (response.isSuccessful && response.json != null) {
@@ -136,7 +140,11 @@ class TransactionsFragment : Fragment() {
         if (gatewayUrl.isEmpty() || secret.isEmpty()) return
 
         val encodedQuery = URLEncoder.encode(searchQuery, "UTF-8")
-        val exportUrl = "$gatewayUrl/api/transactions/export?q=$encodedQuery&status=$statusFilter"
+        var exportUrl = "$gatewayUrl/api/transactions/export?q=$encodedQuery&status=$statusFilter"
+        val clientId = arguments?.getString("clientId")
+        if (!clientId.isNullOrEmpty()) {
+            exportUrl += "&clientId=$clientId"
+        }
 
         try {
             val request = DownloadManager.Request(Uri.parse(exportUrl))

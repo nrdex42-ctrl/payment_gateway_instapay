@@ -9,7 +9,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { secret } = body || {}
 
-    const ownerSecret = process.env.OWNER_SECRET || 'owner-sandbox-secret-token-2026'
+    const ownerSecret = process.env.OWNER_SECRET
+    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
 
     if (!secret || secret !== ownerSecret) {
       return NextResponse.json(

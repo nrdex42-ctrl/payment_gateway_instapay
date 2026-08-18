@@ -49,7 +49,11 @@ interface SessionPayload {
 }
 
 function getOwnerSecret(): string {
-  return process.env.OWNER_SECRET || OWNER_SECRET_DEFAULT
+  const secret = process.env.OWNER_SECRET
+  if (!secret) {
+    throw new Error('OWNER_SECRET environment variable is missing. Authentication disabled for security.')
+  }
+  return secret
 }
 
 /**

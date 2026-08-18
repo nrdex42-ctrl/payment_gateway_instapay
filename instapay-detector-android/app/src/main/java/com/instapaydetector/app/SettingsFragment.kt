@@ -194,16 +194,21 @@ class SettingsFragment : Fragment() {
 
         MainScope().launch {
             val client = GatewayClient(requireContext())
-            val ok = client.reportPayment(
+            val result = client.reportPayment(
                 amountEgp = fakeAmount,
                 senderHandle = fakeSender,
                 recipientHandle = fakeRecipient,
                 reference = "TEST-${System.currentTimeMillis() / 1000}",
                 notificationTimestampIso = Date().toInstant().toString()
             )
+            val toastMsg = when (result) {
+                ReportResult.SUCCESS -> "Test webhook sent — check dashboard"
+                ReportResult.SUBSCRIPTION_ENDED -> "Test failed — Trial/Subscription Ended"
+                ReportResult.ERROR -> "Webhook POST failed — check URL/token"
+            }
             Toast.makeText(
                 requireContext(),
-                if (ok) "Test webhook sent — check dashboard" else "Webhook POST failed — check URL/token",
+                toastMsg,
                 Toast.LENGTH_LONG
             ).show()
             refreshPermissionStatus()

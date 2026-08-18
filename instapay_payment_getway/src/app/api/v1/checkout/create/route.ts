@@ -23,6 +23,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (client.subscriptionEndsAt && new Date(client.subscriptionEndsAt).getTime() < Date.now()) {
+      return NextResponse.json(
+        { ok: false, error: 'Payment Required. Your subscription or free trial has ended.' },
+        { status: 402 }
+      )
+    }
+
     const body = await request.json()
     const { amountEgp, senderHandle, note } = body || {}
 

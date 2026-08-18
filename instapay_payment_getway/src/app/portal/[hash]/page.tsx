@@ -52,6 +52,9 @@ interface ClientStats {
   createdAt: string
   totalTransactions: number
   confirmedVolume: number
+  subscriptionPlan: string
+  isFreeTrial: boolean
+  subscriptionEndsAt: string | null
 }
 
 interface PlatformStats {
@@ -76,7 +79,7 @@ interface RecentTx {
 
 export default function AdminPortalPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = use(params)
-  const expectedHash = process.env.NEXT_PUBLIC_ADMIN_PORTAL_PATH || 'secure-control-shabana-88123'
+  const expectedHash = process.env.NEXT_PUBLIC_ADMIN_PORTAL_PATH
 
   // Security through obscurity verification
   if (hash !== expectedHash) {
@@ -454,6 +457,44 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
     }
   }
 
+  const handleUpdateSubscription = async (id: string, plan: string, isTrial: boolean, addDays: number) => {
+    try {
+      const client = clients.find(c => c.id === id)
+      if (!client) return
+      
+      let newDate: Date | null = null
+      if (addDays > 0) {
+         const baseDate = client.subscriptionEndsAt && new Date(client.subscriptionEndsAt).getTime() > Date.now() 
+                          ? new Date(client.subscriptionEndsAt) 
+                          : new Date()
+         newDate = new Date(baseDate.getTime() + addDays * 24 * 60 * 60 * 1000)
+      } else if (addDays < 0) {
+         newDate = new Date(Date.now() - 24 * 60 * 60 * 1000) // expired yesterday
+      } else {
+         newDate = client.subscriptionEndsAt ? new Date(client.subscriptionEndsAt) : null
+      }
+
+      const res = await fetch(`/api/admin/clients/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          subscriptionPlan: plan,
+          isFreeTrial: isTrial,
+          subscriptionEndsAt: newDate?.toISOString() || null
+        }),
+      })
+      if (res.ok) {
+        alert(`Subscription updated successfully!`)
+        loadData()
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text)
     setCopiedText(label)
@@ -725,6 +766,25 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                               {c.isActive ? <CheckCircle className="h-2.5 w-2.5" /> : <XCircle className="h-2.5 w-2.5" />}
                               {c.isActive ? 'Active' : 'Disabled'}
                             </span>
+                            
+                            {/* Subscription Badge */}
+                            {(() => {
+                              const isExpired = c.subscriptionEndsAt && new Date(c.subscriptionEndsAt).getTime() < Date.now()
+                              if (isExpired) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                                    <AlertCircle className="h-2.5 w-2.5" />
+                                    Expired
+                                  </span>
+                                )
+                              }
+                              return (
+                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${c.isFreeTrial ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30'} border`}>
+                                  <Calendar className="h-2.5 w-2.5" />
+                                  {c.subscriptionPlan}
+                                </span>
+                              )
+                            })()}
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-neutral-400">
@@ -735,6 +795,12 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                             <div>
                               <span className="text-neutral-600 font-medium">Email Address:</span>{' '}
                               <span className="font-mono font-semibold text-neutral-300">{c.email}</span>
+                            </div>
+                            <div>
+                              <span className="text-neutral-600 font-medium">Subscription Ends:</span>{' '}
+                              <span className="font-mono font-semibold text-neutral-300">
+                                {c.subscriptionEndsAt ? new Date(c.subscriptionEndsAt).toLocaleDateString() : 'Lifetime'}
+                              </span>
                             </div>
                           </div>
 
@@ -797,7 +863,49 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                             <span className="text-[10px] text-neutral-500 block">{c.totalTransactions} transactions</span>
                           </div>
 
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex flex-col gap-1.5 w-full md:w-auto mt-3 md:mt-0 items-end">
+                            {/* Subscription Actions */}
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                               <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUpdateSubscription(c.id, 'FREE_TRIAL', true, 1)}
+                                  className="h-6 rounded text-[10px] bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500 hover:text-amber-950 px-2"
+                                >
+                                  +1 Day Trial
+                               </Button>
+                               <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUpdateSubscription(c.id, 'PRO', false, 30)}
+                                  className="h-6 rounded text-[10px] bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30 hover:bg-fuchsia-500 hover:text-white px-2"
+                                >
+                                  +30 Days Pro
+                               </Button>
+                               <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUpdateSubscription(c.id, 'EXPIRED', false, -9999)}
+                                  className="h-6 rounded text-[10px] bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500 hover:text-white px-2"
+                                >
+                                  End Sub
+                               </Button>
+                            </div>
+
+                            {/* Standard Actions */}
+                            <div className="flex items-center gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setTxFilters({ q: '', status: '', minAmount: '', maxAmount: '', startDate: '', endDate: '', clientId: c.id })
+                                setActiveTab('transactions')
+                              }}
+                              className="h-8 rounded-lg text-neutral-400 hover:text-violet-400 hover:bg-violet-500/10"
+                            >
+                              <Activity className="h-4 w-4 mr-1.5" />
+                              Transactions
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -840,7 +948,11 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/30 p-4 rounded-2xl border border-neutral-900">
                   <div className="space-y-0.5">
-                    <h3 className="text-sm font-bold text-white">All Platform Transactions</h3>
+                    <h3 className="text-sm font-bold text-white">
+                      {txFilters.clientId 
+                        ? `Transactions for ${clients.find(c => c.id === txFilters.clientId)?.businessName || 'Merchant'}` 
+                        : 'All Platform Transactions'}
+                    </h3>
                     <p className="text-xs text-neutral-500 font-medium">Search and audit checkouts across the entire payment platform.</p>
                   </div>
                   <Button

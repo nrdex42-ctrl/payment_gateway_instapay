@@ -62,7 +62,15 @@ class MerchantsFragment : Fragment() {
     private fun setupRecyclerView() {
         adapter = MerchantAdapter(requireContext(), filteredMerchants,
             onToggleActive = { id, currentActive -> toggleMerchantStatus(id, currentActive) },
-            onDelete = { id -> deleteMerchant(id) }
+            onDelete = { id -> deleteMerchant(id) },
+            onEditSubscription = { id -> showEditSubscriptionDialog(id) },
+            onViewTransactions = { id, businessName ->
+                val intent = android.content.Intent(requireContext(), MerchantTransactionsActivity::class.java).apply {
+                    putExtra("CLIENT_ID", id)
+                    putExtra("BUSINESS_NAME", businessName)
+                }
+                startActivity(intent)
+            }
         )
         binding.rvMerchants.layoutManager = LinearLayoutManager(requireContext())
         binding.rvMerchants.adapter = adapter
@@ -174,6 +182,65 @@ class MerchantsFragment : Fragment() {
                 }
             }
             .show()
+    }
+
+    private fun showEditSubscriptionDialog(id: String) {
+        val options = arrayOf("+1 Day Free Trial", "+30 Days Pro", "Expire Immediately")
+        AlertDialog.Builder(requireContext())
+            .setTitle("Manage Subscription")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> updateSubscription(id, "FREE_TRIAL", true, 1)
+                    1 -> updateSubscription(id, "PRO", false, 30)
+                    2 -> updateSubscription(id, "EXPIRED", false, -9999)
+                }
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
+    }
+
+    private fun updateSubscription(id: String, plan: String, isTrial: Boolean, addDays: Int) {
+        val client = allMerchants.find { it.optString("id") == id } ?: return
+        
+        var newDate: Long? = null
+        if (addDays > 0) {
+            val endsStr = client.optString("subscriptionEndsAt", "")
+            var baseTime = System.currentTimeMillis()
+            if (endsStr.isNotEmpty() && endsStr != "null") {
+                try {
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+                    val date = sdf.parse(endsStr)
+                    if (date != null && date.time > baseTime) {
+                        baseTime = date.time
+                    }
+                } catch (e: Exception) {}
+            }
+            newDate = baseTime + addDays * 24L * 60L * 60L * 1000L
+        } else if (addDays < 0) {
+            newDate = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
+        }
+
+        lifecycleScope.launch {
+            binding.swipeRefresh.isRefreshing = true
+            val body = JSONObject().apply {
+                put("subscriptionPlan", plan)
+                put("isFreeTrial", isTrial)
+                if (newDate != null) {
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
+                    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                    put("subscriptionEndsAt", sdf.format(java.util.Date(newDate)))
+                } else {
+                    put("subscriptionEndsAt", JSONObject.NULL)
+                }
+            }
+            val response = ApiClient.patch(requireContext(), "/api/admin/clients/$id", body)
+            if (response.isSuccessful) {
+                loadMerchants()
+            } else {
+                binding.swipeRefresh.isRefreshing = false
+                Toast.makeText(requireContext(), response.errorMessage ?: "Failed to update sub", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun handleUnauthorized() {

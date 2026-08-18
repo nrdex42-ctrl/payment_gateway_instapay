@@ -73,6 +73,9 @@ export async function POST(request: NextRequest) {
         isActive: false, // inactive until approved
         apiKey: null,
         detectToken: null,
+        subscriptionPlan: 'FREE_TRIAL',
+        isFreeTrial: true,
+        subscriptionEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day from now
       },
     })
 

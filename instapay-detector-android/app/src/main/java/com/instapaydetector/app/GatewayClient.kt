@@ -11,6 +11,12 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
+enum class ReportResult {
+    SUCCESS,
+    SUBSCRIPTION_ENDED,
+    ERROR
+}
+
 /**
  * Sends a parsed InstaPay notification to the gateway webhook.
  *
@@ -19,7 +25,7 @@ import java.util.concurrent.TimeUnit
  *          Content-Type: application/json
  * Body: { "amountEgp": 1.00, "senderHandle": "ahmed@instapay", "reference": "...", "notificationTimestamp": "..." }
  *
- * Returns true if the gateway accepted the report (HTTP 2xx), false otherwise.
+ * Returns ReportResult indicating the outcome.
  */
 class GatewayClient(ctx: Context) {
 
@@ -37,17 +43,17 @@ class GatewayClient(ctx: Context) {
         recipientHandle: String?,
         reference: String?,
         notificationTimestampIso: String
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): ReportResult = withContext(Dispatchers.IO) {
         val url = config.gatewayUrl
         val token = config.authToken
 
         if (url.isBlank() || token.isBlank()) {
             Log.e(TAG, "Gateway URL or token is blank. Configure them in the app settings.")
-            return@withContext false
+            return@withContext ReportResult.ERROR
         }
         if (senderHandle.isNullOrBlank()) {
             Log.e(TAG, "senderHandle is blank — cannot report payment.")
-            return@withContext false
+            return@withContext ReportResult.ERROR
         }
 
         val payload = JSONObject().apply {
@@ -81,11 +87,17 @@ class GatewayClient(ctx: Context) {
                         }
                     })"
                 )
-                response.isSuccessful
+                if (response.code == 402 || response.code == 403) {
+                    ReportResult.SUBSCRIPTION_ENDED
+                } else if (response.isSuccessful) {
+                    ReportResult.SUCCESS
+                } else {
+                    ReportResult.ERROR
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to POST to gateway webhook: ${e.message}", e)
-            false
+            ReportResult.ERROR
         }
     }
 

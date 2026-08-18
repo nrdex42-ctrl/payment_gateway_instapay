@@ -9,7 +9,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const isOwner = await authenticateOwner(request)
   const resolvedParams = await params
   if (!isOwner) {
-    const ownerSecret = process.env.OWNER_SECRET || 'owner-sandbox-secret-token-2026'
+    const ownerSecret = process.env.OWNER_SECRET
+    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
     const authHeader = request.headers.get('authorization') || ''
     const provided = authHeader.replace(/^Bearer\s+/, '').trim()
     if (provided !== ownerSecret) {
@@ -20,7 +21,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   try {
     const { id } = resolvedParams
     const body = await request.json()
-    const { businessName, instapayHandle, webhookUrl, checkoutTtlMin, isActive } = body || {}
+    const { businessName, instapayHandle, webhookUrl, checkoutTtlMin, isActive, subscriptionPlan, isFreeTrial, subscriptionEndsAt } = body || {}
 
     const client = await db.client.findUnique({ where: { id } })
     if (!client) {
@@ -32,6 +33,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (webhookUrl !== undefined) data.webhookUrl = webhookUrl ? String(webhookUrl).trim() : null
     if (checkoutTtlMin !== undefined) data.checkoutTtlMin = Number(checkoutTtlMin)
     if (isActive !== undefined) data.isActive = Boolean(isActive)
+    if (subscriptionPlan !== undefined) data.subscriptionPlan = String(subscriptionPlan).trim()
+    if (isFreeTrial !== undefined) data.isFreeTrial = Boolean(isFreeTrial)
+    if (subscriptionEndsAt !== undefined) {
+      data.subscriptionEndsAt = subscriptionEndsAt ? new Date(subscriptionEndsAt as string | number) : null
+    }
 
     if (instapayHandle !== undefined) {
       let handle = String(instapayHandle).trim().toLowerCase().replace(/^@/, '')
@@ -69,7 +75,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const isOwner = await authenticateOwner(request)
   const resolvedParams = await params
   if (!isOwner) {
-    const ownerSecret = process.env.OWNER_SECRET || 'owner-sandbox-secret-token-2026'
+    const ownerSecret = process.env.OWNER_SECRET
+    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
     const authHeader = request.headers.get('authorization') || ''
     const provided = authHeader.replace(/^Bearer\s+/, '').trim()
     if (provided !== ownerSecret) {

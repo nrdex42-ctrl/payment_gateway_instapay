@@ -15,7 +15,9 @@ class MerchantAdapter(
     private val context: Context,
     private var items: List<JSONObject>,
     private val onToggleActive: (id: String, currentActive: Boolean) -> Unit,
-    private val onDelete: (id: String) -> Unit
+    private val onDelete: (id: String) -> Unit,
+    private val onEditSubscription: ((id: String) -> Unit)? = null,
+    private val onViewTransactions: ((id: String, businessName: String) -> Unit)? = null
 ) : RecyclerView.Adapter<MerchantAdapter.ViewHolder>() {
 
     // Set of merchant IDs whose details are expanded
@@ -51,6 +53,9 @@ class MerchantAdapter(
             val approvalStatus = item.optString("approvalStatus", "APPROVED")
             val confirmedVolume = item.optDouble("confirmedVolume", 0.0)
             val totalTransactions = item.optInt("totalTransactions", 0)
+            val subscriptionPlan = item.optString("subscriptionPlan", "TRIAL")
+            val isFreeTrial = item.optBoolean("isFreeTrial", true)
+            val subscriptionEndsAt = item.optString("subscriptionEndsAt", "")
 
             binding.tvBusinessName.text = businessName
             binding.tvSlug.text = "/$slug"
@@ -76,6 +81,49 @@ class MerchantAdapter(
                     binding.tvStatus.setTextColor(context.getColor(R.color.status_denied))
                     binding.tvStatus.setBackgroundColor(context.getColor(R.color.status_denied_bg))
                 }
+            }
+
+            // Subscription rendering
+            binding.tvSubscription.text = if (isFreeTrial) "TRIAL" else subscriptionPlan.uppercase()
+            binding.tvSubscription.setTextColor(context.getColor(if (isFreeTrial) R.color.status_pending else R.color.status_confirmed))
+            binding.tvSubscription.setBackgroundColor(context.getColor(if (isFreeTrial) R.color.status_pending_bg else R.color.status_confirmed_bg))
+
+            var isExpired = false
+            if (subscriptionEndsAt.isNotEmpty() && subscriptionEndsAt != "null") {
+                try {
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+                    val date = sdf.parse(subscriptionEndsAt)
+                    if (date != null) {
+                        val displayFormat = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.US)
+                        binding.tvSubscriptionEnds.text = displayFormat.format(date)
+                        if (date.time < System.currentTimeMillis()) {
+                            isExpired = true
+                        }
+                    } else {
+                        binding.tvSubscriptionEnds.text = "Lifetime"
+                    }
+                } catch (e: Exception) {
+                    binding.tvSubscriptionEnds.text = "Lifetime"
+                }
+            } else {
+                binding.tvSubscriptionEnds.text = "Lifetime"
+            }
+
+            if (isExpired) {
+                binding.tvSubscription.text = "EXPIRED"
+                binding.tvSubscription.setTextColor(context.getColor(R.color.status_denied))
+                binding.tvSubscription.setBackgroundColor(context.getColor(R.color.status_denied_bg))
+                binding.tvSubscriptionEnds.setTextColor(context.getColor(R.color.status_denied))
+            } else {
+                binding.tvSubscriptionEnds.setTextColor(context.getColor(R.color.text_secondary))
+            }
+
+            binding.btnEditSubscription.setOnClickListener {
+                onEditSubscription?.invoke(id)
+            }
+
+            binding.btnViewTransactions.setOnClickListener {
+                onViewTransactions?.invoke(id, businessName)
             }
 
             // Expanded logic for keys

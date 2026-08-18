@@ -20,23 +20,37 @@ object ApiClient {
     private const val PREFS_NAME = "admin_prefs"
     private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
+    fun getPrefs(context: Context): android.content.SharedPreferences {
+        val masterKey = androidx.security.crypto.MasterKey.Builder(context)
+            .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        return androidx.security.crypto.EncryptedSharedPreferences.create(
+            context,
+            PREFS_NAME,
+            masterKey,
+            androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
     fun getGatewayUrl(context: Context): String {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = getPrefs(context)
         return prefs.getString("gateway_url", "") ?: ""
     }
 
     fun getPortalHash(context: Context): String {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = getPrefs(context)
         return prefs.getString("portal_hash", "") ?: ""
     }
 
     fun getOwnerSecret(context: Context): String {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = getPrefs(context)
         return prefs.getString("owner_secret", "") ?: ""
     }
 
     fun clearPrefs(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = getPrefs(context)
         prefs.edit().clear().apply()
     }
 

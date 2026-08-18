@@ -24,7 +24,7 @@ class SetupActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // Redirect if already configured
-        val prefs = getSharedPreferences("admin_prefs", Context.MODE_PRIVATE)
+        val prefs = ApiClient.getPrefs(this)
         val gatewayUrl = prefs.getString("gateway_url", null)
         val portalHash = prefs.getString("portal_hash", null)
         val ownerSecret = prefs.getString("owner_secret", null)
@@ -70,7 +70,7 @@ class SetupActivity : AppCompatActivity() {
                 verifyCredentials(cleanUrl, ownerSecret)
             }
             if (isValid) {
-                val prefs = getSharedPreferences("admin_prefs", Context.MODE_PRIVATE)
+                val prefs = ApiClient.getPrefs(this@SetupActivity)
                 prefs.edit()
                     .putString("gateway_url", cleanUrl)
                     .putString("portal_hash", cleanHash)

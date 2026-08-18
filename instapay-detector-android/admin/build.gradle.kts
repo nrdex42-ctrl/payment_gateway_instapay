@@ -30,7 +30,7 @@ android {
             isMinifyEnabled = false
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -74,4 +74,7 @@ dependencies {
     
     // Coroutines for background verification
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // Security
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 }
