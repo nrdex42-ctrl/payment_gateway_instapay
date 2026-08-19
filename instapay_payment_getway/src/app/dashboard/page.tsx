@@ -21,7 +21,11 @@ import {
   Terminal,
   TrendingUp,
   Wallet,
-  Smartphone
+  Smartphone,
+  Filter,
+  Eye,
+  Search,
+  CheckCircle2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -92,6 +96,16 @@ export default function MerchantDashboardPage() {
   // Copy state
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null)
 
+  // Advanced features states
+  const [activeTab, setActiveTab] = useState<'integration' | 'transactions' | 'webhooks'>('integration')
+  const [allTransactions, setAllTransactions] = useState<any[]>([])
+  const [webhookLogs, setWebhookLogs] = useState<any[]>([])
+  const [txFilters, setTxFilters] = useState({ q: '', status: '', minAmount: '', maxAmount: '', startDate: '', endDate: '' })
+  const [webhookFilters, setWebhookFilters] = useState({ success: '' })
+  const [txLoading, setTxLoading] = useState(false)
+  const [webhookLoading, setWebhookLoading] = useState(false)
+  const [selectedLogDetail, setSelectedLogDetail] = useState<any | null>(null)
+
   useEffect(() => {
     async function checkSession() {
       try {
@@ -119,6 +133,93 @@ export default function MerchantDashboardPage() {
       loadSnippets()
     }
   }, [client])
+
+  useEffect(() => {
+    if (client) {
+      if (activeTab === 'transactions') {
+        loadTransactions()
+      } else if (activeTab === 'webhooks') {
+        loadWebhookLogs()
+      }
+    }
+  }, [activeTab, client])
+
+  const loadTransactions = async () => {
+    if (!client) return
+    setTxLoading(true)
+    try {
+      const headers = { Authorization: `Bearer ${client.apiKey}` }
+      const params = new URLSearchParams()
+      params.set('clientId', client.id)
+      if (txFilters.q) params.set('q', txFilters.q)
+      if (txFilters.status) params.set('status', txFilters.status)
+      if (txFilters.minAmount) params.set('minAmount', txFilters.minAmount)
+      if (txFilters.maxAmount) params.set('maxAmount', txFilters.maxAmount)
+      if (txFilters.startDate) params.set('startDate', txFilters.startDate)
+      if (txFilters.endDate) params.set('endDate', txFilters.endDate)
+
+      const res = await fetch(`/api/transactions?${params.toString()}`, { headers })
+      const data = await res.json()
+      if (data.ok) {
+        setAllTransactions(data.transactions)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setTxLoading(false)
+    }
+  }
+
+  const loadWebhookLogs = async () => {
+    if (!client) return
+    setWebhookLoading(true)
+    try {
+      const headers = { Authorization: `Bearer ${client.apiKey}` }
+      const params = new URLSearchParams()
+      if (webhookFilters.success) params.set('success', webhookFilters.success)
+
+      const res = await fetch(`/api/dashboard/webhooks?${params.toString()}`, { headers })
+      const data = await res.json()
+      if (data.ok) {
+        setWebhookLogs(data.logs)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setWebhookLoading(false)
+    }
+  }
+
+  const handleExportCSV = () => {
+    if (!client) return
+    const params = new URLSearchParams()
+    params.set('clientId', client.id)
+    if (txFilters.q) params.set('q', txFilters.q)
+    if (txFilters.status) params.set('status', txFilters.status)
+    if (txFilters.minAmount) params.set('minAmount', txFilters.minAmount)
+    if (txFilters.maxAmount) params.set('maxAmount', txFilters.maxAmount)
+    if (txFilters.startDate) params.set('startDate', txFilters.startDate)
+    if (txFilters.endDate) params.set('endDate', txFilters.endDate)
+
+    fetch(`/api/transactions/export?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${client.apiKey}` }
+    })
+    .then(async (res) => {
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `transactions_export_${Date.now()}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    })
+    .catch((err) => {
+      console.error(err)
+      alert('Failed to export transactions.')
+    })
+  }
 
   const loadDashboardData = async () => {
     if (!client) return
@@ -308,209 +409,495 @@ export default function MerchantDashboardPage() {
 
         {/* Dashboard Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Columns: Keys, Webhooks, Snippets */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Left Column: Navigable Tabs System */}
+          <div className="lg:col-span-2 space-y-5">
+            {/* Tabs Navigation */}
+            <div className="flex items-center gap-1 border-b border-neutral-900 pb-2 overflow-x-auto">
+              {[
+                { id: 'integration', label: 'Developer Integration', icon: <Key className="h-4 w-4" /> },
+                { id: 'transactions', label: 'Transaction Reports', icon: <Activity className="h-4 w-4" /> },
+                { id: 'webhooks', label: 'Webhook logs', icon: <Globe className="h-4 w-4" /> },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTab(t.id as any)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold tracking-wider whitespace-nowrap transition-all border ${
+                    activeTab === t.id
+                      ? 'bg-violet-600/10 border-violet-500 text-violet-400 font-bold shadow-md shadow-violet-600/5'
+                      : 'text-neutral-500 border-transparent hover:text-neutral-300 hover:bg-neutral-900/40'
+                  }`}
+                >
+                  {t.icon}
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* TAB CONTENTS */}
             
-            {/* Integration Keys Card */}
-            <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <Key className="h-5 w-5 text-neutral-400" />
-                <h2 className="text-base font-bold text-white">API Integration Credentials</h2>
-              </div>
-
-              <div className="space-y-3 bg-neutral-950 p-4 rounded-xl border border-neutral-900 text-xs">
-                {/* API Key */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="space-y-0.5">
-                    <span className="text-neutral-300 font-semibold flex items-center gap-1">
-                      API Key (`apiKey`)
-                    </span>
-                    <p className="text-[10px] text-neutral-500">Bearer token for generating checkouts from your backend server.</p>
+            {/* Tab: Developer Integration */}
+            {activeTab === 'integration' && (
+              <div className="space-y-6">
+                {/* Integration Keys Card */}
+                <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Key className="h-5 w-5 text-neutral-400" />
+                    <h2 className="text-base font-bold text-white">API Integration Credentials</h2>
                   </div>
-                  <div className="flex items-center gap-2 font-mono text-neutral-300">
-                    <span className="select-all">{client.apiKey}</span>
-                    <button
-                      onClick={() => copyToClipboard(client.apiKey || '', 'api-key')}
-                      className="text-neutral-500 hover:text-neutral-300 transition-colors"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
-                    {copiedLabel === 'api-key' && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
-                    <button
-                      onClick={() => handleRegenerateToken('apiKey')}
-                      className="text-[10px] text-neutral-600 hover:text-neutral-400 underline font-sans ml-1"
-                    >
-                      Regen
-                    </button>
+
+                  <div className="space-y-3 bg-neutral-950 p-4 rounded-xl border border-neutral-900 text-xs">
+                    {/* API Key */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <span className="text-neutral-300 font-semibold flex items-center gap-1">
+                          API Key (`apiKey`)
+                        </span>
+                        <p className="text-[10px] text-neutral-500">Bearer token for generating checkouts from your backend server.</p>
+                      </div>
+                      <div className="flex items-center gap-2 font-mono text-neutral-300">
+                        <span className="select-all">{client.apiKey}</span>
+                        <button
+                          onClick={() => copyToClipboard(client.apiKey || '', 'api-key')}
+                          className="text-neutral-500 hover:text-neutral-300 transition-colors"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                        {copiedLabel === 'api-key' && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
+                        <button
+                          onClick={() => handleRegenerateToken('apiKey')}
+                          className="text-[10px] text-neutral-600 hover:text-neutral-400 underline font-sans ml-1"
+                        >
+                          Regen
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* APK detectToken */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-neutral-900/60 pt-3 mt-3">
+                      <div className="space-y-0.5">
+                        <span className="text-neutral-300 font-semibold flex items-center gap-1">
+                          APK Token (`detectToken`)
+                        </span>
+                        <p className="text-[10px] text-neutral-500">Configure inside your Android Notification listener APK.</p>
+                      </div>
+                      <div className="flex items-center gap-2 font-mono text-neutral-300">
+                        <span className="select-all">{client.detectToken}</span>
+                        <button
+                          onClick={() => copyToClipboard(client.detectToken || '', 'detect-token')}
+                          className="text-neutral-500 hover:text-neutral-300 transition-colors"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                        {copiedLabel === 'detect-token' && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
+                        <button
+                          onClick={() => handleRegenerateToken('detectToken')}
+                          className="text-[10px] text-neutral-600 hover:text-neutral-400 underline font-sans ml-1"
+                        >
+                          Regen
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Webhook Secret */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-neutral-900/60 pt-3 mt-3">
+                      <div className="space-y-0.5">
+                        <span className="text-neutral-300 font-semibold flex items-center gap-1">
+                          Webhook Secret (`webhookSecret`)
+                        </span>
+                        <p className="text-[10px] text-neutral-500">HMAC-SHA256 secret key for signing payloads forwarded to your server.</p>
+                      </div>
+                      <div className="flex items-center gap-2 font-mono text-neutral-300">
+                        <span className="select-all">{client.webhookSecret || 'Not Generated'}</span>
+                        <button
+                          onClick={() => copyToClipboard(client.webhookSecret || '', 'webhook-secret')}
+                          className="text-neutral-500 hover:text-neutral-300 transition-colors"
+                          disabled={!client.webhookSecret}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                        {copiedLabel === 'webhook-secret' && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
+                        <button
+                          onClick={() => handleRegenerateToken('webhookSecret')}
+                          className="text-[10px] text-neutral-600 hover:text-neutral-400 underline font-sans ml-1"
+                        >
+                          {client.webhookSecret ? 'Regen' : 'Generate'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* APK detectToken */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-neutral-900/60 pt-3 mt-3">
-                  <div className="space-y-0.5">
-                    <span className="text-neutral-300 font-semibold flex items-center gap-1">
-                      APK Token (`detectToken`)
-                    </span>
-                    <p className="text-[10px] text-neutral-500">Configure inside your Android Notification listener APK.</p>
+                {/* Webhook Callback Settings */}
+                <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-5 w-5 text-neutral-400" />
+                    <h2 className="text-base font-bold text-white">Webhook Callback Settings</h2>
                   </div>
-                  <div className="flex items-center gap-2 font-mono text-neutral-300">
-                    <span className="select-all">{client.detectToken}</span>
-                    <button
-                      onClick={() => copyToClipboard(client.detectToken || '', 'detect-token')}
-                      className="text-neutral-500 hover:text-neutral-300 transition-colors"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
-                    {copiedLabel === 'detect-token' && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
-                    <button
-                      onClick={() => handleRegenerateToken('detectToken')}
-                      className="text-[10px] text-neutral-600 hover:text-neutral-400 underline font-sans ml-1"
-                    >
-                      Regen
-                    </button>
-                  </div>
+
+                  <form onSubmit={handleUpdateSettings} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2 space-y-1.5">
+                        <Label htmlFor="webhookUrl" className="text-xs text-neutral-400">
+                          Webhook URL (Gateway POSTs confirmed payments here)
+                        </Label>
+                        <Input
+                          id="webhookUrl"
+                          type="url"
+                          placeholder="https://yourserver.com/api/webhooks/payment"
+                          value={webhookUrlInput}
+                          onChange={(e) => setWebhookUrlInput(e.target.value)}
+                          className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="checkoutTtl" className="text-xs text-neutral-400">
+                          Checkout Expiration (Mins)
+                        </Label>
+                        <Input
+                          id="checkoutTtl"
+                          type="number"
+                          min="1"
+                          max="180"
+                          value={checkoutTtlInput}
+                          onChange={(e) => setCheckoutTtlInput(e.target.value)}
+                          className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white focus-visible:ring-violet-500"
+                        />
+                      </div>
+                    </div>
+
+                    {settingsError && (
+                      <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-2 text-xs text-red-400 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span>{settingsError}</span>
+                      </div>
+                    )}
+
+                    {settingsSuccess && (
+                      <div className="rounded-xl border border-emerald-900/50 bg-emerald-950/20 px-4 py-2 text-xs text-emerald-400 flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        <span>Settings saved successfully.</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end">
+                      <Button
+                        type="submit"
+                        disabled={updatingSettings}
+                        className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-semibold px-6"
+                      >
+                        {updatingSettings ? 'Saving…' : 'Save Settings'}
+                      </Button>
+                    </div>
+                  </form>
                 </div>
 
-                {/* Webhook Secret */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-neutral-900/60 pt-3 mt-3">
-                  <div className="space-y-0.5">
-                    <span className="text-neutral-300 font-semibold flex items-center gap-1">
-                      Webhook Secret (`webhookSecret`)
-                    </span>
-                    <p className="text-[10px] text-neutral-500">HMAC-SHA256 secret key for signing payloads forwarded to your server.</p>
-                  </div>
-                  <div className="flex items-center gap-2 font-mono text-neutral-300">
-                    <span className="select-all">{client.webhookSecret || 'Not Generated'}</span>
-                    <button
-                      onClick={() => copyToClipboard(client.webhookSecret || '', 'webhook-secret')}
-                      className="text-neutral-500 hover:text-neutral-300 transition-colors"
-                      disabled={!client.webhookSecret}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
-                    {copiedLabel === 'webhook-secret' && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
-                    <button
-                      onClick={() => handleRegenerateToken('webhookSecret')}
-                      className="text-[10px] text-neutral-600 hover:text-neutral-400 underline font-sans ml-1"
-                    >
-                      {client.webhookSecret ? 'Regen' : 'Generate'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+                {/* SDK Code Snippets */}
+                {snippets && (
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="h-5 w-5 text-neutral-400" />
+                      <h2 className="text-base font-bold text-white">Integration Documentation</h2>
+                    </div>
 
-            {/* Webhook Callback Settings */}
-            <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <Globe className="h-5 w-5 text-neutral-400" />
-                <h2 className="text-base font-bold text-white">Webhook Callback Settings</h2>
-              </div>
+                    {/* Tabs */}
+                    <div className="flex items-center gap-1 border-b border-neutral-900 pb-2">
+                      {(Object.keys(snippets) as Array<keyof Snippets>).map((tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => setSelectedSnippetTab(tab)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${
+                            selectedSnippetTab === tab
+                              ? 'bg-neutral-800 text-white border border-neutral-700'
+                              : 'text-neutral-500 hover:text-neutral-300'
+                          }`}
+                        >
+                          {tab === 'nodeWebhook' ? 'Node Webhook' : tab}
+                        </button>
+                      ))}
+                    </div>
 
-              <form onSubmit={handleUpdateSettings} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-2 space-y-1.5">
-                    <Label htmlFor="webhookUrl" className="text-xs text-neutral-400">
-                      Webhook URL (Gateway POSTs confirmed payments here)
-                    </Label>
-                    <Input
-                      id="webhookUrl"
-                      type="url"
-                      placeholder="https://yourserver.com/api/webhooks/payment"
-                      value={webhookUrlInput}
-                      onChange={(e) => setWebhookUrlInput(e.target.value)}
-                      className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="checkoutTtl" className="text-xs text-neutral-400">
-                      Checkout Expiration (Mins)
-                    </Label>
-                    <Input
-                      id="checkoutTtl"
-                      type="number"
-                      min="1"
-                      max="180"
-                      value={checkoutTtlInput}
-                      onChange={(e) => setCheckoutTtlInput(e.target.value)}
-                      className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white focus-visible:ring-violet-500"
-                    />
-                  </div>
-                </div>
-
-                {settingsError && (
-                  <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-2 text-xs text-red-400 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    <span>{settingsError}</span>
+                    {/* Code Block */}
+                    <div className="relative">
+                      <pre className="bg-neutral-950 p-4 rounded-xl border border-neutral-900 text-[11px] font-mono text-neutral-300 overflow-x-auto max-h-72">
+                        <code>
+                          {snippets[selectedSnippetTab]
+                            .replace('YOUR_API_KEY', client.apiKey || 'YOUR_API_KEY')}
+                        </code>
+                      </pre>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => copyToClipboard(snippets[selectedSnippetTab].replace('YOUR_API_KEY', client.apiKey || 'YOUR_API_KEY'), 'code')}
+                        className="absolute top-2 right-2 h-7 px-2 text-neutral-500 hover:text-white bg-neutral-950/80"
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy
+                      </Button>
+                      {copiedLabel === 'code' && (
+                        <span className="absolute top-10 right-2 text-[10px] text-emerald-400 font-sans bg-neutral-950 px-2 py-0.5 rounded">
+                          Copied!
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
+              </div>
+            )}
 
-                {settingsSuccess && (
-                  <div className="rounded-xl border border-emerald-900/50 bg-emerald-950/20 px-4 py-2 text-xs text-emerald-400 flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                    <span>Settings saved successfully.</span>
+            {/* Tab: Transaction Reports */}
+            {activeTab === 'transactions' && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/30 p-4 rounded-2xl border border-neutral-900">
+                  <div className="space-y-0.5">
+                    <h3 className="text-sm font-bold text-white">Transaction Logs</h3>
+                    <p className="text-xs text-neutral-500 font-medium">Filter and export your historical client transactions.</p>
                   </div>
-                )}
-
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    disabled={updatingSettings}
-                    className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-semibold px-6"
-                  >
-                    {updatingSettings ? 'Saving…' : 'Save Settings'}
-                  </Button>
-                </div>
-              </form>
-            </div>
-
-            {/* SDK Code Snippets */}
-            {snippets && (
-              <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Terminal className="h-5 w-5 text-neutral-400" />
-                  <h2 className="text-base font-bold text-white">Integration Documentation</h2>
-                </div>
-
-                {/* Tabs */}
-                <div className="flex items-center gap-1 border-b border-neutral-900 pb-2">
-                  {(Object.keys(snippets) as Array<keyof Snippets>).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setSelectedSnippetTab(tab)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${
-                        selectedSnippetTab === tab
-                          ? 'bg-neutral-800 text-white border border-neutral-700'
-                          : 'text-neutral-500 hover:text-neutral-300'
-                      }`}
-                    >
-                      {tab === 'nodeWebhook' ? 'Node Webhook' : tab}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Code Block */}
-                <div className="relative">
-                  <pre className="bg-neutral-950 p-4 rounded-xl border border-neutral-900 text-[11px] font-mono text-neutral-300 overflow-x-auto max-h-72">
-                    <code>
-                      {snippets[selectedSnippetTab]
-                        .replace('YOUR_API_KEY', client.apiKey || 'YOUR_API_KEY')}
-                    </code>
-                  </pre>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    onClick={() => copyToClipboard(snippets[selectedSnippetTab].replace('YOUR_API_KEY', client.apiKey || 'YOUR_API_KEY'), 'code')}
-                    className="absolute top-2 right-2 h-7 px-2 text-neutral-500 hover:text-white bg-neutral-950/80"
+                    onClick={handleExportCSV}
+                    className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded-xl text-xs h-9"
                   >
-                    <Copy className="h-3 w-3 mr-1" />
-                    Copy
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                    Export CSV
                   </Button>
-                  {copiedLabel === 'code' && (
-                    <span className="absolute top-10 right-2 text-[10px] text-emerald-400 font-sans bg-neutral-950 px-2 py-0.5 rounded">
-                      Copied!
-                    </span>
+                </div>
+
+                {/* Filters card */}
+                <div className="bg-neutral-900/20 border border-neutral-900 p-4 rounded-2xl space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-neutral-400 uppercase font-bold">Keyword</Label>
+                      <Input
+                        type="text"
+                        placeholder="Sender, Ref, Session..."
+                        value={txFilters.q}
+                        onChange={(e) => setTxFilters({ ...txFilters, q: e.target.value })}
+                        className="h-8 text-xs rounded-lg border-neutral-800 bg-neutral-950/80 text-white placeholder-neutral-700"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-neutral-400 uppercase font-bold">Status</Label>
+                      <select
+                        value={txFilters.status}
+                        onChange={(e) => setTxFilters({ ...txFilters, status: e.target.value })}
+                        className="w-full h-8 px-2.5 rounded-lg border border-neutral-800 bg-neutral-950/80 text-white text-xs outline-none focus:border-violet-500"
+                      >
+                        <option value="">All Statuses</option>
+                        <option value="PENDING">PENDING</option>
+                        <option value="CONFIRMED">CONFIRMED</option>
+                        <option value="EXPIRED">EXPIRED</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-neutral-400 uppercase font-bold">Min Amount</Label>
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={txFilters.minAmount}
+                        onChange={(e) => setTxFilters({ ...txFilters, minAmount: e.target.value })}
+                        className="h-8 text-xs rounded-lg border-neutral-800 bg-neutral-950/80 text-white placeholder-neutral-700"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-neutral-400 uppercase font-bold">Max Amount</Label>
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={txFilters.maxAmount}
+                        onChange={(e) => setTxFilters({ ...txFilters, maxAmount: e.target.value })}
+                        className="h-8 text-xs rounded-lg border-neutral-800 bg-neutral-950/80 text-white placeholder-neutral-700"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-neutral-400 uppercase font-bold">Start Date</Label>
+                      <Input
+                        type="date"
+                        value={txFilters.startDate}
+                        onChange={(e) => setTxFilters({ ...txFilters, startDate: e.target.value })}
+                        className="h-8 text-xs rounded-lg border-neutral-800 bg-neutral-950/80 text-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-neutral-400 uppercase font-bold">End Date</Label>
+                      <Input
+                        type="date"
+                        value={txFilters.endDate}
+                        onChange={(e) => setTxFilters({ ...txFilters, endDate: e.target.value })}
+                        className="h-8 text-xs rounded-lg border-neutral-800 bg-neutral-950/80 text-white"
+                      />
+                    </div>
+                    <div className="flex items-end gap-2 sm:col-span-2">
+                      <Button
+                        size="sm"
+                        onClick={loadTransactions}
+                        disabled={txLoading}
+                        className="h-8 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs flex-1"
+                      >
+                        <Filter className="mr-1 h-3.5 w-3.5" />
+                        Apply Filters
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setTxFilters({ q: '', status: '', minAmount: '', maxAmount: '', startDate: '', endDate: '' })
+                          setTimeout(() => loadTransactions(), 100)
+                        }}
+                        className="h-8 rounded-lg border border-neutral-800 text-neutral-400 hover:text-white text-xs px-4"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Transactions list */}
+                <div className="space-y-2">
+                  {txLoading ? (
+                    <div className="py-12 text-center text-xs text-neutral-500">
+                      <RefreshCw className="h-5 w-5 animate-spin mx-auto text-violet-500 mb-2" />
+                      Loading transactions...
+                    </div>
+                  ) : allTransactions.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-neutral-600 border border-neutral-900 rounded-2xl bg-neutral-900/10">
+                      No transactions matched the criteria.
+                    </div>
+                  ) : (
+                    allTransactions.map((tx) => (
+                      <div
+                        key={tx.sessionId}
+                        className="rounded-xl border border-neutral-900 bg-neutral-900/30 p-4 flex justify-between gap-3 text-xs"
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-white">{tx.senderHandle}</span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${
+                                tx.status === 'CONFIRMED'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                  : tx.status === 'PENDING'
+                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                  : 'bg-neutral-800 text-neutral-400'
+                              }`}
+                            >
+                              {tx.status}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-neutral-500 font-mono">
+                            Session ID: <span className="select-all text-neutral-400">{tx.sessionId}</span>
+                            {tx.detectedRef && ` · Ref: ${tx.detectedRef}`}
+                          </p>
+                          <p className="text-[9px] text-neutral-600 font-medium">
+                            Created: {tx.createdAtEgypt} {tx.detectedAtEgypt && ` · Confirmed: ${tx.detectedAtEgypt}`}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="font-black text-white text-sm">+{tx.amountEgp.toFixed(2)} EGP</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Webhook Logs */}
+            {activeTab === 'webhooks' && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="space-y-0.5 bg-neutral-900/30 p-4 rounded-2xl border border-neutral-900">
+                  <h3 className="text-sm font-bold text-white">Webhook Delivery Log</h3>
+                  <p className="text-xs text-neutral-500 font-medium">Troubleshoot your backend callback responses and HTTP status outcomes.</p>
+                </div>
+
+                {/* Filters card */}
+                <div className="bg-neutral-900/20 border border-neutral-900 p-4 rounded-2xl flex items-end gap-3">
+                  <div className="space-y-1 flex-1 min-w-[150px]">
+                    <Label className="text-[10px] text-neutral-400 uppercase font-bold">Status</Label>
+                    <select
+                      value={webhookFilters.success}
+                      onChange={(e) => setWebhookFilters({ ...webhookFilters, success: e.target.value })}
+                      className="w-full h-8 px-2.5 rounded-lg border border-neutral-800 bg-neutral-950/80 text-white text-xs outline-none focus:border-violet-500"
+                    >
+                      <option value="">All Results</option>
+                      <option value="true">Success (2xx)</option>
+                      <option value="false">Failed</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      onClick={loadWebhookLogs}
+                      disabled={webhookLoading}
+                      className="h-8 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs px-4"
+                    >
+                      Filter
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setWebhookFilters({ success: '' })
+                        setTimeout(() => loadWebhookLogs(), 100)
+                      }}
+                      className="h-8 rounded-lg border border-neutral-800 text-neutral-400 hover:text-white text-xs"
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Webhook logs */}
+                <div className="space-y-2">
+                  {webhookLoading ? (
+                    <div className="py-12 text-center text-xs text-neutral-500">
+                      <RefreshCw className="h-5 w-5 animate-spin mx-auto text-violet-500 mb-2" />
+                      Loading logs...
+                    </div>
+                  ) : webhookLogs.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-neutral-600 border border-neutral-900 rounded-2xl bg-neutral-900/10">
+                      No webhook logs found for your account.
+                    </div>
+                  ) : (
+                    webhookLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="rounded-xl border border-neutral-900 bg-neutral-900/30 p-4 flex justify-between gap-3 text-xs"
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-2 w-2 rounded-full ${
+                                log.isSuccess ? 'bg-emerald-500 shadow-sm shadow-emerald-500' : 'bg-red-500 shadow-sm shadow-red-500'
+                              }`}
+                            />
+                            <span className="font-bold text-white">Event: {log.event}</span>
+                          </div>
+                          <p className="text-[10px] text-neutral-400 font-mono truncate select-all">{log.url}</p>
+                          <p className="text-[9px] text-neutral-600">{new Date(log.createdAt).toLocaleString()}</p>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold ${
+                              log.isSuccess ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'
+                            }`}
+                          >
+                            {log.statusCode || 'Timeout'}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setSelectedLogDetail(log)}
+                            className="h-8 rounded-lg border border-neutral-800 text-neutral-400 hover:text-white text-xs px-2"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
@@ -523,7 +910,7 @@ export default function MerchantDashboardPage() {
             {/* APK Download & Demo */}
             <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
               <h3 className="font-bold text-white text-sm">Listener Application</h3>
-              <p className="text-xs text-neutral-400 leading-relaxed">
+              <p className="text-xs text-neutral-400 leading-relaxed font-medium">
                 Download the companion Android APK and install it on your Android device to start auto-detecting and confirming customer payments.
               </p>
               
@@ -541,7 +928,7 @@ export default function MerchantDashboardPage() {
                 <Button
                   asChild
                   variant="outline"
-                  className="w-full border-neutral-800 hover:bg-neutral-900 text-neutral-400 hover:text-white rounded-xl h-10"
+                  className="w-full border-neutral-800 hover:bg-neutral-900 text-neutral-400 hover:text-white rounded-xl h-10 font-semibold"
                 >
                   <a href={`/pay/${client.slug}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="mr-1.5 h-4 w-4" />
@@ -553,7 +940,7 @@ export default function MerchantDashboardPage() {
 
             {/* Recent Merchant Activity */}
             <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 overflow-hidden">
-              <div className="border-b border-neutral-900 px-4 py-3 bg-neutral-950/40">
+              <div className="border-b border-neutral-900 px-4 py-3 bg-neutral-950/40 animate-pulse">
                 <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Recent Merchant Activity</span>
               </div>
               
@@ -587,9 +974,78 @@ export default function MerchantDashboardPage() {
         </div>
       </main>
 
+      {/* Webhook Log Detail Modal */}
+      <AnimatePresence>
+        {selectedLogDetail && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedLogDetail(null)}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative z-10 space-y-4 max-h-[90vh] flex flex-col text-neutral-200"
+            >
+              <div>
+                <h3 className="text-lg font-bold text-white">Webhook Attempt Detail</h3>
+                <p className="text-xs text-neutral-500 mt-1">Delivery details for event: {selectedLogDetail.event}</p>
+              </div>
+
+              <ScrollArea className="flex-1 pr-1 space-y-4">
+                <div className="space-y-3 text-xs">
+                  <div className="grid grid-cols-2 gap-2 bg-neutral-900/40 p-3 rounded-xl border border-neutral-850">
+                    <div>
+                      <span className="text-neutral-500 font-semibold block">Status</span>
+                      <span className={`block font-bold mt-0.5 ${selectedLogDetail.isSuccess ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {selectedLogDetail.isSuccess ? 'SUCCESS' : 'FAILED'} (HTTP {selectedLogDetail.statusCode || 'N/A'})
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-neutral-500 font-semibold block">Destination URL</span>
+                    <p className="font-mono bg-neutral-900/60 p-2.5 rounded-lg border border-neutral-850 text-neutral-300 break-all select-all">
+                      {selectedLogDetail.url}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-neutral-500 font-semibold block">Payload Sent (JSON)</span>
+                    <pre className="font-mono bg-neutral-900/60 p-3 rounded-lg border border-neutral-850 text-[10px] text-neutral-300 overflow-x-auto select-all max-h-48">
+                      {JSON.stringify(JSON.parse(selectedLogDetail.payload), null, 2)}
+                    </pre>
+                  </div>
+
+                  <div className="space-y-1 font-mono">
+                    <span className="text-neutral-500 font-sans font-semibold block">Server Response Snippet</span>
+                    <pre className="bg-neutral-900/60 p-3 rounded-lg border border-neutral-850 text-[10px] text-neutral-300 overflow-x-auto max-h-48 break-all whitespace-pre-wrap select-all">
+                      {selectedLogDetail.response || 'No response returned.'}
+                    </pre>
+                  </div>
+                </div>
+              </ScrollArea>
+
+              <div className="flex justify-end pt-2 border-t border-neutral-850">
+                <Button
+                  onClick={() => setSelectedLogDetail(null)}
+                  className="bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-xs px-4"
+                >
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Footer */}
       <footer className="mt-auto border-t border-neutral-900 py-6 bg-neutral-950 text-center text-xs text-neutral-600">
-        InstaPay Egypt Platform Gateway Merchant Panel · Sandbox Environment
+        InstaPay Egypt Egypt Gateway Merchant Panel · Sandbox Environment
       </footer>
     </div>
   )

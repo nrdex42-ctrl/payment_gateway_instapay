@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateOwner } from '@/lib/auth'
-import { getStartOfTodayEgypt, formatEgyptTime } from '@/lib/timezone'
+import { getStartOfTodayEgypt, formatEgyptTime, getEgyptDstMode } from '@/lib/timezone'
 
 /**
  * GET: Platform-wide summary stats for admin dashboard.
@@ -9,7 +9,8 @@ import { getStartOfTodayEgypt, formatEgyptTime } from '@/lib/timezone'
 export async function GET(request: NextRequest) {
   const isOwner = await authenticateOwner(request)
   if (!isOwner) {
-    const ownerSecret = process.env.OWNER_SECRET || 'owner-sandbox-secret-token-2026'
+    const ownerSecret = process.env.OWNER_SECRET
+    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
     const authHeader = request.headers.get('authorization') || ''
     const provided = authHeader.replace(/^Bearer\s+/, '').trim()
     if (provided !== ownerSecret) {
@@ -19,7 +20,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const now = new Date()
-    const startOfToday = getStartOfTodayEgypt(now)
+    const dstMode = await getEgyptDstMode()
+    const startOfToday = getStartOfTodayEgypt(now, dstMode)
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
     const [
@@ -94,7 +96,7 @@ export async function GET(request: NextRequest) {
         status: tx.status,
         detectedRef: tx.detectedRef,
         detectedAt: tx.detectedAt?.toISOString() ?? null,
-        detectedAtEgypt: tx.detectedAt ? formatEgyptTime(tx.detectedAt) : null,
+        detectedAtEgypt: tx.detectedAt ? formatEgyptTime(tx.detectedAt, dstMode) : null,
         createdAt: tx.createdAt.toISOString(),
       })),
     })

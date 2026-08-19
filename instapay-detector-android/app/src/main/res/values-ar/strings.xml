@@ -1,0 +1,85 @@
+<resources>
+    <string name="app_name">كاشف إنستا باي</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_dashboard">لوحة التحكم</string>
+    <string name="nav_transactions">العمليات</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- Dashboard -->
+    <string name="dash_today">اليوم</string>
+    <string name="dash_7days">آخر ٧ أيام</string>
+    <string name="dash_pending">معلق</string>
+    <string name="dash_avg">متوسط/يوم</string>
+    <string name="dash_revenue_trend">مخطط الإيرادات (٣٠ يوماً)</string>
+    <string name="dash_recent">أحدث المدفوعات</string>
+    <string name="dash_view_all">عرض الكل</string>
+    <string name="dash_no_recent">لا توجد مدفوعات بعد</string>
+    <string name="dash_live">نشط</string>
+    <string name="dash_offline">غير متصل</string>
+    <string name="dash_best_day">أفضل يوم</string>
+    <string name="dash_total_30d">إجمالي ٣٠ يوماً</string>
+    <string name="dash_payments">مدفوعات</string>
+    <string name="dash_payment">مدفوعات</string>
+
+    <!-- Transactions -->
+    <string name="tx_search_hint">ابحث عن طريق المرسل، المرجع، الملاحظة…</string>
+    <string name="tx_filter_all">الكل</string>
+    <string name="tx_filter_confirmed">مؤكد</string>
+    <string name="tx_filter_pending">معلق</string>
+    <string name="tx_filter_expired">منتهي الصلاحية</string>
+    <string name="tx_empty">لم يتم العثور على عمليات</string>
+    <string name="tx_export">تصدير CSV</string>
+    <string name="tx_loading">جاري التحميل…</string>
+    <string name="tx_load_more">تحميل المزيد</string>
+
+    <!-- Transaction detail -->
+    <string name="tx_detail_from">من</string>
+    <string name="tx_detail_to">إلى</string>
+    <string name="tx_detail_amount">المبلغ</string>
+    <string name="tx_detail_status">الحالة</string>
+    <string name="tx_detail_reference">المرجع</string>
+    <string name="tx_detail_date">التاريخ</string>
+    <string name="tx_detail_note">الملاحظة</string>
+    <string name="tx_detail_session">معرف الجلسة</string>
+    <string name="tx_detail_close">إغلاق</string>
+
+    <!-- Settings -->
+    <string name="title_settings">إعدادات الربط</string>
+    <string name="title_status">الحالة</string>
+
+    <string name="gateway_url_label">رابط بوابة الدفع (Webhook URL)</string>
+    <string name="gateway_url_hint">https://your-gateway.example.com/api/webhooks/instapay</string>
+    <string name="auth_token_label">رمز المصادقة (Auth token)</string>
+    <string name="auth_token_hint">يجب أن يتطابق مع DETECT_TOKEN في البوابة</string>
+    <string name="save_button">حفظ التغييرات</string>
+
+    <string name="permission_status_unknown">صلاحية قراءة الإشعارات: غير معروفة</string>
+    <string name="permission_status_granted">صلاحية قراءة الإشعارات: مسموح بها ✓</string>
+    <string name="permission_status_denied">صلاحية قراءة الإشعارات: غير مسموح بها ✗</string>
+    <string name="grant_permission_button">منح صلاحية الوصول للإشعارات</string>
+
+    <string name="listener_running">جاري كشف وقراءة إشعارات إنستا باي…</string>
+    <string name="listener_idle">الكاشف متوقف</string>
+
+    <string name="test_button">إرسال إشعار فحص تجريبي</string>
+
+    <string name="monitored_package_label">الحزمة المراقبة: com.egyptianbanks.instapay</string>
+    <string name="monitored_handle_label">يتم إرسال العمليات المستلمة على: %1$s</string>
+
+    <string name="last_detection_label">آخر عملية تم كشفها</string>
+    <string name="last_detection_none">لا توجد عمليات مكتشفة بعد</string>
+
+    <string name="settings_about_title">حول التطبيق</string>
+    <string name="settings_about_body">كاشف إشعارات إنستا باي v2.0.0 — نظام كشف العمليات وتأكيدها لحظياً للمحافظ وبوابات الدفع. بيئة تجريبية.</string>
+
+    <!-- Theme & Language preferences -->
+    <string name="pref_category_title">تفضيلات التطبيق</string>
+    <string name="pref_theme_label">الوضع (المظهر)</string>
+    <string name="pref_theme_light">مضيء (Light)</string>
+    <string name="pref_theme_dark">مظلم (Dark)</string>
+    <string name="pref_theme_system">تلقائي مع النظام</string>
+    <string name="pref_lang_label">لغة التطبيق</string>
+    <string name="pref_lang_en">English</string>
+    <string name="pref_lang_ar">العربية (Arabic)</string>
+</resources>

@@ -14,7 +14,7 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:padding="16dp"
-        android:background="@color/bg_card">
+        android:background="@color/bg_light">
 
         <TextView
             android:layout_width="0dp"
@@ -32,7 +32,10 @@
             android:layout_height="wrap_content"
             android:text="@string/tx_export"
             android:textSize="12sp"
-            app:icon="@android:drawable/ic_menu_save" />
+            android:textColor="@color/text_on_primary"
+            app:backgroundTint="@color/brand_primary"
+            app:icon="@drawable/ic_export"
+            app:iconTint="@color/text_on_primary" />
     </LinearLayout>
 
     <!-- Search bar -->
@@ -41,11 +44,9 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
         android:layout_marginTop="8dp"
-        app:boxCornerRadiusBottomEnd="12dp"
-        app:boxCornerRadiusBottomStart="12dp"
-        app:boxCornerRadiusTopEnd="12dp"
-        app:boxCornerRadiusTopStart="12dp"
-        app:startIconDrawable="@android:drawable/ic_menu_search">
+        style="@style/Widget.InstapayDetector.TextInputLayout"
+        app:startIconDrawable="@drawable/ic_search"
+        app:startIconTint="@color/text_tertiary">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/searchInput"
@@ -53,53 +54,50 @@
             android:layout_height="wrap_content"
             android:hint="@string/tx_search_hint"
             android:inputType="text"
+            android:textColor="@color/text_primary"
             android:imeOptions="actionSearch"
             android:textSize="14sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Filter chips -->
     <com.google.android.material.chip.ChipGroup
+        android:id="@+id/filterGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
         android:paddingVertical="8dp"
-        app:singleLine="false">
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:singleLine="true">
 
-        <com.google.android.material.button.MaterialButton
+        <com.google.android.material.chip.Chip
             android:id="@+id/filterAll"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/tx_filter_all"
-            android:textSize="12sp"
-            android:minHeight="36dp" />
+            android:checked="true" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.google.android.material.chip.Chip
             android:id="@+id/filterConfirmed"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/tx_filter_confirmed"
-            android:textSize="12sp"
-            android:minHeight="36dp" />
+            android:text="@string/tx_filter_confirmed" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.google.android.material.chip.Chip
             android:id="@+id/filterPending"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/tx_filter_pending"
-            android:textSize="12sp"
-            android:minHeight="36dp" />
+            android:text="@string/tx_filter_pending" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.google.android.material.chip.Chip
             android:id="@+id/filterExpired"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/tx_filter_expired"
-            android:textSize="12sp"
-            android:minHeight="36dp" />
+            android:text="@string/tx_filter_expired" />
     </com.google.android.material.chip.ChipGroup>
 
     <!-- Error banner -->

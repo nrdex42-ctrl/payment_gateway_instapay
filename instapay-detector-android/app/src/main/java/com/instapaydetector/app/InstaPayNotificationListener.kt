@@ -96,7 +96,7 @@ class InstaPayNotificationListener : NotificationListenerService() {
         )
 
         scope.launch {
-            val ok = gatewayClient.reportPayment(
+            val result = gatewayClient.reportPayment(
                 amountEgp = parsed.amount,
                 senderHandle = parsed.senderHandle,
                 recipientHandle = config.merchantHandle,
@@ -104,7 +104,7 @@ class InstaPayNotificationListener : NotificationListenerService() {
                 notificationTimestampIso = isoTimestamp
             )
 
-            if (!ok) {
+            if (result == ReportResult.ERROR) {
                 Log.w(TAG, "Webhook POST failed — enqueueing report to OfflineQueueManager.")
                 OfflineQueueManager.get(this@InstaPayNotificationListener).enqueue(
                     OfflineQueueManager.QueuedReport(
@@ -116,9 +116,41 @@ class InstaPayNotificationListener : NotificationListenerService() {
                         timestampIso = isoTimestamp
                     )
                 )
+            } else if (result == ReportResult.SUBSCRIPTION_ENDED) {
+                Log.e(TAG, "Subscription/Trial ended. Webhook rejected payment.")
+                postErrorNotification("Subscription Ended", "Your free trial or subscription has ended. Payments are no longer being forwarded.")
             } else {
                 Log.i(TAG, "Webhook POST ok=true")
             }
+        }
+    }
+
+    private fun postErrorNotification(title: String, text: String) {
+        val channel = "instapay_detector_error"
+        val mgr = NotificationManagerCompat.from(this)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val ch = android.app.NotificationChannel(
+                channel,
+                "Detector Errors",
+                android.app.NotificationManager.IMPORTANCE_HIGH
+            )
+            mgr.createNotificationChannel(ch)
+        }
+
+        val notification = NotificationCompat.Builder(this, channel)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        try {
+            mgr.notify(System.currentTimeMillis().toInt(), notification)
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Cannot post error notification: ${e.message}")
         }
     }
 

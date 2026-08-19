@@ -27,10 +27,20 @@
                 android:orientation="horizontal"
                 android:paddingBottom="16dp">
 
-                <View
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/ic_brand_logo" />
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    app:cardCornerRadius="22dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/border_subtle"
+                    app:cardBackgroundColor="@color/bg_card">
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:src="@drawable/ic_brand_logo"
+                        android:scaleType="centerCrop" />
+                </com.google.android.material.card.MaterialCardView>
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -44,7 +54,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/text_primary"
-                        android:textSize="18sp"
+                        android:textSize="17sp"
                         android:textStyle="bold"
                         tools:text="Mohammed Shabana" />
 
@@ -53,7 +63,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/text_secondary"
-                        android:textSize="12sp"
+                        android:textSize="11sp"
                         android:fontFamily="monospace"
                         tools:text="mohammedshabana77@instapay" />
                 </LinearLayout>
@@ -147,14 +157,12 @@
                     android:layout_marginStart="6dp" />
             </LinearLayout>
 
-            <!-- Revenue chart -->
-            <androidx.cardview.widget.CardView
+            <!-- Revenue Trend Section -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.InstapayDetector.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="1dp"
-                app:cardBackgroundColor="@color/bg_card">
+                android:layout_marginTop="12dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -170,7 +178,8 @@
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
-                    <com.github.mikephil.charting.charts.BarChart
+                    <!-- Native LineChart -->
+                    <com.github.mikephil.charting.charts.LineChart
                         android:id="@+id/chart"
                         android:layout_width="match_parent"
                         android:layout_height="200dp"
@@ -195,7 +204,7 @@
                         android:textSize="11sp"
                         tools:text="Total EGP 1,234 • 5 payments • Avg EGP 41/day" />
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Recent transactions section -->
             <LinearLayout

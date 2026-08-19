@@ -9,7 +9,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const isOwner = await authenticateOwner(request)
   const resolvedParams = await params
   if (!isOwner) {
-    const ownerSecret = process.env.OWNER_SECRET || 'owner-sandbox-secret-token-2026'
+    const ownerSecret = process.env.OWNER_SECRET
+    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
     const authHeader = request.headers.get('authorization') || ''
     const provided = authHeader.replace(/^Bearer\s+/, '').trim()
     if (provided !== ownerSecret) {
@@ -20,7 +21,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   try {
     const { id } = resolvedParams
     const body = await request.json()
-    const { businessName, instapayHandle, webhookUrl, checkoutTtlMin, isActive } = body || {}
+    const { businessName, instapayHandle, webhookUrl, checkoutTtlMin, isActive, subscriptionPlan, isFreeTrial, subscriptionEndsAt } = body || {}
 
     const client = await db.client.findUnique({ where: { id } })
     if (!client) {
@@ -32,6 +33,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (webhookUrl !== undefined) data.webhookUrl = webhookUrl ? String(webhookUrl).trim() : null
     if (checkoutTtlMin !== undefined) data.checkoutTtlMin = Number(checkoutTtlMin)
     if (isActive !== undefined) data.isActive = Boolean(isActive)
+    if (subscriptionPlan !== undefined) data.subscriptionPlan = String(subscriptionPlan).trim()
+    if (isFreeTrial !== undefined) data.isFreeTrial = Boolean(isFreeTrial)
+    if (subscriptionEndsAt !== undefined) {
+      data.subscriptionEndsAt = subscriptionEndsAt ? new Date(subscriptionEndsAt as string | number) : null
+    }
 
     if (instapayHandle !== undefined) {
       let handle = String(instapayHandle).trim().toLowerCase().replace(/^@/, '')
@@ -48,6 +54,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       data,
     })
 
+    await db.auditLog.create({
+      data: {
+        action: 'UPDATE_MERCHANT',
+        details: `Updated merchant ${updated.businessName} (ID: ${id}). Settings updated: ${JSON.stringify(data)}`,
+      }
+    }).catch(() => {})
+
     return NextResponse.json({ ok: true, client: updated })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -62,7 +75,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const isOwner = await authenticateOwner(request)
   const resolvedParams = await params
   if (!isOwner) {
-    const ownerSecret = process.env.OWNER_SECRET || 'owner-sandbox-secret-token-2026'
+    const ownerSecret = process.env.OWNER_SECRET
+    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
     const authHeader = request.headers.get('authorization') || ''
     const provided = authHeader.replace(/^Bearer\s+/, '').trim()
     if (provided !== ownerSecret) {
@@ -85,6 +99,13 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await db.client.delete({
       where: { id },
     })
+
+    await db.auditLog.create({
+      data: {
+        action: 'DELETE_MERCHANT',
+        details: `Deleted merchant ${client.businessName} (ID: ${id}) and all their associated transactions.`,
+      }
+    }).catch(() => {})
 
     return NextResponse.json({ ok: true, message: 'Client deleted successfully.' })
   } catch (err) {

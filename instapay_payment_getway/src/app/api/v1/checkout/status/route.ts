@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
         status: currentStatus,
         detectedRef: transaction.detectedRef,
         detectedAt: transaction.detectedAt?.toISOString() ?? null,
+        detectedAmountEgp: transaction.detectedAmountEgp,
         createdAt: transaction.createdAt.toISOString(),
         expiresAt: transaction.expiresAt.toISOString(),
         note: transaction.note,

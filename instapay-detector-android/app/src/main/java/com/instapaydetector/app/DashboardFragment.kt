@@ -9,9 +9,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.BarData
-import com.github.mikephil.charting.data.BarDataSet
-import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.instapaydetector.app.databinding.FragmentDashboardBinding
 import kotlinx.coroutines.launch
@@ -135,7 +135,7 @@ class DashboardFragment : Fragment() {
 
     private fun renderChart(chart: ChartData) {
         val entries = chart.series.mapIndexed { i, point ->
-            BarEntry(i.toFloat(), point.totalEgp.toFloat())
+            Entry(i.toFloat(), point.totalEgp.toFloat())
         }
 
         if (entries.isEmpty()) {
@@ -147,22 +147,27 @@ class DashboardFragment : Fragment() {
         binding.chart.visibility = View.VISIBLE
         binding.chartEmpty.visibility = View.GONE
 
-        val dataSet = BarDataSet(entries, "Revenue (EGP)").apply {
+        val dataSet = LineDataSet(entries, "Revenue (EGP)").apply {
             color = resources.getColor(R.color.brand_primary, null)
             setDrawValues(false)
+            setDrawCircles(true)
+            setCircleColor(resources.getColor(R.color.brand_primary, null))
+            circleRadius = 3.5f
+            setDrawCircleHole(false)
+            lineWidth = 2.5f
+            mode = LineDataSet.Mode.CUBIC_BEZIER
+            setDrawFilled(true)
+            fillDrawable = resources.getDrawable(R.drawable.bg_chart_gradient, null)
             highLightColor = resources.getColor(R.color.brand_secondary, null)
         }
 
-        val barData = BarData(dataSet).apply {
-            barWidth = 0.7f
-        }
+        val lineData = LineData(dataSet)
 
         binding.chart.apply {
-            data = barData
+            data = lineData
             description.isEnabled = false
             legend.isEnabled = false
             setDrawGridBackground(false)
-            setFitBars(true)
             setTouchEnabled(true)
             setScaleEnabled(false)
             animateY(600)

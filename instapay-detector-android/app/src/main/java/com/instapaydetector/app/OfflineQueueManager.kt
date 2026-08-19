@@ -106,7 +106,7 @@ class OfflineQueueManager private constructor(private val context: Context) {
                     val item = pending.first()
                     Log.i(TAG, "Attempting to flush queued report (id=${item.id}, attempt=${item.retries + 1})")
 
-                    val success = client.reportPayment(
+                    val result = client.reportPayment(
                         amountEgp = item.amountEgp,
                         senderHandle = item.senderHandle,
                         recipientHandle = item.recipientHandle,
@@ -114,8 +114,12 @@ class OfflineQueueManager private constructor(private val context: Context) {
                         notificationTimestampIso = item.timestampIso
                     )
 
-                    if (success) {
+                    if (result == ReportResult.SUCCESS) {
                         Log.i(TAG, "Successfully flushed report id=${item.id}")
+                        pending.removeAt(0)
+                        saveQueue(pending)
+                    } else if (result == ReportResult.SUBSCRIPTION_ENDED) {
+                        Log.e(TAG, "Dropping report id=${item.id} because subscription/trial ended.")
                         pending.removeAt(0)
                         saveQueue(pending)
                     } else {
