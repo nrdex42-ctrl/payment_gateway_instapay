@@ -106,6 +106,34 @@
                     android:text="@string/grant_permission_button"
                     android:textColor="@color/text_on_primary"
                     app:backgroundTint="@color/brand_primary" />
+
+                <TextView
+                    android:id="@+id/batteryStatusText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Battery Optimization: Checking…"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/batteryStatusDesc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="To prevent Android from suspending the app or blocking network requests while sleeping, allow unrestricted background running."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/grantBatteryPermissionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Request Unrestricted Run"
+                    android:textColor="@color/text_on_primary"
+                    app:backgroundTint="@color/brand_primary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -290,60 +318,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Preferences card -->
-        <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.InstapayDetector.Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/pref_category_title"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <!-- Theme Preference -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/pref_theme_label"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
-
-                <Spinner
-                    android:id="@+id/themeSpinner"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:minHeight="48dp" />
-
-                <!-- Language Preference -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/pref_lang_label"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
-
-                <Spinner
-                    android:id="@+id/languageSpinner"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:minHeight="48dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
         <!-- About card -->
         <com.google.android.material.card.MaterialCardView
@@ -372,6 +347,30 @@
                     android:text="@string/settings_about_body"
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Logout Card -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.InstapayDetector.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/logoutButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Log Out"
+                    android:textColor="@color/status_denied"
+                    app:strokeColor="@color/status_denied" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

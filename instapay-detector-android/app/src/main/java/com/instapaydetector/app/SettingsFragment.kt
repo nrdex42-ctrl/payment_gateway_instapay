@@ -1,7 +1,11 @@
 package com.instapaydetector.app
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
@@ -47,29 +51,6 @@ class SettingsFragment : Fragment() {
             }
         }
 
-        // Load preferences
-        val prefs = requireContext().getSharedPreferences("instapay_settings", android.content.Context.MODE_PRIVATE)
-
-        // Theme Spinner Setup
-        val themesText = arrayOf(getString(R.string.pref_theme_system), getString(R.string.pref_theme_light), getString(R.string.pref_theme_dark))
-        val themesValue = arrayOf("system", "light", "dark")
-        val themeAdapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, themesText)
-        themeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.themeSpinner.adapter = themeAdapter
-        val currentTheme = prefs.getString("pref_theme", "system") ?: "system"
-        val themeIndex = themesValue.indexOf(currentTheme).coerceAtLeast(0)
-        binding.themeSpinner.setSelection(themeIndex)
-
-        // Language Spinner Setup
-        val langsText = arrayOf(getString(R.string.pref_lang_en), getString(R.string.pref_lang_ar))
-        val langsValue = arrayOf("en", "ar")
-        val langAdapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, langsText)
-        langAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.languageSpinner.adapter = langAdapter
-        val currentLang = LocaleHelper.getLanguage(requireContext())
-        val langIndex = langsValue.indexOf(currentLang).coerceAtLeast(0)
-        binding.languageSpinner.setSelection(langIndex)
-
         // Load saved config
         binding.gatewayUrlInput.setText(config.gatewayUrl)
         binding.authTokenInput.setText(config.authToken)
@@ -82,6 +63,7 @@ class SettingsFragment : Fragment() {
             val url = binding.gatewayUrlInput.text.toString().trim()
             val token = binding.authTokenInput.text.toString().trim()
             val merchantHandle = binding.merchantHandleInput.text.toString().trim()
+            val currentLang = LocaleHelper.getLanguage(requireContext())
 
             if (url.isEmpty()) {
                 val errText = if (currentLang == "ar") "يرجى إدخال رابط بوابة الدفع" else "Please enter the gateway URL"
@@ -97,42 +79,40 @@ class SettingsFragment : Fragment() {
             config.authToken = token
             config.merchantHandle = merchantHandle
             
-            // Save preferences
-            val selectedTheme = themesValue[binding.themeSpinner.selectedItemPosition]
-            val selectedLang = langsValue[binding.languageSpinner.selectedItemPosition]
-
-            prefs.edit().putString("pref_theme", selectedTheme).apply()
-            
-            val themeChanged = selectedTheme != currentTheme
-            val langChanged = selectedLang != currentLang
-
-            if (langChanged) {
-                LocaleHelper.setLocale(requireContext(), selectedLang)
-                LocaleHelper.applyLocale(requireContext())
-            }
-
-            if (themeChanged) {
-                val nightMode = when (selectedTheme) {
-                    "light" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
-                    "dark" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-                    else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                }
-                androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(nightMode)
-            }
-
-            val confirmationText = if (selectedLang == "ar") "تم حفظ الإعدادات بنجاح" else "Config Saved Successfully"
+            val confirmationText = if (currentLang == "ar") "تم حفظ الإعدادات بنجاح" else "Config Saved Successfully"
             Toast.makeText(requireContext(), confirmationText, Toast.LENGTH_SHORT).show()
 
-            if (themeChanged || langChanged) {
-                activity?.recreate()
-            } else {
-                binding.monitoredHandleLabel.text = getString(R.string.monitored_handle_label).replace("mohammedshabana77@instapay", merchantHandle)
-            }
+            binding.monitoredHandleLabel.text = "Reporting payments received by: $merchantHandle"
         }
 
         binding.monitoredHandleLabel.text = "Reporting payments received by: ${config.merchantHandle}"
         binding.grantPermissionButton.setOnClickListener { openNotificationAccessSettings() }
         binding.testButton.setOnClickListener { sendTestNotification() }
+        binding.logoutButton.setOnClickListener {
+            config.isLoggedIn = false
+            // Reset to defaults
+            config.authToken = "instapay-sandbox-detector-token-2026"
+            config.merchantHandle = "mohammedshabana77@instapay"
+            
+            val intent = Intent(requireContext(), LoginActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+            activity?.finish()
+        }
+
+        binding.grantBatteryPermissionButton.setOnClickListener {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:${requireContext().packageName}")
+                    }
+                    startActivity(intent)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Failed to open settings: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     override fun onResume() {
@@ -157,6 +137,24 @@ class SettingsFragment : Fragment() {
             "Active · listening for received payments"
         } else {
             getString(R.string.listener_idle)
+        }
+
+        // Check battery optimizations status
+        val pm = requireContext().getSystemService(Context.POWER_SERVICE) as PowerManager
+        val isIgnoringBattery = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            pm.isIgnoringBatteryOptimizations(requireContext().packageName)
+        } else {
+            true
+        }
+
+        if (isIgnoringBattery) {
+            binding.batteryStatusText.text = "Battery Optimization: Unrestricted ✓"
+            binding.batteryStatusText.setTextColor(resources.getColor(R.color.status_confirmed, null))
+            binding.grantBatteryPermissionButton.visibility = View.GONE
+        } else {
+            binding.batteryStatusText.text = "Battery Optimization: Optimized (app may sleep) ✗"
+            binding.batteryStatusText.setTextColor(resources.getColor(R.color.status_denied, null))
+            binding.grantBatteryPermissionButton.visibility = View.VISIBLE
         }
 
         val lastDetection = requireContext()

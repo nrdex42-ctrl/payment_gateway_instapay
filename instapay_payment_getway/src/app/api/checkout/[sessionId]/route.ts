@@ -57,6 +57,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         deepLinkToken: tx.deepLinkToken,
         detectedRef: tx.detectedRef,
         detectedAt: tx.detectedAt?.toISOString() ?? null,
+        detectedAmountEgp: tx.detectedAmountEgp,
         createdAt: tx.createdAt.toISOString(),
         expiresAt: tx.expiresAt.toISOString(),
         secondsRemaining,

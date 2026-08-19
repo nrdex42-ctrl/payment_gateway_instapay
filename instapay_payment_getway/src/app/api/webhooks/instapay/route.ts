@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
 
     // --- Match PENDING checkouts for this client only ---
     const now = new Date()
-    const match = await db.transaction.findFirst({
+    let match = await db.transaction.findFirst({
       where: {
         clientId: client.id,
         senderHandle,
@@ -204,14 +204,68 @@ export async function POST(request: NextRequest) {
       orderBy: { createdAt: 'asc' },
     })
 
+    // Fallback 1: match exact amount checkouts that expired within the last 30 minutes grace period
     if (!match) {
+      const GRACE_PERIOD_MS = 30 * 60 * 1000 // 30 minutes grace period
+      const graceCutoff = new Date(now.getTime() - GRACE_PERIOD_MS)
+
+      match = await db.transaction.findFirst({
+        where: {
+          clientId: client.id,
+          senderHandle,
+          amountEgp: Math.round(amountEgp * 100) / 100,
+          status: { in: ['PENDING', 'EXPIRED'] },
+          expiresAt: { gte: graceCutoff },
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+    }
+
+    let isMismatchedAmount = false
+    const receivedAmountRounded = Math.round(amountEgp * 100) / 100
+
+    // Fallback 2: Hybrid search for checkouts for the same sender handle, ignoring amount
+    if (!match) {
+      const GRACE_PERIOD_MS = 30 * 60 * 1000
+      const graceCutoff = new Date(now.getTime() - GRACE_PERIOD_MS)
+
+      match = await db.transaction.findFirst({
+        where: {
+          clientId: client.id,
+          senderHandle,
+          status: { in: ['PENDING', 'EXPIRED'] },
+          expiresAt: { gte: graceCutoff },
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+
+      if (match) {
+        isMismatchedAmount = true
+      }
+    }
+
+    // If still no match is found, this is an entirely unmatched (orphaned) payment
+    if (!match) {
+      try {
+        await db.mismatchedPayment.create({
+          data: {
+            clientId: client.id,
+            senderHandle,
+            amountEgp: receivedAmountRounded,
+            reference,
+          }
+        })
+      } catch (err) {
+        console.error('[webhook] failed to save mismatched payment to DB:', err)
+      }
+
       const response = NextResponse.json({
         ok: true,
         matched: false,
         reason: 'NO_PENDING_CHECKOUT',
         received: {
           senderHandle,
-          amountEgp: Math.round(amountEgp * 100) / 100,
+          amountEgp: receivedAmountRounded,
           reference,
           notificationTimestamp: notificationTimestamp.toISOString(),
         },
@@ -223,13 +277,72 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    // Update transaction to CONFIRMED
+    // Handle Mismatched Amount logic
+    if (isMismatchedAmount) {
+      if (receivedAmountRounded < match.amountEgp) {
+        // Underpayment: mark transaction as UNDERPAID and save
+        const updated = await db.transaction.update({
+          where: { id: match.id },
+          data: {
+            status: 'UNDERPAID',
+            detectedRef: reference,
+            detectedAt: now,
+            detectedAmountEgp: receivedAmountRounded,
+          },
+        })
+
+        // Trigger callback webhook for underpayment
+        if (client.webhookUrl) {
+          void forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
+            event: 'payment.underpaid',
+            clientId: client.id,
+            businessName: client.businessName,
+            transaction: {
+              sessionId: updated.sessionId,
+              senderHandle: updated.senderHandle,
+              recipientHandle: updated.recipientHandle,
+              amountEgp: match.amountEgp, // requested amount
+              detectedAmountEgp: updated.detectedAmountEgp, // received amount
+              currency: updated.currency,
+              status: updated.status,
+              detectedRef: updated.detectedRef,
+              detectedAt: updated.detectedAt?.toISOString() ?? null,
+              note: updated.note,
+              createdAt: updated.createdAt.toISOString(),
+            },
+          })
+        }
+
+        const response = NextResponse.json({
+          ok: true,
+          matched: false,
+          reason: 'UNDERPAID',
+          received: {
+            senderHandle,
+            amountEgp: receivedAmountRounded,
+            reference,
+            notificationTimestamp: notificationTimestamp.toISOString(),
+          },
+        })
+        const rlHeaders = getRateLimitHeaders(rl)
+        Object.entries(rlHeaders).forEach(([k, v]) => {
+          response.headers.set(k, v)
+        })
+        return response
+      } else {
+        // Overpayment: confirm transaction and record the actual amount received
+        console.log(`[webhook] Overpayment matched! Expected ${match.amountEgp}, got ${receivedAmountRounded}`)
+      }
+    }
+
+    // Update transaction to CONFIRMED (for exact match or overpayment)
     const updated = await db.transaction.update({
       where: { id: match.id },
       data: {
         status: 'CONFIRMED',
         detectedRef: reference,
         detectedAt: now,
+        detectedAmountEgp: receivedAmountRounded,
       },
     })
 

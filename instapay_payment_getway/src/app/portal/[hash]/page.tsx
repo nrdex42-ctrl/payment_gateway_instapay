@@ -87,7 +87,9 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   }
 
   const [token, setToken] = useState<string | null>(null)
-  const [secretInput, setSecretInput] = useState('')
+  const [adminEmail, setAdminEmail] = useState('')
+  const [adminPassword, setAdminPassword] = useState('')
+  const [adminTotp, setAdminTotp] = useState('')
   const [authError, setAuthError] = useState<string | null>(null)
 
   // Platform data
@@ -170,7 +172,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: secretInput }),
+        body: JSON.stringify({ email: adminEmail, password: adminPassword, totp: adminTotp }),
       })
       const data = await res.json()
       if (data.ok) {
@@ -187,7 +189,9 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const handleLogout = () => {
     localStorage.removeItem('owner_secret_token')
     setToken(null)
-    setSecretInput('')
+    setAdminEmail('')
+    setAdminPassword('')
+    setAdminTotp('')
   }
 
   const loadData = async () => {
@@ -520,22 +524,53 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
             </div>
             <h1 className="text-xl font-bold text-white tracking-tight">Platform Admin Login</h1>
             <p className="text-sm text-neutral-400">
-              Enter platform owner secret key to access setup controls.
+              Enter your credentials and TOTP code to access setup controls.
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="secret" className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                Admin secret key
+              <Label htmlFor="admin-email" className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                Email Address
               </Label>
               <Input
-                id="secret"
-                type="password"
-                placeholder="Paste OWNER_SECRET token…"
-                value={secretInput}
-                onChange={(e) => setSecretInput(e.target.value)}
+                id="admin-email"
+                type="email"
+                placeholder="instapay.payment.gateway@gmail.com"
+                value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
                 className="h-11 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-600 focus-visible:ring-violet-500"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="admin-password" className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                Password
+              </Label>
+              <Input
+                id="admin-password"
+                type="password"
+                placeholder="••••••••"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                className="h-11 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-600 focus-visible:ring-violet-500"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="admin-totp" className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                TOTP 2FA Code
+              </Label>
+              <Input
+                id="admin-totp"
+                type="text"
+                maxLength={6}
+                placeholder="000000"
+                value={adminTotp}
+                onChange={(e) => setAdminTotp(e.target.value)}
+                className="h-11 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-600 focus-visible:ring-violet-500 text-center font-mono tracking-widest text-lg"
                 required
               />
             </div>
@@ -937,6 +972,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                           </div>
                         </div>
                       </div>
+                    </div>
                     ))
                   )}
                 </div>

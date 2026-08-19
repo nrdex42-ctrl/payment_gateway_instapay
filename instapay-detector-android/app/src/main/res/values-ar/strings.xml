@@ -65,7 +65,7 @@
     <string name="test_button">إرسال إشعار فحص تجريبي</string>
 
     <string name="monitored_package_label">الحزمة المراقبة: com.egyptianbanks.instapay</string>
-    <string name="monitored_handle_label">يتم إرسال العمليات المستلمة على: mohammedshabana77@instapay</string>
+    <string name="monitored_handle_label">يتم إرسال العمليات المستلمة على: %1$s</string>
 
     <string name="last_detection_label">آخر عملية تم كشفها</string>
     <string name="last_detection_none">لا توجد عمليات مكتشفة بعد</string>

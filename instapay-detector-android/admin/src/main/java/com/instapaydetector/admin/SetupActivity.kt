@@ -14,6 +14,10 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+
 
 class SetupActivity : AppCompatActivity() {
 
@@ -44,10 +48,11 @@ class SetupActivity : AppCompatActivity() {
 
     private fun handleSetup() {
         val gatewayUrl = binding.etGatewayUrl.text?.toString()?.trim() ?: ""
-        val portalHash = binding.etPortalHash.text?.toString()?.trim() ?: ""
-        val ownerSecret = binding.etOwnerSecret.text?.toString()?.trim() ?: ""
+        val email = binding.etEmail.text?.toString()?.trim() ?: ""
+        val password = binding.etPassword.text?.toString()?.trim() ?: ""
+        val totp = binding.etTotp.text?.toString()?.trim() ?: ""
 
-        if (gatewayUrl.isEmpty() || portalHash.isEmpty() || ownerSecret.isEmpty()) {
+        if (gatewayUrl.isEmpty() || email.isEmpty() || password.isEmpty() || totp.isEmpty()) {
             showError(getString(R.string.error_invalid_fields))
             return
         }
@@ -59,22 +64,21 @@ class SetupActivity : AppCompatActivity() {
 
         // Clean trailing slashes
         val cleanUrl = gatewayUrl.removeSuffix("/")
-        val cleanHash = portalHash.removePrefix("/").removeSuffix("/")
 
         binding.btnConnect.isEnabled = false
         binding.btnConnect.text = getString(R.string.btn_verifying)
         binding.tvError.visibility = View.GONE
 
         lifecycleScope.launch {
-            val isValid = withContext(Dispatchers.IO) {
-                verifyCredentials(cleanUrl, ownerSecret)
+            val token = withContext(Dispatchers.IO) {
+                performAdminLogin(cleanUrl, email, password, totp)
             }
-            if (isValid) {
+            if (token != null) {
                 val prefs = ApiClient.getPrefs(this@SetupActivity)
                 prefs.edit()
                     .putString("gateway_url", cleanUrl)
-                    .putString("portal_hash", cleanHash)
-                    .putString("owner_secret", ownerSecret)
+                    .putString("portal_hash", "admin")
+                    .putString("owner_secret", token)
                     .apply()
 
                 Toast.makeText(this@SetupActivity, "Setup Completed Successfully!", Toast.LENGTH_SHORT).show()
@@ -82,7 +86,7 @@ class SetupActivity : AppCompatActivity() {
             } else {
                 binding.btnConnect.isEnabled = true
                 binding.btnConnect.text = getString(R.string.btn_connect)
-                showError(getString(R.string.error_connection_failed))
+                showError("Connection or authentication failed. Check credentials/2FA.")
             }
         }
     }
@@ -92,19 +96,32 @@ class SetupActivity : AppCompatActivity() {
         binding.tvError.visibility = View.VISIBLE
     }
 
-    private fun verifyCredentials(url: String, secret: String): Boolean {
+    private fun performAdminLogin(url: String, email: String, password: String, totp: String): String? {
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val jsonBody = JSONObject().apply {
+            put("email", email)
+            put("password", password)
+            put("totp", totp)
+        }
+        val requestBody = jsonBody.toString().toRequestBody(mediaType)
         val request = Request.Builder()
-            .url("$url/api/admin/audit")
-            .addHeader("Authorization", "Bearer $secret")
+            .url("$url/api/admin/auth")
+            .post(requestBody)
             .build()
 
         return try {
             client.newCall(request).execute().use { response ->
-                response.code == 200
+                val bodyStr = response.body?.string() ?: ""
+                if (response.code == 200) {
+                    val json = JSONObject(bodyStr)
+                    if (json.has("token")) json.getString("token") else null
+                } else {
+                    null
+                }
             }
         } catch (e: IOException) {
             e.printStackTrace()
-            false
+            null
         }
     }
 

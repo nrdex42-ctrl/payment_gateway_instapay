@@ -47,11 +47,18 @@ class GatewayConfig private constructor(ctx: Context) {
             prefs.edit().putString(KEY_MERCHANT_HANDLE, value.trim().lowercase()).apply()
         }
 
+    var isLoggedIn: Boolean
+        get() = prefs.getBoolean(KEY_IS_LOGGED_IN, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_IS_LOGGED_IN, value).apply()
+        }
+
     companion object {
         private const val FILE_NAME = "gateway_config.xml"
         private const val KEY_URL = "gateway_url"
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_MERCHANT_HANDLE = "merchant_handle"
+        private const val KEY_IS_LOGGED_IN = "is_logged_in"
 
         private const val DEFAULT_URL =
             "https://your-gateway.example.com/api/webhooks/instapay"

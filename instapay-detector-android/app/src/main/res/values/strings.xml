@@ -65,7 +65,7 @@
     <string name="test_button">Send test notification</string>
 
     <string name="monitored_package_label">Monitored package: com.egyptianbanks.instapay</string>
-    <string name="monitored_handle_label">Reporting payments received by: mohammedshabana77@instapay</string>
+    <string name="monitored_handle_label">Reporting payments received by: %1$s</string>
 
     <string name="last_detection_label">Last detection</string>
     <string name="last_detection_none">No detections yet</string>

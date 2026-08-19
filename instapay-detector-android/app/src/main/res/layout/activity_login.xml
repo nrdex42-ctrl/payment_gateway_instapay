@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_root">
+    android:background="@color/bg_light">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -15,79 +15,70 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:padding="28dp">
+            android:padding="24dp">
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1" />
 
-            <!-- Brand Logo with glow -->
-            <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp">
-
-                <ImageView
-                    android:id="@+id/img_logo"
-                    android:layout_width="88dp"
-                    android:layout_height="88dp"
-                    android:src="@drawable/ic_brand_logo"
-                    android:contentDescription="@string/app_name"
-                    android:scaleType="centerCrop" />
-            </FrameLayout>
+            <!-- Brand Logo -->
+            <ImageView
+                android:id="@+id/img_logo"
+                android:layout_width="88dp"
+                android:layout_height="88dp"
+                android:src="@drawable/ic_brand_logo"
+                android:contentDescription="@string/app_name"
+                android:layout_marginBottom="8dp" />
 
             <!-- Title -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/title_setup"
+                android:text="Merchant Log In"
                 android:textColor="@color/text_primary"
                 android:textSize="22sp"
                 android:textStyle="bold"
-                android:letterSpacing="-0.02"
                 android:layout_marginBottom="6dp" />
 
             <!-- Subtitle -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/desc_setup"
+                android:text="Enter your merchant account details to sync the detector app."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 android:gravity="center"
-                android:lineSpacingExtra="3dp"
-                android:layout_marginBottom="36dp"
+                android:layout_marginBottom="28dp"
                 android:paddingHorizontal="16dp" />
 
-            <!-- Glass Card Container -->
+            <!-- Login Card Container -->
             <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.InstapayDetector.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/bg_card"
                 app:strokeColor="@color/border_subtle"
                 app:strokeWidth="1dp"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp">
+                app:cardCornerRadius="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="24dp">
+                    android:padding="20dp">
 
-                    <!-- Gateway URL -->
+                    <!-- Server URL -->
                     <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.InstapayDetector.TextInputLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        style="@style/Widget.InstaPayAdmin.TextInputLayout">
+                        android:layout_marginBottom="12dp"
+                        android:hint="Server URL">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_gateway_url"
+                            android:id="@+id/et_server_url"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="@string/hint_gateway_url"
                             android:inputType="textUri"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp" />
@@ -95,16 +86,16 @@
 
                     <!-- Email Address -->
                     <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.InstapayDetector.TextInputLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        style="@style/Widget.InstaPayAdmin.TextInputLayout">
+                        android:layout_marginBottom="12dp"
+                        android:hint="Email Address">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_email"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Email Address"
                             android:inputType="textEmailAddress"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp" />
@@ -112,42 +103,41 @@
 
                     <!-- Password -->
                     <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.InstapayDetector.TextInputLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        style="@style/Widget.InstaPayAdmin.TextInputLayout"
-                        app:endIconMode="password_toggle"
-                        app:endIconTint="@color/text_tertiary">
+                        android:layout_marginBottom="12dp"
+                        android:hint="Password"
+                        app:passwordToggleEnabled="true"
+                        app:passwordToggleTint="@color/text_tertiary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_password"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Password"
                             android:inputType="textPassword"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- TOTP Code -->
+                    <!-- InstaPay Handle -->
                     <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.InstapayDetector.TextInputLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="24dp"
-                        style="@style/Widget.InstaPayAdmin.TextInputLayout">
+                        android:layout_marginBottom="20dp"
+                        android:hint="InstaPay Handle">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_totp"
+                            android:id="@+id/et_instapay_handle"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="TOTP Code"
-                            android:inputType="number"
-                            android:maxLength="6"
+                            android:inputType="text"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Error Display -->
+                    <!-- Error Text -->
                     <TextView
                         android:id="@+id/tv_error"
                         android:layout_width="match_parent"
@@ -155,23 +145,22 @@
                         android:visibility="gone"
                         android:textColor="@color/status_denied"
                         android:textSize="12sp"
-                        android:background="@color/status_denied_bg"
+                        android:background="#2E1616"
                         android:padding="12dp"
-                        android:layout_marginBottom="16dp"
-                        android:drawablePadding="8dp" />
+                        android:layout_marginBottom="16dp" />
 
-                    <!-- Connect Button -->
-                    <Button
-                        android:id="@+id/btn_connect"
+                    <!-- Log In Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_login"
                         android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:text="@string/btn_connect"
+                        android:layout_height="52dp"
+                        android:text="Log In"
                         android:textAllCaps="false"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_on_primary"
                         app:backgroundTint="@color/brand_primary"
-                        app:cornerRadius="14dp" />
+                        app:cornerRadius="12dp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -185,12 +174,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="InstaPay Gateway Platform"
-                android:textColor="@color/text_muted"
+                android:text="InstaPay Detector Platform"
+                android:textColor="@color/text_secondary"
                 android:textSize="11sp"
-                android:layout_marginTop="24dp" />
+                android:layout_marginTop="20dp" />
 
         </LinearLayout>
     </ScrollView>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

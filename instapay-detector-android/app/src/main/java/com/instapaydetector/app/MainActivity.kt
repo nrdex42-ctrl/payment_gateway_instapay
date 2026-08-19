@@ -26,6 +26,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Redirect to Login if not logged in
+        val config = GatewayConfig.get(this)
+        if (!config.isLoggedIn) {
+            startActivity(android.content.Intent(this, LoginActivity::class.java))
+            finish()
+            return
+        }
+
         // Apply saved Language
         LocaleHelper.applyLocale(this)
 
