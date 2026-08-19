@@ -52,8 +52,9 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transactions Transaction[]
-  webhookLogs  WebhookLog[]
+  transactions       Transaction[]
+  webhookLogs        WebhookLog[]
+  mismatchedPayments MismatchedPayment[]
 
   @@index([instapayHandle])
   @@index([apiKey])
@@ -80,8 +81,9 @@ model Transaction {
   deepLinkUrl   String
   deepLinkToken String
 
-  detectedRef String?
-  detectedAt  DateTime?
+  detectedRef       String?
+  detectedAt        DateTime?
+  detectedAmountEgp Float?
 
   createdAt DateTime @default(now())
   expiresAt DateTime
@@ -117,4 +119,18 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// ─── Unmatched / Mismatched Payment Logs ────────────────────────────
+model MismatchedPayment {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  senderHandle String
+  amountEgp    Float
+  reference    String?
+  status       String   @default("UNMATCHED") // UNMATCHED | RESOLVED
+  createdAt    DateTime @default(now())
+
+  @@index([clientId, createdAt])
 }
