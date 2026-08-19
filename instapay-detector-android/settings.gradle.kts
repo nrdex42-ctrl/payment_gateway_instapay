@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "InstaPay Detector"
 include(":app")
+include(":admin")

@@ -19,6 +19,7 @@ model Owner {
   email        String   @unique
   name         String
   passwordHash String
+  dstMode      String   @default("AUTO")
   createdAt    DateTime @default(now())
 }
 
@@ -51,7 +52,9 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transactions Transaction[]
+  transactions       Transaction[]
+  webhookLogs        WebhookLog[]
+  mismatchedPayments MismatchedPayment[]
 
   @@index([instapayHandle])
   @@index([apiKey])
@@ -78,8 +81,9 @@ model Transaction {
   deepLinkUrl   String
   deepLinkToken String
 
-  detectedRef String?
-  detectedAt  DateTime?
+  detectedRef       String?
+  detectedAt        DateTime?
+  detectedAmountEgp Float?
 
   createdAt DateTime @default(now())
   expiresAt DateTime
@@ -89,4 +93,44 @@ model Transaction {
   @@index([status, expiresAt])
   @@index([deepLinkToken])
   @@index([createdAt])
+}
+
+// ─── Webhook Delivery Log ──────────────────────────────────────────
+model WebhookLog {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  url        String
+  event      String
+  payload    String   // Stringified JSON payload
+  statusCode Int?     // HTTP status code returned
+  response   String?  // Response body from merchant server
+  isSuccess  Boolean
+  createdAt  DateTime @default(now())
+
+  @@index([clientId, createdAt])
+}
+
+// ─── Administrative Audit Log ──────────────────────────────────────
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // e.g. "APPROVE_MERCHANT", "DISABLE_MERCHANT", "UPDATE_TZ", "FORCE_CONFIRM"
+  details   String   // Text description
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ─── Unmatched / Mismatched Payment Logs ────────────────────────────
+model MismatchedPayment {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  senderHandle String
+  amountEgp    Float
+  reference    String?
+  status       String   @default("UNMATCHED") // UNMATCHED | RESOLVED
+  createdAt    DateTime @default(now())
+
+  @@index([clientId, createdAt])
 }

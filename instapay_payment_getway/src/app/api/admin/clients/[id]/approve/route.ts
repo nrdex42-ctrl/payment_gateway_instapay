@@ -6,7 +6,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const isOwner = await authenticateOwner(request)
   const resolvedParams = await params
   if (!isOwner) {
-    const ownerSecret = process.env.OWNER_SECRET || 'owner-sandbox-secret-token-2026'
+    const ownerSecret = process.env.OWNER_SECRET
+    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
     const authHeader = request.headers.get('authorization') || ''
     const provided = authHeader.replace(/^Bearer\s+/, '').trim()
     if (provided !== ownerSecret) {
@@ -39,6 +40,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         detectToken,
       },
     })
+
+    await db.auditLog.create({
+      data: {
+        action: 'APPROVE_MERCHANT',
+        details: `Approved merchant: ${updated.businessName} (ID: ${updated.id})`,
+      }
+    }).catch(() => {})
 
     return NextResponse.json({
       ok: true,

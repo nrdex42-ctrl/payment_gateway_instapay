@@ -173,6 +173,7 @@ export default function HostedCheckoutPage({ params }: { params: Promise<{ slug:
                 submitting={submitting}
                 onSubmit={handleSubmit}
                 errorMessage={errorMessage}
+                recipientHandle={client.instapayHandle}
               />
             </div>
           )}

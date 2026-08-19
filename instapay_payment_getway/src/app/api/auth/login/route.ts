@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyPassword, createSessionToken } from '@/lib/auth'
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
   try {
+    // Enforce Rate Limit: max 10 requests per 1 minute
+    const rl = checkRateLimit(request, 10, 60 * 1000)
+    if (!rl.success) {
+      return NextResponse.json(
+        { ok: false, error: 'Too many login attempts. Please try again later.' },
+        { status: 429, headers: getRateLimitHeaders(rl) }
+      )
+    }
+
     const body = await request.json()
     const { email, password } = body || {}
 
@@ -70,6 +80,12 @@ export async function POST(request: NextRequest) {
       sameSite: 'strict',
       maxAge: 24 * 60 * 60, // 1 day
       path: '/',
+    })
+
+    // Attach headers
+    const rlHeaders = getRateLimitHeaders(rl)
+    Object.entries(rlHeaders).forEach(([k, v]) => {
+      response.headers.set(k, v)
     })
 
     return response

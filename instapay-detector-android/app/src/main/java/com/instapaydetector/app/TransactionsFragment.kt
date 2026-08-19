@@ -68,11 +68,15 @@ class TransactionsFragment : Fragment() {
         })
 
         // Filter chips
-        binding.filterAll.setOnClickListener { setStatusFilter(null); selectFilter(binding.filterAll) }
-        binding.filterConfirmed.setOnClickListener { setStatusFilter("CONFIRMED"); selectFilter(binding.filterConfirmed) }
-        binding.filterPending.setOnClickListener { setStatusFilter("PENDING"); selectFilter(binding.filterPending) }
-        binding.filterExpired.setOnClickListener { setStatusFilter("EXPIRED"); selectFilter(binding.filterExpired) }
-        selectFilter(binding.filterAll)
+        binding.filterGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            val status = when (checkedIds.firstOrNull()) {
+                R.id.filterConfirmed -> "CONFIRMED"
+                R.id.filterPending -> "PENDING"
+                R.id.filterExpired -> "EXPIRED"
+                else -> null
+            }
+            setStatusFilter(status)
+        }
 
         // Export button
         binding.exportButton.setOnClickListener {
@@ -98,20 +102,6 @@ class TransactionsFragment : Fragment() {
     private fun setStatusFilter(status: String?) {
         currentStatus = status
         loadFirstPage()
-    }
-
-    private fun selectFilter(selected: MaterialButton) {
-        // Toggle visual state by changing the background tint
-        val ctx = requireContext()
-        val activeColor = ctx.resources.getColor(R.color.brand_primary, null)
-        val inactiveColor = ctx.resources.getColor(R.color.text_secondary, null)
-        val activeBg = ctx.resources.getColor(R.color.bg_card, null)
-
-        listOf(binding.filterAll, binding.filterConfirmed, binding.filterPending, binding.filterExpired).forEach { btn ->
-            val isSelected = btn.id == selected.id
-            btn.setBackgroundColor(if (isSelected) activeColor else activeBg)
-            btn.setTextColor(if (isSelected) activeBg else inactiveColor)
-        }
     }
 
     private fun loadFirstPage() {

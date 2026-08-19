@@ -24,13 +24,14 @@ export interface CheckoutStatus {
   merchantName?: string
   amountEgp: number
   currency: string
-  status: 'PENDING' | 'CONFIRMED' | 'EXPIRED'
+  status: 'PENDING' | 'CONFIRMED' | 'EXPIRED' | 'UNDERPAID'
   note?: string | null
   deepLinkUrl?: string
   deepLinkToken?: string
   qrCodeDataUrl?: string
   detectedRef?: string | null
   detectedAt?: string | null
+  detectedAmountEgp?: number | null
   createdAt: string
   expiresAt: string
   secondsRemaining: number
@@ -150,6 +151,10 @@ export function WaitingScreen({ checkout, onReset }: Props) {
 
   if (current.status === 'EXPIRED') {
     return <ExpiredView checkout={current} onReset={onReset} />
+  }
+
+  if (current.status === 'UNDERPAID') {
+    return <UnderpaidView checkout={current} onReset={onReset} />
   }
 
   return (
@@ -483,4 +488,51 @@ function formatCountdown(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+function UnderpaidView({
+  checkout,
+  onReset,
+}: {
+  checkout: CheckoutStatus
+  onReset: () => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="space-y-5 text-center"
+    >
+      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-50 text-amber-600 ring-4 ring-amber-100">
+        <XCircle className="h-12 w-12 text-amber-500" />
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-bold text-neutral-900 font-sans">Underpayment Detected</h2>
+        <p className="mt-1 text-sm text-neutral-600">
+          You transferred less than the requested amount. Please contact the merchant to resolve this.
+        </p>
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-left">
+        <Row label="Requested" value={`${checkout.amountEgp.toFixed(2)} ${checkout.currency}`} bold />
+        <Row
+          label="Received"
+          value={`${checkout.detectedAmountEgp?.toFixed(2) || '0.00'} ${checkout.currency}`}
+          bold
+          mono
+        />
+        <Row label="Sender" value={checkout.senderHandle} mono />
+        {checkout.detectedRef && <Row label="Reference" value={checkout.detectedRef} mono />}
+      </div>
+
+      <Button
+        type="button"
+        onClick={onReset}
+        className="h-11 w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-[15px] font-semibold text-white shadow-lg"
+      >
+        Try again
+      </Button>
+    </motion.div>
+  )
 }
