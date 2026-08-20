@@ -41,6 +41,9 @@ class SetupActivity : AppCompatActivity() {
         binding = ActivitySetupBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Pre-fill default production server URL
+        binding.etGatewayUrl.setText("https://instapay-ruddy.vercel.app")
+
         binding.btnConnect.setOnClickListener {
             handleSetup()
         }

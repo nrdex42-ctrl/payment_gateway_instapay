@@ -84,7 +84,9 @@ class MerchantAdapter(
             }
 
             // Subscription rendering
-            binding.tvSubscription.text = if (isFreeTrial) "TRIAL" else subscriptionPlan.uppercase()
+            val txLimit = item.optInt("txLimit", 5)
+            val txCount = item.optInt("txCount", 0)
+            binding.tvSubscription.text = (if (isFreeTrial) "TRIAL" else subscriptionPlan.uppercase()) + " ($txCount/$txLimit)"
             binding.tvSubscription.setTextColor(context.getColor(if (isFreeTrial) R.color.status_pending else R.color.status_confirmed))
             binding.tvSubscription.setBackgroundColor(context.getColor(if (isFreeTrial) R.color.status_pending_bg else R.color.status_confirmed_bg))
 
@@ -109,8 +111,8 @@ class MerchantAdapter(
                 binding.tvSubscriptionEnds.text = "Lifetime"
             }
 
-            if (isExpired) {
-                binding.tvSubscription.text = "EXPIRED"
+            if (isExpired || txCount >= txLimit) {
+                binding.tvSubscription.text = if (txCount >= txLimit) "LIMIT EXCEEDED" else "EXPIRED"
                 binding.tvSubscription.setTextColor(context.getColor(R.color.status_denied))
                 binding.tvSubscription.setBackgroundColor(context.getColor(R.color.status_denied_bg))
                 binding.tvSubscriptionEnds.setTextColor(context.getColor(R.color.status_denied))

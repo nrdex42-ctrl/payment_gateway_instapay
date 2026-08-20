@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -70,6 +72,9 @@ class SettingsFragment : Fragment() {
                 }
                 .show()
         }
+
+        // Plans Manager – Load Plans button
+        binding.btnRefreshPlans.setOnClickListener { loadPlans() }
     }
 
     private fun loadSettings() {
@@ -94,6 +99,9 @@ class SettingsFragment : Fragment() {
                 handleUnauthorized()
             }
         }
+
+        // Auto-load plans on startup
+        loadPlans()
     }
 
     private fun updateDstMode(newMode: String) {
@@ -108,6 +116,106 @@ class SettingsFragment : Fragment() {
                 Toast.makeText(requireContext(), "DST Mode updated successfully", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(requireContext(), response.errorMessage ?: "Failed to update DST Mode", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun loadPlans() {
+        binding.btnRefreshPlans.text = "Loading…"
+        binding.btnRefreshPlans.isEnabled = false
+
+        lifecycleScope.launch {
+            val response = ApiClient.get(requireContext(), "/api/admin/plans")
+            binding.btnRefreshPlans.text = "Refresh Plans"
+            binding.btnRefreshPlans.isEnabled = true
+
+            if (response.isSuccessful && response.json != null) {
+                val plans = response.json.optJSONArray("plans") ?: return@launch
+                binding.plansContainer.removeAllViews()
+
+                for (i in 0 until plans.length()) {
+                    val plan = plans.getJSONObject(i)
+                    val name = plan.optString("name", "Unknown")
+                    val price = plan.optDouble("priceEgp", 0.0)
+                    val maxTx = plan.optInt("maxTransactions", 0)
+
+                    val itemView = LayoutInflater.from(requireContext())
+                        .inflate(R.layout.item_plan_card, binding.plansContainer, false)
+
+                    itemView.findViewById<android.widget.TextView>(R.id.tvPlanName).text =
+                        name.replace("_", " ")
+                    itemView.findViewById<android.widget.TextView>(R.id.tvPlanPrice).text =
+                        if (price <= 0) "Free" else "EGP %.0f/mo".format(price)
+                    itemView.findViewById<android.widget.TextView>(R.id.tvPlanLimit).text =
+                        "$maxTx transactions"
+
+                    itemView.findViewById<android.widget.ImageButton>(R.id.btnEditPlan)
+                        .setOnClickListener {
+                            showEditPlanDialog(name, price, maxTx)
+                        }
+
+                    binding.plansContainer.addView(itemView)
+                }
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    response.errorMessage ?: "Failed to load plans",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun showEditPlanDialog(planName: String, currentPrice: Double, currentLimit: Int) {
+        val ctx = requireContext()
+        val layout = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(60, 40, 60, 20)
+        }
+
+        val priceInput = EditText(ctx).apply {
+            hint = "Price (EGP)"
+            setText("%.0f".format(currentPrice))
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+        }
+        layout.addView(priceInput)
+
+        val limitInput = EditText(ctx).apply {
+            hint = "Max Transactions"
+            setText("$currentLimit")
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        }
+        layout.addView(limitInput)
+
+        AlertDialog.Builder(ctx)
+            .setTitle("Edit Plan: ${planName.replace("_", " ")}")
+            .setView(layout)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
+                val newPrice = priceInput.text.toString().toDoubleOrNull() ?: currentPrice
+                val newLimit = limitInput.text.toString().toIntOrNull() ?: currentLimit
+                updatePlan(planName, newPrice, newLimit)
+            }
+            .show()
+    }
+
+    private fun updatePlan(planName: String, priceEgp: Double, maxTransactions: Int) {
+        lifecycleScope.launch {
+            val body = JSONObject().apply {
+                put("name", planName)
+                put("priceEgp", priceEgp)
+                put("maxTransactions", maxTransactions)
+            }
+            val response = ApiClient.patch(requireContext(), "/api/admin/plans", body)
+            if (response.isSuccessful) {
+                Toast.makeText(requireContext(), "Plan updated!", Toast.LENGTH_SHORT).show()
+                loadPlans() // Refresh
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    response.errorMessage ?: "Failed to update plan",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }

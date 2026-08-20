@@ -42,6 +42,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const isExpired = client.subscriptionEndsAt && new Date(client.subscriptionEndsAt).getTime() < Date.now()
+    const isLimitReached = client.txLimit !== undefined && client.txCount >= client.txLimit
+    if (isExpired || isLimitReached) {
+      const errMsg = isLimitReached 
+        ? 'This merchant account has reached its plan transaction limit. Please contact the merchant.'
+        : 'This merchant account subscription has expired. Please contact the merchant.'
+      return NextResponse.json(
+        { ok: false, error: errMsg },
+        { status: 403 }
+      )
+    }
+
     const senderHandle = normalizeHandle(body.senderHandle)
     const amountEgp = Number(body.amountEgp)
     const note = (body.note || '').trim() || null

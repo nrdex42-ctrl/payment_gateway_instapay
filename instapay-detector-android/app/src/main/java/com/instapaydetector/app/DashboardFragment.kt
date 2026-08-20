@@ -122,6 +122,52 @@ class DashboardFragment : Fragment() {
         binding.cardAvg.statValue.text = formatEgp(dash.stats.sevenDays.totalEgp / 7.0)
         binding.cardAvg.statSub.text = "7-day average"
 
+        // Subscription Info Card
+        val sub = dash.subscription
+        if (sub != null) {
+            binding.cardSubscription.visibility = View.VISIBLE
+            val planLabel = sub.plan.replace("_", " ")
+            binding.tvPlanName.text = if (sub.isFreeTrial) "FREE TRIAL" else planLabel
+            binding.tvTxUsage.text = "${sub.txCount} / ${sub.txLimit} confirmed transactions used"
+
+            // Progress bar
+            val pct = if (sub.txLimit > 0) (sub.txCount * 100) / sub.txLimit else 0
+            binding.progressTx.progress = Math.min(pct, 100)
+
+            // Remaining days
+            if (sub.subscriptionEndsAt != null) {
+                try {
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+                    val endDate = sdf.parse(sub.subscriptionEndsAt)
+                    if (endDate != null) {
+                        val remainMs = endDate.time - System.currentTimeMillis()
+                        val remainDays = (remainMs / (1000L * 60 * 60 * 24)).toInt()
+                        if (remainDays > 0) {
+                            binding.tvPlanExpiry.text = "Expires in $remainDays day${if (remainDays != 1) "s" else ""}"
+                            binding.tvPlanExpiry.setTextColor(resources.getColor(R.color.text_secondary, null))
+                        } else {
+                            binding.tvPlanExpiry.text = "EXPIRED"
+                            binding.tvPlanExpiry.setTextColor(resources.getColor(R.color.status_denied, null))
+                        }
+                    }
+                } catch (e: Exception) {
+                    binding.tvPlanExpiry.text = "No expiry"
+                }
+            } else {
+                binding.tvPlanExpiry.text = "No expiry"
+            }
+
+            // Limit warning
+            if (sub.txCount >= sub.txLimit) {
+                binding.tvLimitWarning.visibility = View.VISIBLE
+                binding.tvLimitWarning.text = "⚠ Limit reached. Contact your provider to upgrade."
+            } else {
+                binding.tvLimitWarning.visibility = View.GONE
+            }
+        } else {
+            binding.cardSubscription.visibility = View.GONE
+        }
+
         // Recent transactions (show up to 5)
         if (dash.recent.isEmpty()) {
             binding.recentList.visibility = View.GONE

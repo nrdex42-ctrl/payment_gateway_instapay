@@ -148,7 +148,16 @@ export async function GET(request: NextRequest) {
         detectedAtEgypt: t.detectedAt ? formatEgyptTime(t.detectedAt, dstMode) : null,
         createdAt: t.createdAt.toISOString(),
         createdAtEgypt: formatEgyptTime(t.createdAt, dstMode),
+        expiresAt: t.expiresAt.toISOString(),
+        expiresAtEgypt: formatEgyptTime(t.expiresAt, dstMode),
       })),
+      subscription: client ? {
+        plan: client.subscriptionPlan,
+        txCount: client.txCount,
+        txLimit: client.txLimit,
+        subscriptionEndsAt: client.subscriptionEndsAt ? client.subscriptionEndsAt.toISOString() : null,
+        isFreeTrial: client.isFreeTrial,
+      } : null,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

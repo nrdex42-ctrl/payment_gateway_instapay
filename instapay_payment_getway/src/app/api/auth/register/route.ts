@@ -62,6 +62,12 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = hashPassword(password)
 
+    // Fetch FREE_TRIAL plan configurations
+    const freeTrialPlan = await db.plan.findUnique({
+      where: { name: 'FREE_TRIAL' }
+    })
+    const trialLimit = freeTrialPlan ? freeTrialPlan.maxTransactions : 5
+
     const client = await db.client.create({
       data: {
         businessName: businessName.trim(),
@@ -76,6 +82,8 @@ export async function POST(request: NextRequest) {
         subscriptionPlan: 'FREE_TRIAL',
         isFreeTrial: true,
         subscriptionEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day from now
+        txLimit: trialLimit,
+        txCount: 0,
       },
     })
 

@@ -25,11 +25,20 @@ data class DashboardStats(
     val merchant: MerchantInfo,
     val stats: StatsBreakdown,
     val recent: List<Transaction>,
+    val subscription: SubscriptionInfo?,
 )
 
 data class MerchantInfo(
     val handle: String,
     val name: String,
+)
+
+data class SubscriptionInfo(
+    val plan: String,
+    val txCount: Int,
+    val txLimit: Int,
+    val subscriptionEndsAt: String?,
+    val isFreeTrial: Boolean,
 )
 
 data class StatsBreakdown(

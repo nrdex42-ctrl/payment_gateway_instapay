@@ -23,9 +23,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (client.subscriptionEndsAt && new Date(client.subscriptionEndsAt).getTime() < Date.now()) {
+    const isExpired = client.subscriptionEndsAt && new Date(client.subscriptionEndsAt).getTime() < Date.now()
+    const isLimitReached = client.txLimit !== undefined && client.txCount >= client.txLimit
+    if (isExpired || isLimitReached) {
+      const errMsg = isLimitReached 
+        ? 'Payment Required. Your plan transaction limit has been reached.'
+        : 'Payment Required. Your subscription or free trial has expired.'
       return NextResponse.json(
-        { ok: false, error: 'Payment Required. Your subscription or free trial has ended.' },
+        { ok: false, error: errMsg },
         { status: 402 }
       )
     }

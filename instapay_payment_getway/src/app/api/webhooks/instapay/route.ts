@@ -42,6 +42,7 @@ export async function emitCheckoutUpdate(payload: {
   sessionId: string,
   status: 'CONFIRMED' | 'EXPIRED',
   amountEgp?: number,
+  detectedAmountEgp?: number | null,
   senderHandle?: string,
   detectedRef?: string | null,
   detectedAt?: string | null,
@@ -346,11 +347,24 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Increment client's confirmed transaction count atomically
+    await db.client.update({
+      where: { id: client.id },
+      data: {
+        txCount: {
+          increment: 1,
+        },
+      },
+    }).catch((err) => {
+      console.error('[webhook] Failed to increment client txCount:', err)
+    })
+
     // Push WebSocket real-time update to checkout waiting screen
     void emitCheckoutUpdate({
       sessionId: updated.sessionId,
       status: 'CONFIRMED',
       amountEgp: updated.amountEgp,
+      detectedAmountEgp: updated.detectedAmountEgp,
       senderHandle: updated.senderHandle,
       detectedRef: updated.detectedRef,
       detectedAt: updated.detectedAt?.toISOString() ?? null,
@@ -367,6 +381,7 @@ export async function POST(request: NextRequest) {
           senderHandle: updated.senderHandle,
           recipientHandle: updated.recipientHandle,
           amountEgp: updated.amountEgp,
+          detectedAmountEgp: updated.detectedAmountEgp,
           currency: updated.currency,
           status: updated.status,
           detectedRef: updated.detectedRef,
@@ -385,6 +400,7 @@ export async function POST(request: NextRequest) {
         senderHandle: updated.senderHandle,
         recipientHandle: updated.recipientHandle,
         amountEgp: updated.amountEgp,
+        detectedAmountEgp: updated.detectedAmountEgp,
         status: updated.status,
         detectedRef: updated.detectedRef,
         detectedAt: updated.detectedAt?.toISOString() ?? null,

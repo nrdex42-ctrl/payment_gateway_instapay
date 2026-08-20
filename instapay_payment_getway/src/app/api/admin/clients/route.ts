@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { authenticateOwner, generateSecureToken, generateSlug } from '@/lib/auth'
+import { authenticateOwner, generateSecureToken, generateSlug, hashPassword } from '@/lib/auth'
 
 /**
  * GET: List all clients on the platform (approved, pending, rejected) with summarized stats.
@@ -52,6 +52,11 @@ export async function GET(request: NextRequest) {
           createdAt: client.createdAt.toISOString(),
           totalTransactions: client._count.transactions,
           confirmedVolume: confirmedSum._sum.amountEgp ?? 0,
+          subscriptionPlan: client.subscriptionPlan,
+          subscriptionEndsAt: client.subscriptionEndsAt ? client.subscriptionEndsAt.toISOString() : null,
+          isFreeTrial: client.isFreeTrial,
+          txLimit: client.txLimit,
+          txCount: client.txCount,
         }
       })
     )
@@ -111,7 +116,8 @@ export async function POST(request: NextRequest) {
     const detectToken = generateSecureToken('det')
     
     // Hash password (or default password for admin-created clients)
-    const passwordHash = generateSecureToken('pwd') // default random pwd if none passed
+    const generatedPassword = password?.trim() || Math.random().toString(36).slice(-8)
+    const passwordHash = hashPassword(generatedPassword)
 
     const client = await db.client.create({
       data: {
@@ -143,6 +149,7 @@ export async function POST(request: NextRequest) {
         checkoutTtlMin: client.checkoutTtlMin,
         isActive: client.isActive,
         approvalStatus: client.approvalStatus,
+        password: generatedPassword, // return the generated password
       },
     })
   } catch (err) {

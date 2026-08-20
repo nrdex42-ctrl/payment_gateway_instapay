@@ -44,6 +44,11 @@ interface ClientSession {
   webhookSecret: string | null
   checkoutTtlMin: number
   createdAt: string
+  subscriptionPlan: string
+  subscriptionEndsAt: string | null
+  isFreeTrial: boolean
+  txLimit: number
+  txCount: number
 }
 
 interface DashboardStats {
@@ -377,6 +382,69 @@ export default function MerchantDashboardPage() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 space-y-6">
+        {/* Subscription Usage Banner */}
+        <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-1.5 flex-1 w-full">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-white tracking-tight uppercase">
+                Plan: <span className="text-violet-400 font-extrabold">{client.subscriptionPlan.replace('_', ' ')}</span>
+              </h2>
+              {client.isFreeTrial && (
+                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-500 border border-amber-500/20">
+                  Free Trial
+                </span>
+              )}
+            </div>
+            
+            <p className="text-xs text-neutral-400">
+              {client.subscriptionEndsAt
+                ? (() => {
+                    const endDate = new Date(client.subscriptionEndsAt!)
+                    const remainMs = endDate.getTime() - Date.now()
+                    const remainDays = Math.ceil(remainMs / (1000 * 60 * 60 * 24))
+                    if (remainDays > 0) {
+                      return `Expires on ${endDate.toLocaleDateString()} — ${remainDays} day${remainDays !== 1 ? 's' : ''} remaining`
+                    }
+                    return `Expired on ${endDate.toLocaleDateString()}`
+                  })()
+                : 'Unlimited plan expiration'}
+            </p>
+
+            {/* Progress Bar Container */}
+            <div className="pt-2 w-full max-w-md">
+              <div className="flex items-center justify-between text-xs pb-1">
+                <span className="text-neutral-500 font-medium">Confirmed Transactions</span>
+                <span className="font-bold text-neutral-300">
+                  {client.txCount.toLocaleString()} / {client.txLimit.toLocaleString()}
+                </span>
+              </div>
+              <div className="h-2 w-full bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    client.txCount >= client.txLimit
+                      ? 'bg-red-500'
+                      : client.txCount >= client.txLimit * 0.8
+                      ? 'bg-amber-500'
+                      : 'bg-gradient-to-r from-violet-600 to-indigo-500'
+                  }`}
+                  style={{ width: `${Math.min(100, (client.txCount / client.txLimit) * 100)}%` }}
+                />
+              </div>
+              {client.txCount >= client.txLimit && (
+                <p className="text-[10px] text-red-400 pt-1">
+                  ⚠️ Your limit is reached. Please pay your provider to renew/upgrade.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col items-stretch md:items-end space-y-1 bg-neutral-950 p-4 rounded-xl border border-neutral-900 text-center md:text-right shrink-0">
+            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider">Renewal Info</span>
+            <span className="text-xs text-neutral-300">Contact provider to extend quota</span>
+            <span className="text-sm font-bold text-white pt-1">{client.subscriptionPlan === 'BASIC' ? '200 EGP / month' : client.subscriptionPlan === 'PRO' ? '500 EGP / month' : client.subscriptionPlan === 'ENTERPRISE' ? '700 EGP / month' : 'Free'}</span>
+          </div>
+        </div>
+
         {/* Stats Grid */}
         {stats && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

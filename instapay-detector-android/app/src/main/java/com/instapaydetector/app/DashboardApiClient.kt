@@ -119,6 +119,17 @@ class DashboardApiClient(ctx: Context) {
         val stats = json.getJSONObject("stats")
         val recentArr = json.getJSONArray("recent")
 
+        val subscription = if (json.has("subscription") && !json.isNull("subscription")) {
+            val sub = json.getJSONObject("subscription")
+            SubscriptionInfo(
+                plan = sub.optString("plan", "FREE_TRIAL"),
+                txCount = sub.optInt("txCount", 0),
+                txLimit = sub.optInt("txLimit", 5),
+                subscriptionEndsAt = if (sub.isNull("subscriptionEndsAt")) null else sub.optString("subscriptionEndsAt"),
+                isFreeTrial = sub.optBoolean("isFreeTrial", true),
+            )
+        } else null
+
         return DashboardStats(
             merchant = MerchantInfo(
                 handle = merchant.getString("handle"),
@@ -130,6 +141,7 @@ class DashboardApiClient(ctx: Context) {
                 pending = parseBucket(stats.getJSONObject("pending")),
             ),
             recent = parseTransactions(recentArr),
+            subscription = subscription,
         )
     }
 

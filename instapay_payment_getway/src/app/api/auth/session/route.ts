@@ -22,6 +22,11 @@ export async function GET(request: NextRequest) {
         webhookSecret: client.webhookSecret,
         checkoutTtlMin: client.checkoutTtlMin,
         createdAt: client.createdAt.toISOString(),
+        subscriptionPlan: client.subscriptionPlan,
+        subscriptionEndsAt: client.subscriptionEndsAt ? client.subscriptionEndsAt.toISOString() : null,
+        isFreeTrial: client.isFreeTrial,
+        txLimit: client.txLimit,
+        txCount: client.txCount,
       },
     })
   } catch (err) {

@@ -14,10 +14,11 @@ interface ClientDemo {
 
 export default function LandingPage() {
   const [merchants, setMerchants] = useState<ClientDemo[]>([])
+  const [plans, setPlans] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function loadMerchants() {
+    async function loadData() {
       try {
         const res = await fetch('/api/merchants')
         if (res.ok) {
@@ -26,13 +27,19 @@ export default function LandingPage() {
             setMerchants(data.merchants)
           }
         }
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false)
-      }
+      } catch {}
+      try {
+        const res = await fetch('/api/plans')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.ok) {
+            setPlans(data.plans)
+          }
+        }
+      } catch {}
+      setLoading(false)
     }
-    loadMerchants()
+    loadData()
   }, [])
 
   return (
@@ -143,6 +150,60 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+
+        {/* Pricing Tiers Section */}
+        {plans.length > 0 && (
+          <div className="space-y-6 pt-10 border-t border-neutral-800/40">
+            <div className="text-center space-y-1">
+              <h3 className="text-xl font-bold text-white tracking-tight font-sans">Simple, Transaction-Based Pricing</h3>
+              <p className="text-xs text-neutral-400">Choose a quota plan that matches your transaction volume requirements.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {plans.map((p) => (
+                <div
+                  key={p.id}
+                  className={`rounded-2xl border p-5 flex flex-col justify-between space-y-5 transition-all ${
+                    p.name === 'PRO'
+                      ? 'border-violet-500 bg-violet-950/10 shadow-lg shadow-violet-950/10'
+                      : 'border-neutral-800/80 bg-neutral-900/10'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                        {p.name.replace('_', ' ')}
+                      </span>
+                      {p.name === 'PRO' && (
+                        <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[9px] font-bold text-violet-400 border border-violet-500/30">
+                          Popular
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-black text-white">{p.priceEgp} EGP</span>
+                      <span className="text-[10px] text-neutral-500">/one-time</span>
+                    </div>
+                    <p className="text-xs text-neutral-400 leading-relaxed pt-1">
+                      Allows processing up to <span className="font-bold text-white">{p.maxTransactions.toLocaleString()}</span> confirmed transactions.
+                    </p>
+                  </div>
+                  <Button
+                    asChild
+                    size="sm"
+                    className={`w-full rounded-xl text-xs font-semibold ${
+                      p.name === 'PRO'
+                        ? 'bg-violet-600 hover:bg-violet-700 text-white'
+                        : 'bg-neutral-800 hover:bg-neutral-700 text-white'
+                    }`}
+                  >
+                    <a href="/register">Get Started</a>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Footer */}

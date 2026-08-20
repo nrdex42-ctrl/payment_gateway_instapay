@@ -49,6 +49,13 @@ model Client {
   // Settings
   checkoutTtlMin Int @default(10)
 
+  // Subscription & Free Trial
+  subscriptionPlan   String    @default("FREE_TRIAL")
+  subscriptionEndsAt DateTime?
+  isFreeTrial        Boolean   @default(true)
+  txLimit            Int       @default(5)
+  txCount            Int       @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -133,4 +140,12 @@ model MismatchedPayment {
   createdAt    DateTime @default(now())
 
   @@index([clientId, createdAt])
+}
+
+// ─── Subscription & Pricing Plans ───────────────────────────────────
+model Plan {
+  id              String @id @default(cuid())
+  name            String @unique // FREE_TRIAL, BASIC, PRO, ENTERPRISE
+  priceEgp        Float
+  maxTransactions Int
 }

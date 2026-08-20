@@ -38,7 +38,7 @@ class LoginActivity : AppCompatActivity() {
         val currentUrl = config.gatewayUrl
         val defaultMockUrl = "https://your-gateway.example.com/api/webhooks/instapay"
         if (currentUrl == defaultMockUrl) {
-            binding.etServerUrl.setText("https://your-gateway.example.com")
+            binding.etServerUrl.setText("https://instapay-ruddy.vercel.app")
         } else {
             val base = if (currentUrl.contains("/api/webhooks/instapay")) {
                 currentUrl.substring(0, currentUrl.indexOf("/api/webhooks/instapay"))

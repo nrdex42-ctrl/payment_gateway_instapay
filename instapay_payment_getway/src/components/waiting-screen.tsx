@@ -373,11 +373,25 @@ function ConfirmedView({
       <div className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-left">
         <Row label="From" value={checkout.senderHandle} mono />
         <Row label="To" value={checkout.recipientHandle} mono />
-        <Row
-          label="Amount"
-          value={`${checkout.amountEgp.toFixed(2)} ${checkout.currency}`}
-          bold
-        />
+        {checkout.detectedAmountEgp && checkout.detectedAmountEgp > checkout.amountEgp ? (
+          <>
+            <Row
+              label="Requested Amount"
+              value={`${checkout.amountEgp.toFixed(2)} ${checkout.currency}`}
+            />
+            <Row
+              label="Amount Paid (Overpayment)"
+              value={`${checkout.detectedAmountEgp.toFixed(2)} ${checkout.currency} (Extra Paid)`}
+              bold
+            />
+          </>
+        ) : (
+          <Row
+            label="Amount"
+            value={`${checkout.amountEgp.toFixed(2)} ${checkout.currency}`}
+            bold
+          />
+        )}
         {checkout.detectedRef && (
           <Row label="Reference" value={checkout.detectedRef} mono />
         )}

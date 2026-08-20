@@ -21,7 +21,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   try {
     const { id } = resolvedParams
     const body = await request.json()
-    const { businessName, instapayHandle, webhookUrl, checkoutTtlMin, isActive, subscriptionPlan, isFreeTrial, subscriptionEndsAt } = body || {}
+    const { businessName, instapayHandle, webhookUrl, checkoutTtlMin, isActive, subscriptionPlan, isFreeTrial, subscriptionEndsAt, txLimit, txCount } = body || {}
 
     const client = await db.client.findUnique({ where: { id } })
     if (!client) {
@@ -35,6 +35,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (isActive !== undefined) data.isActive = Boolean(isActive)
     if (subscriptionPlan !== undefined) data.subscriptionPlan = String(subscriptionPlan).trim()
     if (isFreeTrial !== undefined) data.isFreeTrial = Boolean(isFreeTrial)
+    if (txLimit !== undefined) data.txLimit = Number(txLimit)
+    if (txCount !== undefined) data.txCount = Number(txCount)
     if (subscriptionEndsAt !== undefined) {
       data.subscriptionEndsAt = subscriptionEndsAt ? new Date(subscriptionEndsAt as string | number) : null
     }

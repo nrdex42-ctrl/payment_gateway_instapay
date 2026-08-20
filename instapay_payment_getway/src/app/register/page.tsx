@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, ArrowRight, Loader2, Sparkles, CheckCircle2, UserPlus, AlertCircle } from 'lucide-react'
+import { Shield, ArrowRight, Loader2, Sparkles, CheckCircle2, UserPlus, AlertCircle, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,6 +16,20 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [plans, setPlans] = useState<any[]>([])
+
+  useEffect(() => {
+    async function loadPlans() {
+      try {
+        const res = await fetch('/api/plans')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.ok) setPlans(data.plans)
+        }
+      } catch {}
+    }
+    loadPlans()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,7 +92,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-indigo-950 p-4 font-sans text-neutral-100">
+    <div className="min-h-screen flex flex-col md:flex-row items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-indigo-950 p-6 md:p-12 gap-8 font-sans text-neutral-100">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -206,6 +220,56 @@ export default function RegisterPage() {
           </p>
         </div>
       </motion.div>
+
+      {/* Pricing list column next to the form */}
+      {plans.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="w-full max-w-sm bg-neutral-900/30 border border-neutral-800/80 rounded-3xl p-6 shadow-xl space-y-5"
+        >
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-1.5 font-sans">
+              <Sparkles className="h-4 w-4 text-violet-400" />
+              Subscription Tiers
+            </h3>
+            <p className="text-xs text-neutral-400 leading-normal">
+              Each plan grants a quota of confirmed transactions to route.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {plans.map((p) => (
+              <div
+                key={p.id}
+                className={`rounded-xl border p-3.5 space-y-1.5 transition-all ${
+                  p.name === 'PRO'
+                    ? 'border-violet-500 bg-violet-950/15 shadow-sm'
+                    : 'border-neutral-800/60 bg-neutral-950/20'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-neutral-300 uppercase tracking-wider">
+                    {p.name.replace('_', ' ')}
+                  </span>
+                  <span className="text-xs font-bold text-white">
+                    {p.priceEgp} EGP
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-neutral-400">
+                  <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>{p.maxTransactions.toLocaleString()} confirmed txs</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl bg-violet-500/5 border border-violet-500/10 p-3.5 text-[10px] text-neutral-400 leading-normal">
+            <strong>Free Trial:</strong> Every new merchant registers with a free trial of 5 transactions by default. No payment required to start.
+          </div>
+        </motion.div>
+      )}
     </div>
   )
 }
