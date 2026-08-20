@@ -55,6 +55,8 @@ interface ClientStats {
   subscriptionPlan: string
   isFreeTrial: boolean
   subscriptionEndsAt: string | null
+  txLimit: number
+  txCount: number
 }
 
 interface PlatformStats {
@@ -840,9 +842,42 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                             <div>
                               <span className="text-neutral-600 font-medium">Subscription Ends:</span>{' '}
                               <span className="font-mono font-semibold text-neutral-300">
-                                {c.subscriptionEndsAt ? new Date(c.subscriptionEndsAt).toLocaleDateString() : 'Lifetime'}
+                                {c.subscriptionEndsAt
+                                  ? (() => {
+                                      const endDate = new Date(c.subscriptionEndsAt!)
+                                      const remainMs = endDate.getTime() - Date.now()
+                                      const remainDays = Math.ceil(remainMs / (1000 * 60 * 60 * 24))
+                                      if (remainDays > 0) return `${endDate.toLocaleDateString()} (${remainDays}d left)`
+                                      return `${endDate.toLocaleDateString()} (EXPIRED)`
+                                    })()
+                                  : 'Lifetime'}
                               </span>
                             </div>
+                          </div>
+
+                          {/* Transaction Usage Bar */}
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="text-neutral-500 font-medium">Transaction Usage</span>
+                              <span className="font-bold text-neutral-300">
+                                {(c.txCount ?? 0).toLocaleString()} / {(c.txLimit ?? 0).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  (c.txCount ?? 0) >= (c.txLimit ?? 1)
+                                    ? 'bg-red-500'
+                                    : (c.txCount ?? 0) >= (c.txLimit ?? 1) * 0.8
+                                    ? 'bg-amber-500'
+                                    : 'bg-gradient-to-r from-violet-600 to-indigo-500'
+                                }`}
+                                style={{ width: `${Math.min(100, ((c.txCount ?? 0) / Math.max(c.txLimit ?? 1, 1)) * 100)}%` }}
+                              />
+                            </div>
+                            {(c.txCount ?? 0) >= (c.txLimit ?? 1) && (
+                              <p className="text-[9px] text-red-400 font-semibold">⚠ Limit reached — merchant cannot create new checkouts</p>
+                            )}
                           </div>
 
                           {/* Keys & Tokens */}
