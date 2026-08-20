@@ -107,6 +107,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [checkoutTtlMin, setCheckoutTtlMin] = useState('10')
   const [modalError, setModalError] = useState<string | null>(null)
   const [savingClient, setSavingClient] = useState(false)
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string; businessName: string } | null>(null)
 
   const [copiedText, setCopiedText] = useState<string | null>(null)
 
@@ -367,6 +368,11 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
       const data = await res.json()
       if (data.ok) {
         setShowAddModal(false)
+        setCreatedCredentials({
+          email: emailInput,
+          password: data.password || '(not returned)',
+          businessName: businessName,
+        })
         setBusinessName('')
         setInstapayHandle('')
         setEmailInput('')
@@ -1583,6 +1589,89 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                   </Button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Credentials Created Dialog */}
+      <AnimatePresence>
+        {createdCredentials && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md bg-neutral-900 border border-emerald-900/50 rounded-3xl p-6 shadow-2xl relative z-10 space-y-5"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Merchant Created</h3>
+                  <p className="text-xs text-neutral-400">{createdCredentials.businessName}</p>
+                </div>
+              </div>
+
+              <div className="bg-neutral-950 rounded-2xl border border-neutral-800 p-4 space-y-3">
+                <p className="text-[10px] text-amber-400 font-semibold uppercase tracking-wider">⚠ Save these credentials — password cannot be retrieved later</p>
+                
+                <div className="space-y-1">
+                  <span className="text-[10px] text-neutral-500 font-semibold uppercase">Login Email</span>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-sm text-white font-mono bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-800 select-all">
+                      {createdCredentials.email}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdCredentials.email)
+                        setCopiedText('email')
+                        setTimeout(() => setCopiedText(null), 2000)
+                      }}
+                      className="text-neutral-400 hover:text-white h-8 w-8 p-0"
+                    >
+                      {copiedText === 'email' ? <CheckCircle className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] text-neutral-500 font-semibold uppercase">Password</span>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-sm text-emerald-400 font-mono font-bold bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-800 select-all">
+                      {createdCredentials.password}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdCredentials.password)
+                        setCopiedText('password')
+                        setTimeout(() => setCopiedText(null), 2000)
+                      }}
+                      className="text-neutral-400 hover:text-white h-8 w-8 p-0"
+                    >
+                      {copiedText === 'password' ? <CheckCircle className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => setCreatedCredentials(null)}
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-semibold"
+              >
+                Done
+              </Button>
             </motion.div>
           </div>
         )}
