@@ -29,6 +29,7 @@ import {
   Search,
   Filter,
   Eye,
+  EyeOff,
   Calendar,
   DollarSign
 } from 'lucide-react'
@@ -110,6 +111,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [modalError, setModalError] = useState<string | null>(null)
   const [savingClient, setSavingClient] = useState(false)
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string; businessName: string } | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const [copiedText, setCopiedText] = useState<string | null>(null)
 
@@ -372,7 +374,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
         setShowAddModal(false)
         setCreatedCredentials({
           email: emailInput,
-          password: data.password || '(not returned)',
+          password: data.client?.password || data.password || '(not returned)',
           businessName: businessName,
         })
         setBusinessName('')
@@ -1683,8 +1685,17 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                   <span className="text-[10px] text-neutral-500 font-semibold uppercase">Password</span>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 text-sm text-emerald-400 font-mono font-bold bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-800 select-all">
-                      {createdCredentials.password}
+                      {showPassword ? createdCredentials.password : '••••••••'}
                     </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-neutral-400 hover:text-white h-8 w-8 p-0"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
