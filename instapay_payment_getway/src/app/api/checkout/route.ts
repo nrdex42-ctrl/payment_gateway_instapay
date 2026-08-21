@@ -3,9 +3,10 @@ import QRCode from 'qrcode'
 import { db } from '@/lib/db'
 import {
   buildInstaPayDeepLink,
-  getLocalPart,
   normalizeHandle,
 } from '@/lib/merchant'
+import type { Client } from '@prisma/client'
+import { toEgpCents } from '@/lib/money'
 
 interface CreateCheckoutBody {
   senderHandle: string
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
     const { clientSlug, clientId } = body || {}
 
     // Find the client we are paying to
-    let client = null
+    let client: Client | null = null
     if (clientSlug) {
       client = await db.client.findUnique({ where: { slug: clientSlug } })
     } else if (clientId) {
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
 
     const senderHandle = normalizeHandle(body.senderHandle)
     const amountEgp = Number(body.amountEgp)
+    const amountCents = toEgpCents(amountEgp)
     const note = (body.note || '').trim() || null
 
     if (!senderHandle) {
@@ -70,13 +72,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    if (!Number.isFinite(amountEgp) || amountEgp <= 0) {
+    if (!Number.isFinite(amountEgp) || amountCents <= 0) {
       return NextResponse.json(
         { ok: false, error: 'Amount must be a positive number.' },
         { status: 400 }
       )
     }
-    if (amountEgp > 1_000_000) {
+    if (amountCents > 100_000_000) {
       return NextResponse.json(
         { ok: false, error: 'Amount exceeds the per-transaction limit (1,000,000 EGP).' },
         { status: 400 }
@@ -107,7 +109,8 @@ export async function POST(request: NextRequest) {
         clientId: client.id,
         senderHandle,
         recipientHandle: client.instapayHandle,
-        amountEgp: Math.round(amountEgp * 100) / 100,
+        amountEgp: amountCents / 100,
+        amountCents,
         currency: 'EGP',
         status: 'PENDING',
         note,
@@ -194,4 +197,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-

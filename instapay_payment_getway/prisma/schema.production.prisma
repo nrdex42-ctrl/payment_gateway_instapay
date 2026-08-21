@@ -37,6 +37,10 @@ model Client {
   // Authentication keys (Generated ONLY after Admin Approval)
   apiKey      String? @unique
   detectToken String? @unique
+  apiKeyHash      String? @unique
+  detectTokenHash String? @unique
+  apiKeyLastUsedAt      DateTime?
+  detectTokenLastUsedAt DateTime?
 
   // Status: PENDING | APPROVED | REJECTED
   approvalStatus String  @default("PENDING")
@@ -45,6 +49,7 @@ model Client {
   // Webhook integration
   webhookUrl    String?
   webhookSecret String?
+  webhookSecretHash String?
 
   // Settings
   checkoutTtlMin Int @default(10)
@@ -62,10 +67,13 @@ model Client {
   transactions       Transaction[]
   webhookLogs        WebhookLog[]
   mismatchedPayments MismatchedPayment[]
+  detectorDevices    DetectorDevice[]
 
   @@index([instapayHandle])
   @@index([apiKey])
   @@index([detectToken])
+  @@index([apiKeyHash])
+  @@index([detectTokenHash])
 }
 
 // ─── Checkout / payment transaction ────────────────────────────────
@@ -80,6 +88,7 @@ model Transaction {
   recipientHandle String
 
   amountEgp Float
+  amountCents Int?
   currency  String   @default("EGP")
 
   status String @default("PENDING")
@@ -91,12 +100,14 @@ model Transaction {
   detectedRef       String?
   detectedAt        DateTime?
   detectedAmountEgp Float?
+  detectedAmountCents Int?
 
   createdAt DateTime @default(now())
   expiresAt DateTime
 
   @@index([clientId, status, createdAt])
   @@index([clientId, senderHandle, amountEgp, status])
+  @@index([clientId, senderHandle, amountCents, status])
   @@index([status, expiresAt])
   @@index([deepLinkToken])
   @@index([createdAt])
@@ -109,13 +120,18 @@ model WebhookLog {
   client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   url        String
   event      String
+  eventId    String?
   payload    String   // Stringified JSON payload
   statusCode Int?     // HTTP status code returned
   response   String?  // Response body from merchant server
   isSuccess  Boolean
+  attempt    Int      @default(1)
+  nextAttemptAt DateTime?
   createdAt  DateTime @default(now())
 
   @@index([clientId, createdAt])
+  @@index([eventId])
+  @@index([isSuccess, nextAttemptAt])
 }
 
 // ─── Administrative Audit Log ──────────────────────────────────────
@@ -135,11 +151,29 @@ model MismatchedPayment {
   client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   senderHandle String
   amountEgp    Float
+  amountCents  Int?
   reference    String?
   status       String   @default("UNMATCHED") // UNMATCHED | RESOLVED
   createdAt    DateTime @default(now())
 
   @@index([clientId, createdAt])
+}
+
+// ─── Android Detector Device Health ────────────────────────────────
+model DetectorDevice {
+  id              String   @id @default(cuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  deviceId        String
+  appVersion      String?
+  androidVersion  String?
+  lastSeenAt      DateTime @default(now())
+  lastIp          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([clientId, deviceId])
+  @@index([clientId, lastSeenAt])
 }
 
 // ─── Subscription & Pricing Plans ───────────────────────────────────

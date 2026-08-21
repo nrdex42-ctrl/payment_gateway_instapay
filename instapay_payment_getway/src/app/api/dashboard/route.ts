@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
 import { getStartOfTodayEgypt, formatEgyptTime, getEgyptDstMode, getEgyptOffsetMinutes } from '@/lib/timezone'
+import type { Client } from '@prisma/client'
+import { egpAmountFromRow } from '@/lib/money'
 
 /**
  * Multi-tenant Dashboard stats:
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
       isOwner = true
     }
 
-    let client = null
+    let client: Client | null = null
 
     if (isOwner) {
       if (targetClientId) {
@@ -39,13 +41,7 @@ export async function GET(request: NextRequest) {
       // Authenticate as client
       client = await authenticateByApiKey(request)
       if (!client) {
-        // Fallback for easy frontend sandbox preview: if there is only 1 client in the database, use it.
-        const allClients = await db.client.findMany()
-        if (allClients.length > 0) {
-          client = allClients[0]
-        } else {
-          return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
-        }
+        return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
       }
       clientId = client.id
     }
@@ -139,7 +135,7 @@ export async function GET(request: NextRequest) {
         sessionId: t.sessionId,
         senderHandle: t.senderHandle,
         recipientHandle: t.recipientHandle,
-        amountEgp: t.amountEgp,
+        amountEgp: egpAmountFromRow(t),
         currency: t.currency,
         status: t.status,
         note: t.note,

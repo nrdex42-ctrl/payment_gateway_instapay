@@ -29,7 +29,7 @@ export function hashPassword(password: string): string {
  * Utilizes a constant timing check path to prevent user enumeration timings.
  */
 export function verifyPassword(password: string, storedHash: string): boolean {
-  const dummyHash = 'd7d8e8b0a9c8d7e6f5.a1b2c3d4e5f60708090a0b0c0d0e0f102030405060708090a0b0c0d0e0f0'
+  const dummyHash = 'd7d8e8b0a9c8d7e6f5a4b3c2d1e0f9a8b7.c5d753f0c97333b3b3e882c657419c1606d7689933532099665293a3965e6a2d9eca1f012b2a2c186f5441450215d2f37680a8e4fbeaf08e41880b9702d3'
   const hasFormat = storedHash && storedHash.includes('.')
   const targetHash = hasFormat ? storedHash : dummyHash
 
@@ -90,7 +90,7 @@ export function verifySessionToken(token: string | null): string | null {
     hmac.update(base64Payload)
     const expectedSignature = hmac.digest('hex')
 
-    if (signature !== expectedSignature) return null
+    if (!timingSafeCompare(signature, expectedSignature)) return null
 
     // Decode and verify expiration
     const payloadStr = Buffer.from(base64Payload, 'base64').toString('utf8')
@@ -143,10 +143,24 @@ export async function authenticateByApiKey(request: NextRequest): Promise<Client
   const authHeader = request.headers.get('authorization') || ''
   if (!authHeader.startsWith('Bearer ')) return null
   const apiKey = authHeader.slice('Bearer '.length).trim()
+  const apiKeyHash = hashSecret(apiKey)
 
   try {
-    const client = await db.client.findUnique({ where: { apiKey } })
+    let client = await db.client.findUnique({ where: { apiKeyHash } })
+    if (!client) {
+      client = await db.client.findUnique({ where: { apiKey } })
+      if (client && !client.apiKeyHash) {
+        await db.client.update({
+          where: { id: client.id },
+          data: { apiKeyHash },
+        }).catch(() => {})
+      }
+    }
     if (!client || !client.isActive || client.approvalStatus !== 'APPROVED') return null
+    await db.client.update({
+      where: { id: client.id },
+      data: { apiKeyLastUsedAt: new Date() },
+    }).catch(() => {})
     return client
   } catch {
     return null
@@ -160,10 +174,24 @@ export async function authenticateByDetectToken(request: NextRequest): Promise<C
   const authHeader = request.headers.get('authorization') || ''
   if (!authHeader.startsWith('Bearer ')) return null
   const detectToken = authHeader.slice('Bearer '.length).trim()
+  const detectTokenHash = hashSecret(detectToken)
 
   try {
-    const client = await db.client.findUnique({ where: { detectToken } })
+    let client = await db.client.findUnique({ where: { detectTokenHash } })
+    if (!client) {
+      client = await db.client.findUnique({ where: { detectToken } })
+      if (client && !client.detectTokenHash) {
+        await db.client.update({
+          where: { id: client.id },
+          data: { detectTokenHash },
+        }).catch(() => {})
+      }
+    }
     if (!client || !client.isActive || client.approvalStatus !== 'APPROVED') return null
+    await db.client.update({
+      where: { id: client.id },
+      data: { detectTokenLastUsedAt: new Date() },
+    }).catch(() => {})
     return client
   } catch {
     return null
@@ -189,6 +217,11 @@ export async function authenticateOwner(request: NextRequest): Promise<boolean> 
 export function generateSecureToken(prefix: string = 'ipk'): string {
   const bytes = crypto.randomBytes(16).toString('hex')
   return `${prefix}_${bytes}`
+}
+
+export function hashSecret(secret: string): string {
+  const pepper = process.env.TOKEN_PEPPER || getOwnerSecret()
+  return crypto.createHmac('sha256', pepper).update(secret).digest('hex')
 }
 
 export function generateSlug(businessName: string): string {

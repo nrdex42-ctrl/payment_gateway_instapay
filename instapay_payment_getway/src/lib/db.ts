@@ -12,8 +12,9 @@ export const db =
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
 
-// Self-seeding configuration for subscription plans
-async function seedPlans() {
+// Explicit seeding helper for subscription plans. Do not run this at module import
+// time: Next.js imports server modules during builds and static generation.
+export async function seedPlans() {
   try {
     const count = await db.plan.count()
     if (count === 0) {
@@ -33,5 +34,6 @@ async function seedPlans() {
   }
 }
 
-// Trigger seeder in background
-void seedPlans()
+if (process.env.SEED_PLANS_ON_STARTUP === '1') {
+  void seedPlans()
+}

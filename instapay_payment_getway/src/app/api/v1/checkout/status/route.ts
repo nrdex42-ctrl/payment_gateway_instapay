@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { detectedEgpAmountFromRow, egpAmountFromRow } from '@/lib/money'
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,12 +48,12 @@ export async function GET(request: NextRequest) {
         businessName: transaction.client.businessName,
         senderHandle: transaction.senderHandle,
         recipientHandle: transaction.recipientHandle,
-        amountEgp: transaction.amountEgp,
+        amountEgp: egpAmountFromRow(transaction),
         currency: transaction.currency,
         status: currentStatus,
         detectedRef: transaction.detectedRef,
         detectedAt: transaction.detectedAt?.toISOString() ?? null,
-        detectedAmountEgp: transaction.detectedAmountEgp,
+        detectedAmountEgp: detectedEgpAmountFromRow(transaction),
         createdAt: transaction.createdAt.toISOString(),
         expiresAt: transaction.expiresAt.toISOString(),
         note: transaction.note,

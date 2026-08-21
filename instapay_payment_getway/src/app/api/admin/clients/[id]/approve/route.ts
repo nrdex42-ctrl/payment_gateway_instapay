@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { authenticateOwner, generateSecureToken } from '@/lib/auth'
+import { authenticateOwner, generateSecureToken, hashSecret } from '@/lib/auth'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const isOwner = await authenticateOwner(request)
@@ -38,6 +38,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         isActive: true,
         apiKey,
         detectToken,
+        apiKeyHash: hashSecret(apiKey),
+        detectTokenHash: hashSecret(detectToken),
       },
     })
 

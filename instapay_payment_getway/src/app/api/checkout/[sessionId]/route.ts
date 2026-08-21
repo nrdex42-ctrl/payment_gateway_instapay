@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { detectedEgpAmountFromRow, egpAmountFromRow } from '@/lib/money'
 
 interface RouteContext {
   params: Promise<{ sessionId: string }>
@@ -49,7 +50,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         senderHandle: tx.senderHandle,
         recipientHandle: tx.recipientHandle,
         merchantName: tx.client.businessName, // Map client businessName to merchantName
-        amountEgp: tx.amountEgp,
+        amountEgp: egpAmountFromRow(tx),
         currency: tx.currency,
         status,
         note: tx.note,
@@ -57,7 +58,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         deepLinkToken: tx.deepLinkToken,
         detectedRef: tx.detectedRef,
         detectedAt: tx.detectedAt?.toISOString() ?? null,
-        detectedAmountEgp: tx.detectedAmountEgp,
+        detectedAmountEgp: detectedEgpAmountFromRow(tx),
         createdAt: tx.createdAt.toISOString(),
         expiresAt: tx.expiresAt.toISOString(),
         secondsRemaining,

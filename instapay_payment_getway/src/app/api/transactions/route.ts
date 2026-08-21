@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { formatEgyptTime, getEgyptDstMode } from '@/lib/timezone'
 import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
+import { egpAmountFromRow } from '@/lib/money'
 
 /**
  * Paginated, searchable list of transactions for a specific client (or all for admin).
@@ -39,13 +40,7 @@ export async function GET(request: NextRequest) {
     } else {
       const client = await authenticateByApiKey(request)
       if (!client) {
-        // Fallback for easy local dev: if there is a client, use it.
-        const allClients = await db.client.findMany()
-        if (allClients.length > 0) {
-          clientId = allClients[0].id
-        } else {
-          return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
-        }
+        return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
       } else {
         clientId = client.id
       }
@@ -58,7 +53,7 @@ export async function GET(request: NextRequest) {
       where.clientId = clientId
     }
 
-    if (status === 'PENDING' || status === 'CONFIRMED' || status === 'EXPIRED') {
+    if (['PENDING', 'CONFIRMED', 'EXPIRED', 'UNDERPAID'].includes(status || '')) {
       where.status = status
     }
 
@@ -122,7 +117,7 @@ export async function GET(request: NextRequest) {
         businessName: t.client.businessName,
         senderHandle: t.senderHandle,
         recipientHandle: t.recipientHandle,
-        amountEgp: t.amountEgp,
+        amountEgp: egpAmountFromRow(t),
         currency: t.currency,
         status: t.status,
         note: t.note,

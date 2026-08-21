@@ -34,13 +34,7 @@ export async function GET(request: NextRequest) {
     } else {
       const client = await authenticateByApiKey(request)
       if (!client) {
-        // Fallback for sandbox dev
-        const allClients = await db.client.findMany()
-        if (allClients.length > 0) {
-          clientId = allClients[0].id
-        } else {
-          return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
-        }
+        return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
       } else {
         clientId = client.id
       }

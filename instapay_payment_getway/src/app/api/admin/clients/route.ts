@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { authenticateOwner, generateSecureToken, generateSlug, hashPassword } from '@/lib/auth'
+import { authenticateOwner, generateSecureToken, generateSlug, hashPassword, hashSecret } from '@/lib/auth'
 
 /**
  * GET: List all clients on the platform (approved, pending, rejected) with summarized stats.
@@ -128,6 +128,8 @@ export async function POST(request: NextRequest) {
         passwordHash,
         apiKey,
         detectToken,
+        apiKeyHash: hashSecret(apiKey),
+        detectTokenHash: hashSecret(detectToken),
         webhookUrl: webhookUrl?.trim() || null,
         checkoutTtlMin: Number(checkoutTtlMin || 10),
         isActive: true,

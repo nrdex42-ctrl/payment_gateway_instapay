@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSessionClient, generateSecureToken } from '@/lib/auth'
+import { getSessionClient, generateSecureToken, hashSecret } from '@/lib/auth'
+import { isAllowedWebhookUrl } from '@/lib/webhook'
 
 /**
  * PATCH: Update merchant custom integration settings.
@@ -18,7 +19,14 @@ export async function PATCH(request: NextRequest) {
     const data: Record<string, any> = {}
 
     if (webhookUrl !== undefined) {
-      data.webhookUrl = webhookUrl ? String(webhookUrl).trim() : null
+      const trimmedWebhookUrl = webhookUrl ? String(webhookUrl).trim() : ''
+      if (trimmedWebhookUrl && !isAllowedWebhookUrl(trimmedWebhookUrl)) {
+        return NextResponse.json(
+          { ok: false, error: 'Webhook URL must be a public HTTPS endpoint.' },
+          { status: 400 }
+        )
+      }
+      data.webhookUrl = trimmedWebhookUrl || null
     }
 
     if (checkoutTtlMin !== undefined) {
@@ -29,15 +37,21 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (regenerateWebhookSecret) {
-      data.webhookSecret = generateSecureToken('sec')
+      const webhookSecret = generateSecureToken('sec')
+      data.webhookSecret = webhookSecret
+      data.webhookSecretHash = hashSecret(webhookSecret)
     }
 
     if (regenerateApiKey) {
-      data.apiKey = generateSecureToken('ipk')
+      const apiKey = generateSecureToken('ipk')
+      data.apiKey = apiKey
+      data.apiKeyHash = hashSecret(apiKey)
     }
 
     if (regenerateDetectToken) {
-      data.detectToken = generateSecureToken('det')
+      const detectToken = generateSecureToken('det')
+      data.detectToken = detectToken
+      data.detectTokenHash = hashSecret(detectToken)
     }
 
     const updated = await db.client.update({

@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { authenticateByApiKey } from '@/lib/auth'
 import { buildInstaPayDeepLink, normalizeHandle } from '@/lib/merchant'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
+import { toEgpCents } from '@/lib/money'
 
 export async function POST(request: NextRequest) {
   // Enforce Rate Limit: max 60 checkout creations per 1 minute
@@ -37,8 +38,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { amountEgp, senderHandle, note } = body || {}
+    const amountCents = typeof amountEgp === 'number' ? toEgpCents(amountEgp) : 0
 
-    if (!amountEgp || typeof amountEgp !== 'number' || amountEgp <= 0) {
+    if (!amountEgp || typeof amountEgp !== 'number' || amountCents <= 0) {
       return NextResponse.json(
         { ok: false, error: 'amountEgp is required and must be a positive number.' },
         { status: 400 }
@@ -69,7 +71,8 @@ export async function POST(request: NextRequest) {
         clientId: client.id,
         senderHandle: normalizedSender,
         recipientHandle: client.instapayHandle,
-        amountEgp: Math.round(amountEgp * 100) / 100,
+        amountEgp: amountCents / 100,
+        amountCents,
         currency: 'EGP',
         status: 'PENDING',
         note: note ? String(note).slice(0, 200) : null,
