@@ -81,6 +81,30 @@ npm run db:seed:plans
 npm run build
 ```
 
+## Merchant plan subscription flow
+
+Merchants can subscribe from the dashboard `Plans & Billing` tab.
+
+Configuration required:
+
+```bash
+PLATFORM_INSTAPAY_HANDLE=your_platform_handle@instapay
+```
+
+Flow:
+
+1. Merchant selects a paid plan.
+2. Gateway creates a `Transaction` with `purpose = SUBSCRIPTION`.
+3. Merchant pays the exact monthly plan price to `PLATFORM_INSTAPAY_HANDLE`.
+4. The detector webhook confirms the subscription transaction.
+5. The gateway activates the selected plan for 30 days, resets `txCount`, and
+   sets `txLimit` from the selected `Plan.maxTransactions`.
+
+Operational constraint: the Android detector that reports subscription payments
+must be connected to the phone/account that receives payments for
+`PLATFORM_INSTAPAY_HANDLE`, because notification-based confirmation only works on
+the receiving device.
+
 The code uses the new columns when present and falls back to legacy columns where
 needed. This avoids breaking existing merchant integrations and already-installed
 detector APKs.

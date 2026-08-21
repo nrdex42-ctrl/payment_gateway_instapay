@@ -93,6 +93,8 @@ model Transaction {
   currency  String   @default("EGP")
 
   status String @default("PENDING")
+  purpose String @default("CHECKOUT") // CHECKOUT | SUBSCRIPTION
+  subscriptionPlanName String?
   note   String?
 
   deepLinkUrl   String
@@ -107,6 +109,7 @@ model Transaction {
   expiresAt DateTime
 
   @@index([clientId, status, createdAt])
+  @@index([clientId, purpose, status])
   @@index([clientId, senderHandle, amountEgp, status])
   @@index([clientId, senderHandle, amountCents, status])
   @@index([status, expiresAt])

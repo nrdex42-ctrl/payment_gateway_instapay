@@ -26,7 +26,8 @@ import {
   Eye,
   Search,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  CreditCard
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -78,6 +79,26 @@ interface Snippets {
   nodeWebhook: string
 }
 
+interface Plan {
+  id: string
+  name: string
+  priceEgp: number
+  maxTransactions: number
+}
+
+interface SubscriptionCheckout {
+  sessionId: string
+  planName: string
+  amountEgp: number
+  currency: string
+  senderHandle: string
+  recipientHandle: string
+  deepLinkUrl: string
+  qrCodeDataUrl: string
+  status: string
+  expiresAt: string
+}
+
 export default function MerchantDashboardPage() {
   const router = useRouter()
   
@@ -103,9 +124,13 @@ export default function MerchantDashboardPage() {
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null)
 
   // Advanced features states
-  const [activeTab, setActiveTab] = useState<'integration' | 'transactions' | 'webhooks'>('integration')
+  const [activeTab, setActiveTab] = useState<'integration' | 'billing' | 'transactions' | 'webhooks'>('integration')
   const [allTransactions, setAllTransactions] = useState<any[]>([])
   const [webhookLogs, setWebhookLogs] = useState<any[]>([])
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [subscriptionCheckout, setSubscriptionCheckout] = useState<SubscriptionCheckout | null>(null)
+  const [billingError, setBillingError] = useState<string | null>(null)
+  const [billingLoadingPlan, setBillingLoadingPlan] = useState<string | null>(null)
   const [txFilters, setTxFilters] = useState({ q: '', status: '', minAmount: '', maxAmount: '', startDate: '', endDate: '' })
   const [webhookFilters, setWebhookFilters] = useState({ success: '' })
   const [txLoading, setTxLoading] = useState(false)
@@ -137,6 +162,7 @@ export default function MerchantDashboardPage() {
     if (client) {
       loadDashboardData()
       loadSnippets()
+      loadPlans()
     }
   }, [client])
 
@@ -256,6 +282,60 @@ export default function MerchantDashboardPage() {
       console.error(err)
     }
   }
+
+  const loadPlans = async () => {
+    try {
+      const res = await fetch('/api/plans')
+      const data = await res.json()
+      if (data.ok) setPlans(data.plans)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleSubscribe = async (planName: string) => {
+    setBillingError(null)
+    setBillingLoadingPlan(planName)
+    try {
+      const res = await fetch('/api/subscription/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planName }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setSubscriptionCheckout(data.checkout)
+      } else {
+        setBillingError(data.error || 'Failed to create subscription checkout.')
+      }
+    } catch {
+      setBillingError('Connection error.')
+    } finally {
+      setBillingLoadingPlan(null)
+    }
+  }
+
+  useEffect(() => {
+    if (!subscriptionCheckout || subscriptionCheckout.status !== 'PENDING') return
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/subscription/status?sessionId=${subscriptionCheckout.sessionId}`)
+        const data = await res.json()
+        if (data.ok) {
+          setSubscriptionCheckout((prev) => prev ? { ...prev, ...data.checkout } : prev)
+          if (data.checkout.status === 'CONFIRMED') {
+            const sessionRes = await fetch('/api/auth/session')
+            const sessionData = await sessionRes.json()
+            if (sessionData.ok) setClient(sessionData.client)
+            loadDashboardData()
+          }
+        }
+      } catch (err) {
+        console.error(err)
+      }
+    }, 5000)
+    return () => clearInterval(id)
+  }, [subscriptionCheckout?.sessionId, subscriptionCheckout?.status])
 
   const handleUpdateSettings = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -484,6 +564,7 @@ export default function MerchantDashboardPage() {
             <div className="flex items-center gap-1 border-b border-neutral-900 pb-2 overflow-x-auto">
               {[
                 { id: 'integration', label: 'Developer Integration', icon: <Key className="h-4 w-4" /> },
+                { id: 'billing', label: 'Plans & Billing', icon: <CreditCard className="h-4 w-4" /> },
                 { id: 'transactions', label: 'Transaction Reports', icon: <Activity className="h-4 w-4" /> },
                 { id: 'webhooks', label: 'Webhook logs', icon: <Globe className="h-4 w-4" /> },
               ].map((t) => (
@@ -711,6 +792,105 @@ export default function MerchantDashboardPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Tab: Plans & Billing */}
+            {activeTab === 'billing' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-violet-400" />
+                    <h2 className="text-base font-bold text-white">Gateway Pricing</h2>
+                  </div>
+                  <p className="text-xs text-neutral-400">
+                    Subscribe by paying the exact plan price through InstaPay. Once the subscription transaction is confirmed, your monthly quota is activated automatically.
+                  </p>
+                </div>
+
+                {billingError && (
+                  <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-3 text-xs text-red-400 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{billingError}</span>
+                  </div>
+                )}
+
+                {subscriptionCheckout && (
+                  <div className="rounded-2xl border border-violet-500/30 bg-violet-950/10 p-5 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-5">
+                    <div className="rounded-xl bg-white p-2">
+                      <img src={subscriptionCheckout.qrCodeDataUrl} alt="Subscription payment QR" className="w-full h-auto" />
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-violet-300 font-bold">Pending subscription payment</p>
+                        <h3 className="text-xl font-black text-white">{subscriptionCheckout.planName} · {subscriptionCheckout.amountEgp.toFixed(2)} {subscriptionCheckout.currency}</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3">
+                          <p className="text-neutral-500">Pay from</p>
+                          <p className="font-mono text-neutral-200 select-all">{subscriptionCheckout.senderHandle}</p>
+                        </div>
+                        <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3">
+                          <p className="text-neutral-500">Pay to</p>
+                          <p className="font-mono text-neutral-200 select-all">{subscriptionCheckout.recipientHandle}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button asChild className="bg-violet-600 hover:bg-violet-700 rounded-xl text-white">
+                          <a href={subscriptionCheckout.deepLinkUrl} target="_blank" rel="noopener noreferrer">
+                            Open InstaPay Link
+                          </a>
+                        </Button>
+                        <span className={`text-xs font-bold ${subscriptionCheckout.status === 'CONFIRMED' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {subscriptionCheckout.status === 'CONFIRMED' ? 'Confirmed. Plan activated.' : 'Waiting for confirmation...'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {plans.filter((plan) => plan.name !== 'FREE_TRIAL').map((plan) => {
+                    const isCurrent = client.subscriptionPlan === plan.name
+                    return (
+                      <div
+                        key={plan.id}
+                        className={`rounded-2xl border p-5 space-y-4 ${
+                          isCurrent
+                            ? 'border-violet-500/50 bg-violet-950/10'
+                            : 'border-neutral-900 bg-neutral-900/30'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-lg font-black text-white">{plan.name}</h3>
+                            {isCurrent && (
+                              <span className="rounded-full bg-violet-500/10 border border-violet-500/30 px-2 py-0.5 text-[10px] text-violet-300 font-bold">
+                                Current
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-3xl font-black text-white mt-2">
+                            {plan.priceEgp.toFixed(0)} <span className="text-sm text-neutral-500">EGP / month</span>
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3 text-xs text-neutral-300">
+                          <p><span className="font-bold text-white">{plan.maxTransactions.toLocaleString()}</span> confirmed transactions / month</p>
+                          <p className="text-neutral-500 mt-1">Automatic activation after exact payment confirmation.</p>
+                        </div>
+
+                        <Button
+                          disabled={billingLoadingPlan === plan.name || isCurrent}
+                          onClick={() => handleSubscribe(plan.name)}
+                          className="w-full rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold disabled:opacity-50"
+                        >
+                          {isCurrent ? 'Active Plan' : billingLoadingPlan === plan.name ? 'Creating payment…' : `Subscribe to ${plan.name}`}
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
 

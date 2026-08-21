@@ -72,6 +72,12 @@ export async function PATCH(request: NextRequest) {
         webhookUrl: updated.webhookUrl,
         webhookSecret: updated.webhookSecret,
         checkoutTtlMin: updated.checkoutTtlMin,
+        createdAt: updated.createdAt.toISOString(),
+        subscriptionPlan: updated.subscriptionPlan,
+        subscriptionEndsAt: updated.subscriptionEndsAt ? updated.subscriptionEndsAt.toISOString() : null,
+        isFreeTrial: updated.isFreeTrial,
+        txLimit: updated.txLimit,
+        txCount: updated.txCount,
       },
     })
   } catch (err) {

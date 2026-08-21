@@ -342,17 +342,41 @@ export async function POST(request: NextRequest) {
       where: { id: match.id },
     })
 
+    if (updated.purpose === 'SUBSCRIPTION' && updated.subscriptionPlanName) {
+      const plan = await db.plan.findUnique({ where: { name: updated.subscriptionPlanName } })
+      if (plan) {
+        await db.client.update({
+          where: { id: client.id },
+          data: {
+            subscriptionPlan: plan.name,
+            subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            isFreeTrial: false,
+            txLimit: plan.maxTransactions,
+            txCount: 0,
+          },
+        })
+        await db.auditLog.create({
+          data: {
+            action: 'SUBSCRIPTION_ACTIVATED',
+            details: `Activated ${plan.name} for merchant ${client.businessName} via checkout ${updated.sessionId}`,
+          },
+        }).catch(() => {})
+      }
+    }
+
     // Increment client's confirmed transaction count atomically
-    await db.client.update({
-      where: { id: client.id },
-      data: {
-        txCount: {
-          increment: 1,
+    if (updated.purpose !== 'SUBSCRIPTION') {
+      await db.client.update({
+        where: { id: client.id },
+        data: {
+          txCount: {
+            increment: 1,
+          },
         },
-      },
-    }).catch((err) => {
-      console.error('[webhook] Failed to increment client txCount:', err)
-    })
+      }).catch((err) => {
+        console.error('[webhook] Failed to increment client txCount:', err)
+      })
+    }
 
     // Push WebSocket real-time update to checkout waiting screen
     void emitCheckoutUpdate({
@@ -368,7 +392,7 @@ export async function POST(request: NextRequest) {
     // If client has custom callback webhook, trigger it
     if (client.webhookUrl) {
       void forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
-        event: 'payment.confirmed',
+        event: updated.purpose === 'SUBSCRIPTION' ? 'subscription.payment_confirmed' : 'payment.confirmed',
         clientId: client.id,
         businessName: client.businessName,
         transaction: {
