@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { db } from '@/lib/db'
 import { hashPassword, generateSlug } from '@/lib/auth'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
+import { normalizeEmail, validateMerchantSignupEmail } from '@/lib/emailValidation'
+
+const OTP_PURPOSE = 'MERCHANT_SIGNUP'
+
+function hashOtp(email: string, otp: string): string {
+  const secret = process.env.OWNER_SECRET
+  if (!secret) throw new Error('OWNER_SECRET environment variable is missing.')
+  return crypto.createHmac('sha256', secret).update(`${normalizeEmail(email)}:${otp}`).digest('hex')
+}
 
 export async function POST(request: NextRequest) {
   // Enforce Rate Limit: max 5 merchant registrations per 10 minutes
@@ -14,16 +24,16 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = await request.json()
-    const { businessName, email, password } = body || {}
+    const { businessName, email, password, verificationId, otp } = body || {}
+    const normalizedEmail = normalizeEmail(email || '')
 
-    if (!businessName?.trim() || !email?.trim() || !password?.trim()) {
+    if (!businessName?.trim() || !normalizedEmail || !password?.trim() || !verificationId?.trim() || !otp?.trim()) {
       return NextResponse.json({ ok: false, error: 'All fields are required.' }, { status: 400 })
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email.trim())) {
-      return NextResponse.json({ ok: false, error: 'Invalid email address.' }, { status: 400 })
+    const emailError = validateMerchantSignupEmail(normalizedEmail)
+    if (emailError) {
+      return NextResponse.json({ ok: false, error: emailError }, { status: 400 })
     }
 
     // Validate password strength
@@ -36,13 +46,39 @@ export async function POST(request: NextRequest) {
 
     // Check if email already registered
     const existingEmail = await db.client.findUnique({
-      where: { email: email.trim().toLowerCase() },
+      where: { email: normalizedEmail },
     })
     if (existingEmail) {
       return NextResponse.json(
         { ok: false, error: 'This email is already registered.' },
         { status: 400 }
       )
+    }
+
+    const verification = await db.emailVerification.findUnique({
+      where: { id: String(verificationId).trim() },
+    })
+    const otpValue = String(otp).trim()
+    const expectedOtpHash = hashOtp(normalizedEmail, otpValue)
+    const otpValid =
+      verification &&
+      verification.email === normalizedEmail &&
+      verification.purpose === OTP_PURPOSE &&
+      !verification.consumedAt &&
+      verification.expiresAt.getTime() > Date.now() &&
+      verification.attempts < 5 &&
+      verification.otpHash === expectedOtpHash
+
+    if (!verification || verification.email !== normalizedEmail) {
+      return NextResponse.json({ ok: false, error: 'Please request a new email verification code.' }, { status: 400 })
+    }
+
+    if (!otpValid) {
+      await db.emailVerification.update({
+        where: { id: verification.id },
+        data: { attempts: { increment: 1 } },
+      }).catch(() => {})
+      return NextResponse.json({ ok: false, error: 'Invalid or expired verification code.' }, { status: 400 })
     }
 
     let slug = generateSlug(businessName)
@@ -69,7 +105,7 @@ export async function POST(request: NextRequest) {
         businessName: businessName.trim(),
         slug,
         instapayHandle: provisionalHandle,
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         passwordHash,
         approvalStatus: 'PENDING',
         isActive: false, // inactive until approved
@@ -82,6 +118,11 @@ export async function POST(request: NextRequest) {
         txCount: 0,
       },
     })
+
+    await db.emailVerification.update({
+      where: { id: verification.id },
+      data: { consumedAt: new Date() },
+    }).catch(() => {})
 
     const response = NextResponse.json({
       ok: true,

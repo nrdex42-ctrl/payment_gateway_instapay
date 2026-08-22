@@ -23,6 +23,21 @@ model Owner {
   createdAt    DateTime @default(now())
 }
 
+// ─── Merchant email verification OTPs ─────────────────────────────
+model EmailVerification {
+  id         String    @id @default(cuid())
+  email      String
+  otpHash    String
+  purpose    String    @default("MERCHANT_SIGNUP")
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email, purpose, createdAt])
+  @@index([expiresAt])
+}
+
 // ─── Client / Merchant Account (Self-Service) ──────────────────────
 model Client {
   id             String   @id @default(cuid())

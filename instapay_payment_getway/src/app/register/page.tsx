@@ -44,12 +44,39 @@ export default function RegisterPage() {
   const [businessName, setBusinessName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [otp, setOtp] = useState('')
+  const [verificationId, setVerificationId] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [sendingOtp, setSendingOtp] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   const score = useMemo(() => passwordScore(password), [password])
+
+  const sendOtp = async () => {
+    setErrorMessage(null)
+    setSendingOtp(true)
+    try {
+      const res = await fetch('/api/auth/email-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setVerificationId(data.verificationId)
+        setOtpSent(true)
+      } else {
+        setErrorMessage(data.error || 'Failed to send verification code.')
+      }
+    } catch {
+      setErrorMessage('Connection error. Please try again.')
+    } finally {
+      setSendingOtp(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,7 +87,7 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName, email, password }),
+        body: JSON.stringify({ businessName, email, password, verificationId, otp }),
       })
       const data = await res.json()
       if (data.ok) {
@@ -181,7 +208,7 @@ export default function RegisterPage() {
                 </div>
                 <h2 className="mt-2 text-2xl font-black tracking-tight">Sign up</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-400">
-                  Operational details are completed after login.
+                  Verify your email before submitting.
                 </p>
               </div>
               <div className="rounded-2xl bg-indigo-500/10 p-3 text-indigo-200 ring-1 ring-indigo-400/20">
@@ -220,12 +247,20 @@ export default function RegisterPage() {
                     type="email"
                     placeholder="owner@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value)
+                      setOtpSent(false)
+                      setVerificationId('')
+                      setOtp('')
+                    }}
                     className="h-12 rounded-2xl border-white/10 bg-white/[0.04] pl-10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500"
                     required
                     disabled={submitting}
                   />
                 </div>
+                <p className="text-xs text-slate-500">
+                  Temporary email providers are blocked. Use Gmail or a real business inbox.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -264,6 +299,48 @@ export default function RegisterPage() {
                 <p className="text-xs text-slate-500">Use at least 8 characters with letters and numbers.</p>
               </div>
 
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="otp" className="text-xs font-semibold text-slate-300">
+                      Email verification code
+                    </Label>
+                    <Input
+                      id="otp"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-center font-mono text-lg tracking-[0.35em] text-white placeholder:text-slate-700 focus-visible:ring-indigo-500"
+                      required
+                      disabled={submitting || !otpSent}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={sendOtp}
+                    disabled={sendingOtp || submitting || !email}
+                    className="h-12 rounded-2xl border-white/10 bg-white/[0.04] px-5 text-white hover:bg-white/10"
+                  >
+                    {sendingOtp ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending
+                      </>
+                    ) : otpSent ? 'Resend code' : 'Send code'}
+                  </Button>
+                </div>
+                {otpSent && (
+                  <p className="mt-3 text-xs leading-6 text-emerald-300">
+                    We sent a 6-digit code to {email}. It expires in 10 minutes.
+                  </p>
+                )}
+              </div>
+
               {errorMessage && (
                 <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
                   {errorMessage}
@@ -272,13 +349,13 @@ export default function RegisterPage() {
 
               <Button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !otpSent || otp.length !== 6}
                 className="h-12 w-full rounded-2xl bg-indigo-500 font-bold text-white hover:bg-indigo-400 disabled:opacity-60"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting application
+                    Verifying and submitting
                   </>
                 ) : (
                   <>
