@@ -1,215 +1,276 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { LayoutDashboard, Shield, ArrowRight, Zap, ExternalLink } from 'lucide-react'
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  Clock3,
+  Code2,
+  CreditCard,
+  LockKeyhole,
+  ShieldCheck,
+  Smartphone,
+  Webhook,
+  Zap,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-interface ClientDemo {
-  id: string
-  slug: string
-  businessName: string
-  instapayHandle: string
-}
+const features = [
+  {
+    icon: <CreditCard className="h-5 w-5" />,
+    title: 'Hosted checkout',
+    body: 'Create payment sessions with a simple API and route customers to a clean hosted payment page.',
+  },
+  {
+    icon: <Zap className="h-5 w-5" />,
+    title: 'Automatic confirmation',
+    body: 'Confirm InstaPay transfers quickly using your connected merchant receiving account.',
+  },
+  {
+    icon: <Webhook className="h-5 w-5" />,
+    title: 'Signed webhooks',
+    body: 'Receive HMAC-signed payment events on your backend for reliable order fulfillment.',
+  },
+  {
+    icon: <BarChart3 className="h-5 w-5" />,
+    title: 'Merchant analytics',
+    body: 'Track confirmed, pending, expired, and mismatched payments from one operational dashboard.',
+  },
+]
+
+const plans = [
+  { name: 'Basic', price: '250 EGP', limit: '500 confirmations / month' },
+  { name: 'Pro', price: '750 EGP', limit: '2,000 confirmations / month', popular: true },
+  { name: 'Enterprise', price: 'Custom', limit: 'High-volume processing and support' },
+]
+
+const steps = [
+  'Create a merchant account',
+  'Configure your receiving InstaPay payment link',
+  'Generate checkout sessions from your backend',
+  'Receive signed confirmation webhooks',
+]
 
 export default function LandingPage() {
-  const [merchants, setMerchants] = useState<ClientDemo[]>([])
-  const [plans, setPlans] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetch('/api/merchants')
-        if (res.ok) {
-          const data = await res.json()
-          if (data.ok) {
-            setMerchants(data.merchants)
-          }
-        }
-      } catch {}
-      try {
-        const res = await fetch('/api/plans')
-        if (res.ok) {
-          const data = await res.json()
-          if (data.ok) {
-            setPlans(data.plans)
-          }
-        }
-      } catch {}
-      setLoading(false)
-    }
-    loadData()
-  }, [])
-
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-neutral-900 via-neutral-950 to-indigo-950 text-neutral-100">
-      {/* Header */}
-      <header className="border-b border-neutral-800 bg-neutral-950/60 backdrop-blur-md sticky top-0 z-50">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-emerald-400 shadow-md">
-              <Shield className="h-5 w-5 text-white" />
+    <div className="min-h-screen bg-[#070a12] text-white">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <a href="/" className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400 shadow-lg shadow-indigo-950/40">
+              <ShieldCheck className="h-5 w-5 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-white">InstaPay Gateway</h1>
-                <span className="rounded-md bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-400 border border-violet-500/30">
-                  Multi-Tenant
-                </span>
-              </div>
-              <p className="text-xs text-neutral-500">Egypt Instant Network Router</p>
+              <div className="text-sm font-black tracking-tight sm:text-base">InstaPay Gateway</div>
+              <div className="text-xs text-slate-400">Payment infrastructure for Egypt</div>
             </div>
-          </div>
+          </a>
 
-          <Button
-            asChild
-            size="sm"
-            className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl"
-          >
-            <a href="/login">
-              <LayoutDashboard className="mr-1.5 h-4 w-4" />
-              Merchant Portal
-            </a>
-          </Button>
-        </div>
-      </header>
+          <nav className="hidden items-center gap-7 text-sm font-medium text-slate-300 md:flex">
+            <a href="#features" className="hover:text-white">Features</a>
+            <a href="#pricing" className="hover:text-white">Pricing</a>
+            <a href="#integration" className="hover:text-white">Integration</a>
+          </nav>
 
-      {/* Main hero */}
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-12 sm:px-6 flex flex-col justify-center space-y-10">
-        <div className="text-center space-y-4 max-w-2xl mx-auto">
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-400 border border-violet-500/25"
-          >
-            <Zap className="h-3 w-3 fill-violet-400" />
-            Platform Gateway Live
-          </motion.div>
-          
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-            Multi-Tenant InstaPay confirmation system
-          </h2>
-          <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
-            Integrate InstaPay auto-confirmation on any business project. Clients run the companion notification detector APK on their devices to capture customer transactions automatically.
-          </p>
-        </div>
-
-        {/* Action Panel */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-          {/* Admin panel promo */}
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/30 p-6 flex flex-col justify-between space-y-4">
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider block">Developer Integration</span>
-              <h3 className="text-lg font-bold text-white">Get Started in Minutes</h3>
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                Register your business account today to receive custom API integration keys, APK tokens, and sandbox callback credentials. Accounts activate instantly upon admin approval.
-              </p>
-            </div>
-            <Button asChild className="w-full bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl">
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm" className="hidden text-slate-200 hover:bg-white/10 hover:text-white sm:inline-flex">
+              <a href="/login">Sign in</a>
+            </Button>
+            <Button asChild size="sm" className="rounded-xl bg-white text-slate-950 hover:bg-slate-200">
               <a href="/register">
-                Register Merchant Account
-                <ArrowRight className="ml-2 h-4 w-4" />
+                Start now
+                <ArrowRight className="ml-1.5 h-4 w-4" />
               </a>
             </Button>
           </div>
+        </div>
+      </header>
 
-          {/* Client select / Demo */}
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/30 p-6 flex flex-col justify-between space-y-4">
-            <div className="space-y-2 flex-1">
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Merchant Checkout Demo</span>
-              <h3 className="text-lg font-bold text-white">Hosted Checkout Pages</h3>
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                Choose an active client merchant to test their specific payment flow. Customers visit these pages to generate deep links and QR codes.
+      <main>
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.25),transparent_34%),radial-gradient(circle_at_80%_10%,rgba(6,182,212,0.18),transparent_28%),radial-gradient(circle_at_50%_80%,rgba(139,92,246,0.18),transparent_30%)]" />
+          <div className="relative mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-28">
+            <div className="flex flex-col justify-center">
+              <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-200">
+                <Clock3 className="h-3.5 w-3.5" />
+                Fast InstaPay payment confirmation for online businesses
+              </div>
+
+              <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">
+                Accept InstaPay payments with automated confirmation.
+              </h1>
+
+              <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
+                A merchant payment gateway for creating checkout sessions, detecting successful transfers,
+                and delivering secure webhook callbacks to your business system.
               </p>
-              
-              {/* Merchants Selector */}
-              {loading ? (
-                <div className="h-20 animate-pulse bg-neutral-950 rounded-xl mt-4" />
-              ) : merchants.length === 0 ? (
-                <div className="text-xs text-neutral-500 italic mt-3 bg-neutral-950 p-3 rounded-xl border border-neutral-900">
-                  No active clients found. Please go to the Admin portal first and add a client account.
+
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button asChild size="lg" className="rounded-2xl bg-indigo-500 px-7 text-white hover:bg-indigo-400">
+                  <a href="/register">
+                    Create merchant account
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="rounded-2xl border-white/15 bg-white/5 px-7 text-white hover:bg-white/10">
+                  <a href="/login">Merchant login</a>
+                </Button>
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-slate-300">
+                <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-400" /> API-first checkout</span>
+                <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-400" /> Signed callbacks</span>
+                <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-400" /> Merchant dashboard</span>
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-4 shadow-2xl shadow-black/40 backdrop-blur">
+              <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/80 p-5">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Live operations</p>
+                    <h2 className="mt-1 text-xl font-bold">Payment control center</h2>
+                  </div>
+                  <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-300">Online</span>
                 </div>
-              ) : (
-                <div className="space-y-1.5 mt-3 max-h-32 overflow-y-auto pr-1">
-                  {merchants.map((m) => (
-                    <a
-                      key={m.id}
-                      href={`/pay/${m.slug}`}
-                      className="flex items-center justify-between p-2 rounded-lg bg-neutral-950 hover:bg-neutral-900 border border-neutral-900 transition-all text-xs"
-                    >
-                      <span className="font-semibold text-neutral-300">{m.businessName}</span>
-                      <span className="text-[10px] text-neutral-500 font-mono flex items-center gap-1">
-                        pay/{m.slug} <ExternalLink className="h-3 w-3" />
-                      </span>
-                    </a>
+
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  {[
+                    ['Confirmation rate', '99.9%'],
+                    ['Webhook signing', 'HMAC'],
+                    ['Checkout expiry', 'Configurable'],
+                    ['Settlement currency', 'EGP'],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <div className="text-xs text-slate-400">{label}</div>
+                      <div className="mt-2 text-lg font-black">{value}</div>
+                    </div>
                   ))}
                 </div>
-              )}
+
+                <div className="mt-5 rounded-2xl border border-indigo-400/20 bg-indigo-400/10 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-200">
+                      <Code2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold">Developer-ready integration</div>
+                      <div className="text-xs leading-5 text-slate-400">Create checkout, redirect customer, verify webhook, fulfill order.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Pricing Tiers Section */}
-        {plans.length > 0 && (
-          <div className="space-y-6 pt-10 border-t border-neutral-800/40">
-            <div className="text-center space-y-1">
-              <h3 className="text-xl font-bold text-white tracking-tight font-sans">Simple, Transaction-Based Pricing</h3>
-              <p className="text-xs text-neutral-400">Choose a quota plan that matches your transaction volume requirements.</p>
+        <section id="features" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="max-w-2xl">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-300">Platform features</p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Everything needed to operate InstaPay checkout.</h2>
+          </div>
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {features.map((feature) => (
+              <div key={feature.title} className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-cyan-200">
+                  {feature.icon}
+                </div>
+                <h3 className="text-lg font-bold">{feature.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-slate-400">{feature.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="integration" className="border-y border-white/10 bg-white/[0.03]">
+          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:px-8">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-300">Integration flow</p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Simple payment lifecycle.</h2>
+              <p className="mt-5 max-w-xl text-sm leading-7 text-slate-400">
+                Your backend creates a session, the customer pays using InstaPay, and your system receives
+                a signed confirmation event when the transfer is detected.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {plans.map((p) => (
-                <div
-                  key={p.id}
-                  className={`rounded-2xl border p-5 flex flex-col justify-between space-y-5 transition-all ${
-                    p.name === 'PRO'
-                      ? 'border-violet-500 bg-violet-950/10 shadow-lg shadow-violet-950/10'
-                      : 'border-neutral-800/80 bg-neutral-900/10'
-                  }`}
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                        {p.name.replace('_', ' ')}
-                      </span>
-                      {p.name === 'PRO' && (
-                        <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[9px] font-bold text-violet-400 border border-violet-500/30">
-                          Popular
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-white">{p.priceEgp} EGP</span>
-                      <span className="text-[10px] text-neutral-500">/one-time</span>
-                    </div>
-                    <p className="text-xs text-neutral-400 leading-relaxed pt-1">
-                      Allows processing up to <span className="font-bold text-white">{p.maxTransactions.toLocaleString()}</span> confirmed transactions.
-                    </p>
+            <div className="grid gap-3">
+              {steps.map((step, index) => (
+                <div key={step} className="flex items-center gap-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-sm font-black">
+                    {index + 1}
                   </div>
-                  <Button
-                    asChild
-                    size="sm"
-                    className={`w-full rounded-xl text-xs font-semibold ${
-                      p.name === 'PRO'
-                        ? 'bg-violet-600 hover:bg-violet-700 text-white'
-                        : 'bg-neutral-800 hover:bg-neutral-700 text-white'
-                    }`}
-                  >
-                    <a href="/register">Get Started</a>
-                  </Button>
+                  <div className="font-semibold text-slate-100">{step}</div>
                 </div>
               ))}
             </div>
           </div>
-        )}
+        </section>
+
+        <section id="pricing" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-300">Pricing</p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Monthly plans for growing merchants.</h2>
+            </div>
+            <Button asChild className="w-fit rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
+              <a href="/register">Choose a plan</a>
+            </Button>
+          </div>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {plans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`rounded-3xl border p-6 ${
+                  plan.popular
+                    ? 'border-indigo-400/50 bg-indigo-500/10 shadow-xl shadow-indigo-950/30'
+                    : 'border-white/10 bg-white/[0.04]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-black">{plan.name}</h3>
+                  {plan.popular && <span className="rounded-full bg-indigo-400/20 px-3 py-1 text-xs font-bold text-indigo-200">Popular</span>}
+                </div>
+                <div className="mt-5 text-3xl font-black">{plan.price}</div>
+                <div className="mt-2 text-sm text-slate-400">{plan.limit}</div>
+                <Button asChild className="mt-6 w-full rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
+                  <a href="/register">Get started</a>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+          <div className="rounded-[2rem] border border-white/10 bg-gradient-to-r from-indigo-500/20 to-cyan-400/10 p-8 sm:p-10">
+            <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-bold text-cyan-200">
+                  <LockKeyhole className="h-4 w-4" />
+                  Built for secure merchant operations
+                </div>
+                <h2 className="mt-3 text-3xl font-black tracking-tight">Start accepting InstaPay payments through your own business flow.</h2>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
+                  Register your merchant account, configure your payment settings, and connect your backend using API keys and signed webhooks.
+                </p>
+              </div>
+              <Button asChild size="lg" className="rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
+                <a href="/register">
+                  Open merchant account
+                  <Smartphone className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          </div>
+        </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-neutral-900 py-6 mt-12 bg-neutral-950/40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center text-xs text-neutral-500">
-          InstaPay Platform Gateway · Sandbox Environment for testing
+      <footer className="border-t border-white/10 py-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <div>© {new Date().getFullYear()} InstaPay Gateway. Merchant payment infrastructure.</div>
+          <div className="flex gap-5">
+            <a href="/login" className="hover:text-slate-300">Login</a>
+            <a href="/register" className="hover:text-slate-300">Register</a>
+          </div>
         </div>
       </footer>
     </div>
