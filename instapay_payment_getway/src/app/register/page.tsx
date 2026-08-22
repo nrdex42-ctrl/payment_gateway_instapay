@@ -151,14 +151,14 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#070a12] text-white">
       <header className="border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <a href="/" className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+          <a href="/" className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5">
               <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-sm font-black tracking-tight">InstaPay Gateway</div>
-              <div className="text-xs text-slate-400">Merchant onboarding</div>
+              <div className="hidden text-xs text-slate-400 sm:block">Merchant onboarding</div>
             </div>
           </a>
 
@@ -180,7 +180,7 @@ export default function RegisterPage() {
             Start with only the required account details
           </div>
 
-          <h1 className="max-w-3xl text-4xl font-black tracking-tight sm:text-6xl">
+          <h1 className="max-w-3xl text-3xl font-black tracking-tight sm:text-6xl">
             Create your merchant account.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300">

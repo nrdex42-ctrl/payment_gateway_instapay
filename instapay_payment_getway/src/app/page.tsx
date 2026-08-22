@@ -122,14 +122,14 @@ export default async function LandingPage() {
   return (
     <div className="min-h-screen bg-[#070a12] text-white">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <a href="/" className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+          <a href="/" className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg shadow-indigo-950/40">
               <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-sm font-black tracking-tight sm:text-base">InstaPay Gateway</div>
-              <div className="text-xs text-slate-400">Payment infrastructure for Egypt</div>
+              <div className="hidden text-xs text-slate-400 sm:block">Payment infrastructure for Egypt</div>
             </div>
           </a>
 
@@ -164,7 +164,7 @@ export default async function LandingPage() {
                 Built for Egyptian merchants on InstaPay
               </div>
 
-              <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">
+              <h1 className="max-w-4xl text-3xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">
                 Accept InstaPay payments with automated confirmation.
               </h1>
 

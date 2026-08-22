@@ -121,13 +121,13 @@ export default function HostedCheckoutPage({ params }: { params: Promise<{ slug:
       {/* Header */}
       <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-emerald-400 shadow-md">
-              <span className="text-xs font-black tracking-tight text-white">IPN</span>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-md ring-1 ring-neutral-100">
+              <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-neutral-900">{client.businessName}</h1>
+                <h1 className="truncate text-base font-bold text-neutral-900">{client.businessName}</h1>
                 <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">
                   Secured
                 </span>

@@ -503,23 +503,23 @@ export default function MerchantDashboardPage() {
     <div className="min-h-screen bg-[#070a12] text-neutral-100 flex flex-col font-sans">
       {/* Header */}
       <header className="border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl sticky top-0 z-40">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg shadow-indigo-950/40">
               <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-white">{client.businessName}</h1>
+                <h1 className="truncate text-base font-bold text-white">{client.businessName}</h1>
                 <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-300 border border-emerald-500/30">
                   Approved
                 </span>
               </div>
-              <p className="text-xs text-neutral-500">Merchant console · <span className="font-semibold text-neutral-400">/{client.slug}</span></p>
+              <p className="truncate text-xs text-neutral-500">Merchant console · <span className="font-semibold text-neutral-400">/{client.slug}</span></p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -528,7 +528,7 @@ export default function MerchantDashboardPage() {
               className="rounded-xl text-neutral-300 border-white/10 bg-white/[0.03] hover:bg-white/10 hover:text-white"
             >
               <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
             <Button
               variant="ghost"
@@ -537,7 +537,7 @@ export default function MerchantDashboardPage() {
               className="rounded-xl text-neutral-500 hover:text-red-300 hover:bg-red-500/10"
             >
               <LogOut className="h-4 w-4 mr-1.5" />
-              Logout
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
@@ -545,7 +545,7 @@ export default function MerchantDashboardPage() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 space-y-6">
-        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,.28),transparent_34%),linear-gradient(135deg,rgba(15,23,42,.98),rgba(2,6,23,.92))] p-6 shadow-2xl shadow-black/20">
+        <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,.28),transparent_34%),linear-gradient(135deg,rgba(15,23,42,.98),rgba(2,6,23,.92))] p-4 shadow-2xl shadow-black/20 sm:rounded-[2rem] sm:p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
@@ -560,7 +560,7 @@ export default function MerchantDashboardPage() {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[440px]">
+            <div className="grid w-full gap-3 sm:grid-cols-3 lg:min-w-[440px] lg:max-w-xl">
               <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Plan</div>
                 <div className="mt-2 text-sm font-black text-white">{subscriptionLabel}</div>
