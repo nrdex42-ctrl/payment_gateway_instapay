@@ -31,6 +31,7 @@ data class DashboardStats(
 data class MerchantInfo(
     val handle: String,
     val name: String,
+    val email: String,
 )
 
 data class SubscriptionInfo(

@@ -82,6 +82,10 @@ class SettingsFragment : Fragment() {
             // Reset to defaults
             config.authToken = "instapay-sandbox-detector-token-2026"
             config.merchantHandle = "mohammedshabana77@instapay"
+            config.dashboardApiKey = ""
+            config.merchantEmail = ""
+            config.subscriptionPlan = "FREE_TRIAL"
+            config.subscriptionEndsAt = null
             
             val intent = Intent(requireContext(), LoginActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -156,9 +160,30 @@ class SettingsFragment : Fragment() {
     private fun updateSummaryHeader() {
         binding.summaryMerchantName.text = config.merchantHandle.substringBefore('@').replaceFirstChar { it.uppercaseChar() }
         binding.summaryMerchantHandle.text = config.merchantHandle
+        binding.summaryMerchantEmail.text = config.merchantEmail.ifBlank { "Email unavailable" }
         binding.summaryGatewayUrl.text = config.gatewayUrl.removeSuffix("/api/webhooks/instapay").trimEnd('/')
         binding.summaryDetectorMode.text = "Merchant detector"
+        binding.summarySubscription.text = "${config.subscriptionPlan.replace("_", " ")} · ${formatSubscriptionDuration(config.subscriptionEndsAt)}"
         binding.monitoredHandleLabel.text = getString(R.string.monitored_handle_label, config.merchantHandle)
+    }
+
+    private fun formatSubscriptionDuration(value: String?): String {
+        if (value.isNullOrBlank()) return "No expiry date"
+        return try {
+            val normalized = value.replace(Regex("\\.\\d{3}Z$"), "Z")
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            val endDate = sdf.parse(normalized) ?: return "No expiry date"
+            val remainMs = endDate.time - System.currentTimeMillis()
+            val remainDays = kotlin.math.ceil(remainMs / (1000.0 * 60 * 60 * 24)).toInt()
+            when {
+                remainDays > 1 -> "$remainDays days remaining"
+                remainDays == 1 -> "1 day remaining"
+                else -> "Expired"
+            }
+        } catch (_: Exception) {
+            "No expiry date"
+        }
     }
 
     private fun openNotificationAccessSettings() {

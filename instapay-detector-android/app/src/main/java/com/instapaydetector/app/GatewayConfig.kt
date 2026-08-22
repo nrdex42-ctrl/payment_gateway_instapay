@@ -41,10 +41,34 @@ class GatewayConfig private constructor(ctx: Context) {
             prefs.edit().putString(KEY_TOKEN, value.trim()).apply()
         }
 
+    var dashboardApiKey: String
+        get() = prefs.getString(KEY_DASHBOARD_API_KEY, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_DASHBOARD_API_KEY, value.trim()).apply()
+        }
+
     var merchantHandle: String
         get() = prefs.getString(KEY_MERCHANT_HANDLE, DEFAULT_MERCHANT_HANDLE) ?: DEFAULT_MERCHANT_HANDLE
         set(value) {
             prefs.edit().putString(KEY_MERCHANT_HANDLE, value.trim().lowercase()).apply()
+        }
+
+    var merchantEmail: String
+        get() = prefs.getString(KEY_MERCHANT_EMAIL, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_MERCHANT_EMAIL, value.trim().lowercase()).apply()
+        }
+
+    var subscriptionPlan: String
+        get() = prefs.getString(KEY_SUBSCRIPTION_PLAN, "FREE_TRIAL") ?: "FREE_TRIAL"
+        set(value) {
+            prefs.edit().putString(KEY_SUBSCRIPTION_PLAN, value.trim()).apply()
+        }
+
+    var subscriptionEndsAt: String?
+        get() = prefs.getString(KEY_SUBSCRIPTION_ENDS_AT, null)
+        set(value) {
+            prefs.edit().putString(KEY_SUBSCRIPTION_ENDS_AT, value?.trim()).apply()
         }
 
     var isLoggedIn: Boolean
@@ -57,7 +81,11 @@ class GatewayConfig private constructor(ctx: Context) {
         private const val FILE_NAME = "gateway_config.xml"
         private const val KEY_URL = "gateway_url"
         private const val KEY_TOKEN = "auth_token"
+        private const val KEY_DASHBOARD_API_KEY = "dashboard_api_key"
         private const val KEY_MERCHANT_HANDLE = "merchant_handle"
+        private const val KEY_MERCHANT_EMAIL = "merchant_email"
+        private const val KEY_SUBSCRIPTION_PLAN = "subscription_plan"
+        private const val KEY_SUBSCRIPTION_ENDS_AT = "subscription_ends_at"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
 
         private const val DEFAULT_URL =

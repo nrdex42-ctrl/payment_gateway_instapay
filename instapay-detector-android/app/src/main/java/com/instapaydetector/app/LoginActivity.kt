@@ -86,13 +86,21 @@ class LoginActivity : AppCompatActivity() {
 
             result.fold(
                 onSuccess = { responseJson ->
+                    val apiKey = responseJson.optString("apiKey", "")
                     val detectToken = responseJson.optString("detectToken", "")
                     val instapayHandle = responseJson.optString("instapayHandle", "")
+                    val email = responseJson.optString("email", "")
+                    val plan = responseJson.optString("subscriptionPlan", "FREE_TRIAL")
+                    val subscriptionEndsAt = responseJson.optString("subscriptionEndsAt", "")
 
-                    if (detectToken.isNotEmpty() && instapayHandle.isNotEmpty()) {
+                    if (apiKey.isNotEmpty() && detectToken.isNotEmpty() && instapayHandle.isNotEmpty()) {
                         config.gatewayUrl = "$cleanUrl/api/webhooks/instapay"
+                        config.dashboardApiKey = apiKey
                         config.authToken = detectToken
                         config.merchantHandle = instapayHandle
+                        config.merchantEmail = email
+                        config.subscriptionPlan = plan
+                        config.subscriptionEndsAt = subscriptionEndsAt.ifBlank { null }
                         config.isLoggedIn = true
 
                         Toast.makeText(this@LoginActivity, "Login Successful!", Toast.LENGTH_SHORT).show()

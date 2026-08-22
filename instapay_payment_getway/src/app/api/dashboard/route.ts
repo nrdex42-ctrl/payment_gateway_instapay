@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
+import { authenticateByApiKey, authenticateByDetectToken, authenticateOwner } from '@/lib/auth'
 import { getStartOfTodayEgypt, formatEgyptTime, getEgyptDstMode, getEgyptOffsetMinutes } from '@/lib/timezone'
 import type { Client } from '@prisma/client'
 import { egpAmountFromRow } from '@/lib/money'
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       // If owner but no targetClientId is specified, we'll aggregate platform stats in administrative routes.
     } else {
       // Authenticate as client
-      client = await authenticateByApiKey(request)
+      client = await authenticateByApiKey(request) ?? await authenticateByDetectToken(request)
       if (!client) {
         return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
       }
@@ -107,6 +107,7 @@ export async function GET(request: NextRequest) {
       merchant: {
         handle: client ? client.instapayHandle : 'All Clients',
         name: client ? client.businessName : 'Platform Overview',
+        email: client ? client.email : '',
       },
       stats: {
         today: {

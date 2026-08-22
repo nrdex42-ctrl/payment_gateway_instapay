@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { formatEgyptTime, getEgyptDstMode } from '@/lib/timezone'
-import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
+import { authenticateByApiKey, authenticateByDetectToken, authenticateOwner } from '@/lib/auth'
 import { egpAmountFromRow } from '@/lib/money'
 
 /**
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         clientId = targetClientId
       }
     } else {
-      const client = await authenticateByApiKey(request)
+      const client = await authenticateByApiKey(request) ?? await authenticateByDetectToken(request)
       if (!client) {
         return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
       } else {

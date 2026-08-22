@@ -62,6 +62,17 @@
                     android:ellipsize="end"
                     android:text="merchant@instapay" />
 
+                <TextView
+                    android:id="@+id/summaryMerchantEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:text="merchant@example.com" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -128,6 +139,15 @@
                             android:text="Merchant detector" />
                     </LinearLayout>
                 </LinearLayout>
+
+                <TextView
+                    android:id="@+id/summarySubscription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:text="FREE TRIAL · No expiry date" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

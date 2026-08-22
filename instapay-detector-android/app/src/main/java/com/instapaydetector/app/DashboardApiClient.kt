@@ -35,20 +35,20 @@ class DashboardApiClient(private val ctx: Context) {
         .build()
 
     /** Derives the gateway base URL from the configured webhook URL. */
-    private val baseUrl: String by lazy {
+    private fun baseUrl(): String {
         val url = config.gatewayUrl
         // Strip /api/webhooks/instapay if present
         if (url.contains("/api/webhooks/instapay")) {
-            url.substring(0, url.indexOf("/api/webhooks/instapay"))
+            return url.substring(0, url.indexOf("/api/webhooks/instapay"))
         } else {
             // Fallback: strip the last path segment
-            url.trimEnd('/').substringBeforeLast('/')
+            return url.trimEnd('/').substringBeforeLast('/')
         }
     }
 
     suspend fun fetchDashboard(): Result<DashboardStats> = withContext(Dispatchers.IO) {
         try {
-            val res = get("$baseUrl/api/dashboard")
+            val res = get("${baseUrl()}/api/dashboard")
             if (!res.isSuccessful) {
                 loadCachedDashboard()?.let { return@withContext Result.success(it) }
                 return@withContext Result.failure(Exception("HTTP ${res.code}"))
@@ -68,7 +68,7 @@ class DashboardApiClient(private val ctx: Context) {
 
     suspend fun fetchChart(days: Int = 30): Result<ChartData> = withContext(Dispatchers.IO) {
         try {
-            val res = get("$baseUrl/api/stats/chart?days=$days")
+            val res = get("${baseUrl()}/api/stats/chart?days=$days")
             if (!res.isSuccessful) {
                 return@withContext Result.failure(Exception("HTTP ${res.code}"))
             }
@@ -92,7 +92,7 @@ class DashboardApiClient(private val ctx: Context) {
             if (!status.isNullOrBlank()) params.add("status=$status")
             params.add("limit=$limit")
             if (!cursor.isNullOrBlank()) params.add("cursor=${java.net.URLEncoder.encode(cursor, "UTF-8")}")
-            val url = "$baseUrl/api/transactions?" + params.joinToString("&")
+            val url = "${baseUrl()}/api/transactions?" + params.joinToString("&")
 
             val res = get(url)
             if (!res.isSuccessful) {
@@ -107,9 +107,10 @@ class DashboardApiClient(private val ctx: Context) {
     }
 
     private fun get(url: String): HttpResponse {
+        val bearer = config.dashboardApiKey.ifBlank { config.authToken }
         val request = Request.Builder()
             .url(url)
-            .addHeader("Authorization", "Bearer ${config.authToken}")
+            .addHeader("Authorization", "Bearer $bearer")
             .addHeader("Accept", "application/json")
             .get()
             .build()
@@ -151,6 +152,7 @@ class DashboardApiClient(private val ctx: Context) {
             merchant = MerchantInfo(
                 handle = merchant.getString("handle"),
                 name = merchant.getString("name"),
+                email = merchant.optString("email", config.merchantEmail),
             ),
             stats = StatsBreakdown(
                 today = parseBucket(stats.getJSONObject("today")),

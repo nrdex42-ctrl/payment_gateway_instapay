@@ -78,9 +78,13 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       ok: true,
       message: 'Logged in successfully.',
+      apiKey: client.apiKey,
       detectToken: client.detectToken,
       instapayHandle: client.instapayHandle,
       businessName: client.businessName,
+      email: client.email,
+      subscriptionPlan: client.subscriptionPlan,
+      subscriptionEndsAt: client.subscriptionEndsAt ? client.subscriptionEndsAt.toISOString() : null,
     })
 
     // Attach headers

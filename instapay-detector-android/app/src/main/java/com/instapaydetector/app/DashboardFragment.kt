@@ -108,6 +108,7 @@ class DashboardFragment : Fragment() {
         binding.merchantHandle.text = dash.merchant.handle
         binding.profileName.text = dash.merchant.name
         binding.profileHandle.text = dash.merchant.handle
+        binding.profileEmail.text = dash.merchant.email.ifBlank { config.merchantEmail.ifBlank { "Email unavailable" } }
         binding.profileGateway.text = gatewayBaseUrl()
         binding.profileMode.text = "Merchant detector · received payments"
 
@@ -135,7 +136,10 @@ class DashboardFragment : Fragment() {
             val planLabel = sub.plan.replace("_", " ")
             binding.tvPlanName.text = if (sub.isFreeTrial) "FREE TRIAL" else planLabel
             binding.profilePlan.text = if (sub.isFreeTrial) "Free trial" else planLabel
+            binding.profileDuration.text = formatSubscriptionDuration(sub.subscriptionEndsAt)
             binding.tvTxUsage.text = "${sub.txCount} / ${sub.txLimit} confirmed transactions used"
+            config.subscriptionPlan = sub.plan
+            config.subscriptionEndsAt = sub.subscriptionEndsAt
 
             // Progress bar
             val pct = if (sub.txLimit > 0) (sub.txCount * 100) / sub.txLimit else 0
@@ -173,7 +177,8 @@ class DashboardFragment : Fragment() {
             }
         } else {
             binding.cardSubscription.visibility = View.GONE
-            binding.profilePlan.text = "Plan unavailable"
+            binding.profilePlan.text = config.subscriptionPlan.replace("_", " ")
+            binding.profileDuration.text = formatSubscriptionDuration(config.subscriptionEndsAt)
         }
 
         // Recent transactions (show up to 5)
@@ -281,10 +286,12 @@ class DashboardFragment : Fragment() {
     private fun renderLocalProfileFallback() {
         binding.merchantName.text = "Merchant account"
         binding.merchantHandle.text = config.merchantHandle
-        binding.profileName.text = "Merchant account"
+        binding.profileName.text = config.merchantHandle.substringBefore('@').replaceFirstChar { it.uppercaseChar() }
         binding.profileHandle.text = config.merchantHandle
+        binding.profileEmail.text = config.merchantEmail.ifBlank { "Email unavailable" }
         binding.profileGateway.text = gatewayBaseUrl()
-        binding.profilePlan.text = "Syncing"
+        binding.profilePlan.text = config.subscriptionPlan.replace("_", " ")
+        binding.profileDuration.text = formatSubscriptionDuration(config.subscriptionEndsAt)
         binding.profileMode.text = "Merchant detector · received payments"
     }
 
@@ -294,6 +301,25 @@ class DashboardFragment : Fragment() {
             url.substring(0, url.indexOf("/api/webhooks/instapay"))
         } else {
             url.trimEnd('/')
+        }
+    }
+
+    private fun formatSubscriptionDuration(value: String?): String {
+        if (value.isNullOrBlank()) return "No expiry date"
+        return try {
+            val normalized = value.replace(Regex("\\.\\d{3}Z$"), "Z")
+            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            val endDate = sdf.parse(normalized) ?: return "No expiry date"
+            val remainMs = endDate.time - System.currentTimeMillis()
+            val remainDays = kotlin.math.ceil(remainMs / (1000.0 * 60 * 60 * 24)).toInt()
+            when {
+                remainDays > 1 -> "$remainDays days remaining"
+                remainDays == 1 -> "1 day remaining"
+                else -> "Expired"
+            }
+        } catch (_: Exception) {
+            "No expiry date"
         }
     }
 
