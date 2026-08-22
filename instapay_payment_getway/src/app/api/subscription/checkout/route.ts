@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import QRCode from 'qrcode'
 import { db } from '@/lib/db'
 import { getSessionClient } from '@/lib/auth'
-import { buildInstaPayDeepLink } from '@/lib/merchant'
+import { resolveInstaPayPaymentLink } from '@/lib/merchant'
 import { toEgpCents } from '@/lib/money'
 
 export async function POST(request: NextRequest) {
@@ -32,7 +32,10 @@ export async function POST(request: NextRequest) {
     }
 
     const amountCents = toEgpCents(plan.priceEgp)
-    const { deepLinkUrl, token } = buildInstaPayDeepLink(platformHandle)
+    const { deepLinkUrl, token } = resolveInstaPayPaymentLink(
+      platformHandle,
+      process.env.PLATFORM_INSTAPAY_PAYMENT_URL
+    )
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000)
 
     const transaction = await db.transaction.create({

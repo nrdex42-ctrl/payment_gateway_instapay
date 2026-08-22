@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateByApiKey } from '@/lib/auth'
-import { buildInstaPayDeepLink, normalizeHandle } from '@/lib/merchant'
+import { resolveInstaPayPaymentLink, normalizeHandle } from '@/lib/merchant'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
 import { toEgpCents } from '@/lib/money'
 
@@ -62,8 +62,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Build the deep link to the client's InstaPay handle
-    const { deepLinkUrl, token } = buildInstaPayDeepLink(client.instapayHandle)
+    // Use the merchant's exact static InstaPay APK payment/share URL.
+    const { deepLinkUrl, token } = resolveInstaPayPaymentLink(
+      client.instapayHandle,
+      client.instapayPaymentUrl
+    )
     const expiresAt = new Date(Date.now() + client.checkoutTtlMin * 60 * 1000)
 
     const transaction = await db.transaction.create({

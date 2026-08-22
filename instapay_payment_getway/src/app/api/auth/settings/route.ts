@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSessionClient, generateSecureToken, hashSecret } from '@/lib/auth'
 import { isAllowedWebhookUrl } from '@/lib/webhook'
+import { normalizeInstaPayPaymentUrl } from '@/lib/merchant'
 
 /**
  * PATCH: Update merchant custom integration settings.
@@ -14,7 +15,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { webhookUrl, checkoutTtlMin, regenerateWebhookSecret, regenerateApiKey, regenerateDetectToken } = body || {}
+    const { webhookUrl, instapayPaymentUrl, checkoutTtlMin, regenerateWebhookSecret, regenerateApiKey, regenerateDetectToken } = body || {}
 
     const data: Record<string, any> = {}
 
@@ -27,6 +28,16 @@ export async function PATCH(request: NextRequest) {
         )
       }
       data.webhookUrl = trimmedWebhookUrl || null
+    }
+
+    if (instapayPaymentUrl !== undefined) {
+      const trimmedPaymentUrl = instapayPaymentUrl ? String(instapayPaymentUrl).trim() : ''
+      try {
+        data.instapayPaymentUrl = trimmedPaymentUrl ? normalizeInstaPayPaymentUrl(trimmedPaymentUrl) : null
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Invalid InstaPay payment URL.'
+        return NextResponse.json({ ok: false, error: message }, { status: 400 })
+      }
     }
 
     if (checkoutTtlMin !== undefined) {
@@ -66,6 +77,7 @@ export async function PATCH(request: NextRequest) {
         id: updated.id,
         businessName: updated.businessName,
         instapayHandle: updated.instapayHandle,
+        instapayPaymentUrl: updated.instapayPaymentUrl,
         email: updated.email,
         apiKey: updated.apiKey,
         detectToken: updated.detectToken,

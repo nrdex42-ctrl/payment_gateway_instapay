@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import QRCode from 'qrcode'
 import { db } from '@/lib/db'
 import {
-  buildInstaPayDeepLink,
+  resolveInstaPayPaymentLink,
   normalizeHandle,
 } from '@/lib/merchant'
 import type { Client } from '@prisma/client'
@@ -90,8 +90,11 @@ export async function POST(request: NextRequest) {
       now.getTime() + client.checkoutTtlMin * 60 * 1000
     )
 
-    // Build the official InstaPay deep link for this client
-    const { deepLinkUrl, token: shortToken } = buildInstaPayDeepLink(client.instapayHandle)
+    // Use the merchant's exact static InstaPay APK payment/share URL.
+    const { deepLinkUrl, token: shortToken } = resolveInstaPayPaymentLink(
+      client.instapayHandle,
+      client.instapayPaymentUrl
+    )
 
     // Render the deep link as a QR code
     const qrCodeDataUrl = await QRCode.toDataURL(deepLinkUrl, {
@@ -168,6 +171,7 @@ export async function GET(request: NextRequest) {
         slug: true,
         businessName: true,
         instapayHandle: true,
+        instapayPaymentUrl: true,
         isActive: true,
       },
     })

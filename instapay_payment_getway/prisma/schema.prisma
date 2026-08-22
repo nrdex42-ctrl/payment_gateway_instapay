@@ -30,6 +30,7 @@ model Client {
   slug           String   @unique  // URL-safe identifier, e.g. "ahmed-electronics"
   businessName   String
   instapayHandle String             // their InstaPay handle, e.g. "ahmed_shop@instapay"
+  instapayPaymentUrl String?        // exact static URL copied from InstaPay APK share/payment link
 
   // Self-registration fields
   email          String   @unique
@@ -71,6 +72,7 @@ model Client {
   detectorDevices    DetectorDevice[]
 
   @@index([instapayHandle])
+  @@index([instapayPaymentUrl])
   @@index([apiKey])
   @@index([detectToken])
   @@index([apiKeyHash])

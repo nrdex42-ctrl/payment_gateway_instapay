@@ -29,6 +29,7 @@ model Client {
   slug           String   @unique
   businessName   String
   instapayHandle String
+  instapayPaymentUrl String?
 
   // Self-registration fields
   email          String   @unique
@@ -70,6 +71,7 @@ model Client {
   detectorDevices    DetectorDevice[]
 
   @@index([instapayHandle])
+  @@index([instapayPaymentUrl])
   @@index([apiKey])
   @@index([detectToken])
   @@index([apiKeyHash])

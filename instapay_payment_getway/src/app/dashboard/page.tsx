@@ -39,6 +39,7 @@ interface ClientSession {
   slug: string
   businessName: string
   instapayHandle: string
+  instapayPaymentUrl: string | null
   email: string
   apiKey: string | null
   detectToken: string | null
@@ -115,6 +116,7 @@ export default function MerchantDashboardPage() {
 
   // Integration settings form state
   const [webhookUrlInput, setWebhookUrlInput] = useState('')
+  const [instapayPaymentUrlInput, setInstapayPaymentUrlInput] = useState('')
   const [checkoutTtlInput, setCheckoutTtlInput] = useState('10')
   const [updatingSettings, setUpdatingSettings] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
@@ -145,6 +147,7 @@ export default function MerchantDashboardPage() {
         if (data.ok) {
           setClient(data.client)
           setWebhookUrlInput(data.client.webhookUrl || '')
+          setInstapayPaymentUrlInput(data.client.instapayPaymentUrl || '')
           setCheckoutTtlInput(String(data.client.checkoutTtlMin || 10))
         } else {
           router.push('/login')
@@ -348,6 +351,7 @@ export default function MerchantDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           webhookUrl: webhookUrlInput || null,
+          instapayPaymentUrl: instapayPaymentUrlInput || null,
           checkoutTtlMin: parseInt(checkoutTtlInput) || 10,
         }),
       })
@@ -677,14 +681,31 @@ export default function MerchantDashboardPage() {
                   </div>
                 </div>
 
-                {/* Webhook Callback Settings */}
+                {/* Payment Link & Webhook Settings */}
                 <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
                   <div className="flex items-center gap-2">
                     <Globe className="h-5 w-5 text-neutral-400" />
-                    <h2 className="text-base font-bold text-white">Webhook Callback Settings</h2>
+                    <h2 className="text-base font-bold text-white">Payment Link & Webhook Settings</h2>
                   </div>
 
                   <form onSubmit={handleUpdateSettings} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="instapayPaymentUrl" className="text-xs text-neutral-400">
+                        Static InstaPay Payment URL
+                      </Label>
+                      <Input
+                        id="instapayPaymentUrl"
+                        type="url"
+                        placeholder="https://ipn.eg/S/youraccount/instapay/1QduWC"
+                        value={instapayPaymentUrlInput}
+                        onChange={(e) => setInstapayPaymentUrlInput(e.target.value)}
+                        className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
+                      />
+                      <p className="text-[10px] text-neutral-500">
+                        Paste the exact payment/share link from your InstaPay APK. The gateway reuses this URL unchanged for every checkout.
+                      </p>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="md:col-span-2 space-y-1.5">
                         <Label htmlFor="webhookUrl" className="text-xs text-neutral-400">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateOwner, generateSecureToken, generateSlug, hashPassword, hashSecret } from '@/lib/auth'
+import { normalizeInstaPayPaymentUrl } from '@/lib/merchant'
 
 /**
  * GET: List all clients on the platform (approved, pending, rejected) with summarized stats.
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
           slug: client.slug,
           businessName: client.businessName,
           instapayHandle: client.instapayHandle,
+          instapayPaymentUrl: client.instapayPaymentUrl,
           email: client.email,
           apiKey: client.apiKey,
           detectToken: client.detectToken,
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { businessName, instapayHandle, email, password, webhookUrl, checkoutTtlMin } = body || {}
+    const { businessName, instapayHandle, instapayPaymentUrl, email, password, webhookUrl, checkoutTtlMin } = body || {}
 
     if (!businessName?.trim() || !instapayHandle?.trim() || !email?.trim()) {
       return NextResponse.json({ ok: false, error: 'businessName, instapayHandle, and email are required.' }, { status: 400 })
@@ -124,6 +126,7 @@ export async function POST(request: NextRequest) {
         slug,
         businessName: businessName.trim(),
         instapayHandle: handle,
+        instapayPaymentUrl: instapayPaymentUrl ? normalizeInstaPayPaymentUrl(String(instapayPaymentUrl)) : null,
         email: email.trim().toLowerCase(),
         passwordHash,
         apiKey,
@@ -144,6 +147,7 @@ export async function POST(request: NextRequest) {
         slug: client.slug,
         businessName: client.businessName,
         instapayHandle: client.instapayHandle,
+        instapayPaymentUrl: client.instapayPaymentUrl,
         email: client.email,
         apiKey: client.apiKey,
         detectToken: client.detectToken,

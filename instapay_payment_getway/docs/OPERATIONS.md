@@ -89,6 +89,7 @@ Configuration required:
 
 ```bash
 PLATFORM_INSTAPAY_HANDLE=your_platform_handle@instapay
+PLATFORM_INSTAPAY_PAYMENT_URL=https://ipn.eg/S/your_platform_handle/instapay/1QduWC
 ```
 
 Flow:
@@ -104,6 +105,30 @@ Operational constraint: the Android detector that reports subscription payments
 must be connected to the phone/account that receives payments for
 `PLATFORM_INSTAPAY_HANDLE`, because notification-based confirmation only works on
 the receiving device.
+
+## Static InstaPay payment URLs
+
+Each receiving InstaPay account has a static payment/share URL from the official
+InstaPay APK, for example:
+
+```text
+https://ipn.eg/S/mohammedshabana77/instapay/1QduWC
+```
+
+The gateway stores this exact URL per merchant in `Client.instapayPaymentUrl` and
+reuses it unchanged for every checkout. The trailing token is not regenerated per
+checkout.
+
+Merchants can set this in the dashboard under:
+
+```text
+Developer Integration → Payment Link & Webhook Settings → Static InstaPay Payment URL
+```
+
+For admin subscription payments, set `PLATFORM_INSTAPAY_PAYMENT_URL` in
+production. If a static URL is missing, the gateway falls back to a derived URL
+for compatibility, but production merchants should have their exact APK URL
+configured.
 
 The code uses the new columns when present and falls back to legacy columns where
 needed. This avoids breaking existing merchant integrations and already-installed

@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
         slug: client.slug,
         businessName: client.businessName,
         instapayHandle: client.instapayHandle,
+        instapayPaymentUrl: client.instapayPaymentUrl,
         email: client.email,
         apiKey: client.apiKey,
         detectToken: client.detectToken,
