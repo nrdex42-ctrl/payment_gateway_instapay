@@ -24,9 +24,10 @@ import java.util.concurrent.TimeUnit
  * endpoints — unauthenticated GET is also allowed, but we send the token
  * anyway so the merchant can see private data).
  */
-class DashboardApiClient(ctx: Context) {
+class DashboardApiClient(private val ctx: Context) {
 
     private val config = GatewayConfig.get(ctx)
+    private val cachePrefs = ctx.getSharedPreferences("dashboard_cache", Context.MODE_PRIVATE)
 
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -49,12 +50,18 @@ class DashboardApiClient(ctx: Context) {
         try {
             val res = get("$baseUrl/api/dashboard")
             if (!res.isSuccessful) {
+                loadCachedDashboard()?.let { return@withContext Result.success(it) }
                 return@withContext Result.failure(Exception("HTTP ${res.code}"))
             }
             val json = JSONObject(res.body)
+            cachePrefs.edit()
+                .putString(KEY_DASHBOARD_JSON, res.body)
+                .putLong(KEY_DASHBOARD_CACHED_AT, System.currentTimeMillis())
+                .apply()
             Result.success(parseDashboard(json))
         } catch (e: Exception) {
             Log.e(TAG, "fetchDashboard failed: ${e.message}", e)
+            loadCachedDashboard()?.let { return@withContext Result.success(it) }
             Result.failure(e)
         }
     }
@@ -113,6 +120,16 @@ class DashboardApiClient(ctx: Context) {
     }
 
     // --- JSON parsers ---
+
+    private fun loadCachedDashboard(): DashboardStats? {
+        val cached = cachePrefs.getString(KEY_DASHBOARD_JSON, null) ?: return null
+        return try {
+            parseDashboard(JSONObject(cached))
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse cached dashboard: ${e.message}", e)
+            null
+        }
+    }
 
     private fun parseDashboard(json: JSONObject): DashboardStats {
         val merchant = json.getJSONObject("merchant")
@@ -231,5 +248,7 @@ class DashboardApiClient(ctx: Context) {
 
     companion object {
         private const val TAG = "DashboardApi"
+        private const val KEY_DASHBOARD_JSON = "dashboard_json"
+        private const val KEY_DASHBOARD_CACHED_AT = "dashboard_cached_at"
     }
 }

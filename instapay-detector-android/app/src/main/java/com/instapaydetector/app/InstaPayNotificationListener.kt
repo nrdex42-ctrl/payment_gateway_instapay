@@ -204,11 +204,22 @@ class InstaPayNotificationListener : NotificationListenerService() {
     }
 
     private fun looksLikeInstaPayPayment(text: String): Boolean {
+        if (ARABIC_EXACT_RECEIVED_PATTERN.matcher(text).find()) return true
+        if (ENGLISH_EXACT_RECEIVED_PATTERN.matcher(text).find()) return true
         if (NEGATIVE_PATTERNS.any { it.matcher(text).find() }) return false
         return POSITIVE_PATTERNS.any { it.matcher(text).find() }
     }
 
     private fun extractAmount(text: String): Double? {
+        ARABIC_EXACT_RECEIVED_PATTERN.matcher(text).let { match ->
+            if (match.find()) {
+                val raw = match.group(1) ?: return@let
+                val normalized = normalizeDigits(raw).replace(",", "").trim()
+                normalized.toDoubleOrNull()?.let { value ->
+                    if (value > 0.0) return value
+                }
+            }
+        }
         AMOUNT_PATTERNS.forEach { pattern ->
             val match = pattern.matcher(text)
             if (match.find()) {
@@ -223,6 +234,13 @@ class InstaPayNotificationListener : NotificationListenerService() {
     }
 
     private fun extractSender(text: String): String? {
+        ARABIC_EXACT_RECEIVED_PATTERN.matcher(text).let { match ->
+            if (match.find()) {
+                val sender = match.group(2)?.trim().orEmpty()
+                val normalized = sender.lowercase()
+                if (normalized.isNotBlank()) return normalized
+            }
+        }
         SENDER_PATTERNS.forEach { pattern ->
             val match = pattern.matcher(text)
             if (match.find()) {
@@ -247,6 +265,8 @@ class InstaPayNotificationListener : NotificationListenerService() {
 
     private fun computeConfidence(text: String, amount: Double, sender: String, title: String?): Int {
         var score = 0
+        if (ARABIC_EXACT_RECEIVED_PATTERN.matcher(text).find()) score += 60
+        if (ENGLISH_EXACT_RECEIVED_PATTERN.matcher(text).find()) score += 55
         if (POSITIVE_PATTERNS.any { it.matcher(text).find() }) score += 45
         if (AMOUNT_PATTERNS.any { it.matcher(text).find() }) score += 20
         if (SENDER_PATTERNS.any { it.matcher(text).find() }) score += 20
@@ -380,30 +400,40 @@ class InstaPayNotificationListener : NotificationListenerService() {
         private const val STATUS_NOTIFICATION_ID = 4242
         private const val MIN_FORWARD_CONFIDENCE = 60
 
+        private val ARABIC_EXACT_RECEIVED_PATTERN = Pattern.compile(
+            "لقد\\s+استلمت\\s+([0-9٠-٩]+(?:[\\.,][0-9٠-٩]{1,2})?)\\s*جنيه\\s+من\\s+([a-z0-9_.\\-]+@instapay)",
+            Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE
+        )
+
+        private val ENGLISH_EXACT_RECEIVED_PATTERN = Pattern.compile(
+            "(?:you\\s+have\\s+received|received)\\s+([0-9٠-٩]+(?:[\\.,][0-9٠-٩]{1,2})?)\\s*(?:egp|le|l\\.e\\.|ج\\.م\\.?|جنيه)?\\s*(?:from)\\s+([a-z0-9_.\\-]+@instapay)",
+            Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE
+        )
+
         private val POSITIVE_PATTERNS = listOf(
-            Pattern.compile("\\b(received|credited|deposit(?:ed)?|transfer(?:red)?|payment\\s+received|money\\s+received)\\b", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(استلمت|تم\\s+استلام|وصلتك|تم\\s+إيداع|تم\\s+تحويل)", Pattern.CASE_INSENSITIVE)
+            Pattern.compile("\\b(received|credited|deposit(?:ed)?|transfer(?:red)?|payment\\s+received|money\\s+received)\\b", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE),
+            Pattern.compile("(استلمت|تم\\s+استلام|وصلتك|تم\\s+إيداع|تم\\s+تحويل|لقد\\s+استلمت)", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE)
         )
 
         private val NEGATIVE_PATTERNS = listOf(
-            Pattern.compile("\\b(sent|paid|requested|declined|failed|cancel(?:led|ed)?|reversed|refunded|withdrawn)\\b", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(أرسلت|تم\\s+الإرسال|مرفوض|فشل|ملغي|تم\\s+استرداد|سحب)", Pattern.CASE_INSENSITIVE)
+            Pattern.compile("\\b(sent|paid|requested|declined|failed|cancel(?:led|ed)?|reversed|refunded|withdrawn)\\b", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE),
+            Pattern.compile("(أرسلت|تم\\s+الإرسال|مرفوض|فشل|ملغي|تم\\s+استرداد|سحب)", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE)
         )
 
         private val AMOUNT_PATTERNS = listOf(
-            Pattern.compile("(?:EGP|ج\\.م\\.?|جنيه(?:\\s*مصري)?|LE|L\\.E\\.)?\\s*([0-9٠-٩]+(?:[\\.,][0-9٠-٩]{1,2})?)\\s*(?:EGP|ج\\.م\\.?|جنيه(?:\\s*مصري)?|LE|L\\.E\\.)?", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(?:received|credited|استلمت|تم\\s+استلام|وصلتك|إيداع|deposit(?:ed)?)[^0-9٠-٩]{0,12}([0-9٠-٩]+(?:[\\.,][0-9٠-٩]{1,2})?)", Pattern.CASE_INSENSITIVE)
+            Pattern.compile("(?:EGP|ج\\.م\\.?|جنيه(?:\\s*مصري)?|LE|L\\.E\\.)?\\s*([0-9٠-٩]+(?:[\\.,][0-9٠-٩]{1,2})?)\\s*(?:EGP|ج\\.م\\.?|جنيه(?:\\s*مصري)?|LE|L\\.E\\.)?", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE),
+            Pattern.compile("(?:received|credited|استلمت|تم\\s+استلام|وصلتك|إيداع|deposit(?:ed)?|لقد\\s+استلمت)[^0-9٠-٩]{0,12}([0-9٠-٩]+(?:[\\.,][0-9٠-٩]{1,2})?)", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE)
         )
 
         private val SENDER_PATTERNS = listOf(
-            Pattern.compile("(?:from|من|sender(?:\\s*:)?)\\s+([a-zA-Z0-9_.\\-@\\u0600-\\u06FF ]{2,64})", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("([a-z0-9_.\\-]+@instapay)", Pattern.CASE_INSENSITIVE)
+            Pattern.compile("(?:from|من|sender(?:\\s*:)?)\\s+([a-zA-Z0-9_.\\-@\\u0600-\\u06FF ]{2,64})", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE),
+            Pattern.compile("([a-z0-9_.\\-]+@instapay)", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE)
         )
 
         private val REFERENCE_PATTERNS = listOf(
-            Pattern.compile("(IPAY-[A-Z0-9]{6,})", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(TXN-[A-Z0-9]{6,})", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(REF-[A-Z0-9]{6,})", Pattern.CASE_INSENSITIVE)
+            Pattern.compile("(IPAY-[A-Z0-9]{6,})", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE),
+            Pattern.compile("(TXN-[A-Z0-9]{6,})", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE),
+            Pattern.compile("(REF-[A-Z0-9]{6,})", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE)
         )
 
         fun isPermissionGranted(context: Context): Boolean {

@@ -24,6 +24,7 @@ class DashboardFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val apiClient by lazy { (activity as MainActivity).apiClient }
+    private val config by lazy { GatewayConfig.get(requireContext()) }
     private val paymentFeedback by lazy { (activity as MainActivity).paymentFeedback }
     private val wsClient by lazy { (activity as MainActivity).wsClient }
 
@@ -45,6 +46,7 @@ class DashboardFragment : Fragment() {
         recentAdapter = TransactionAdapter()
         binding.recentList.layoutManager = LinearLayoutManager(requireContext())
         binding.recentList.adapter = recentAdapter
+        renderLocalProfileFallback()
 
         // Configure swipe-to-refresh
         binding.swipeRefresh.setOnRefreshListener { loadAll() }
@@ -104,6 +106,10 @@ class DashboardFragment : Fragment() {
         binding.errorText.visibility = View.GONE
         binding.merchantName.text = dash.merchant.name
         binding.merchantHandle.text = dash.merchant.handle
+        binding.profileName.text = dash.merchant.name
+        binding.profileHandle.text = dash.merchant.handle
+        binding.profileGateway.text = gatewayBaseUrl()
+        binding.profileMode.text = "Merchant detector · received payments"
 
         // Stat cards — each include layout has inner views accessible via the include's binding
         binding.cardToday.statLabel.text = getString(R.string.dash_today)
@@ -128,6 +134,7 @@ class DashboardFragment : Fragment() {
             binding.cardSubscription.visibility = View.VISIBLE
             val planLabel = sub.plan.replace("_", " ")
             binding.tvPlanName.text = if (sub.isFreeTrial) "FREE TRIAL" else planLabel
+            binding.profilePlan.text = if (sub.isFreeTrial) "Free trial" else planLabel
             binding.tvTxUsage.text = "${sub.txCount} / ${sub.txLimit} confirmed transactions used"
 
             // Progress bar
@@ -166,6 +173,7 @@ class DashboardFragment : Fragment() {
             }
         } else {
             binding.cardSubscription.visibility = View.GONE
+            binding.profilePlan.text = "Plan unavailable"
         }
 
         // Recent transactions (show up to 5)
@@ -268,6 +276,25 @@ class DashboardFragment : Fragment() {
 
     private fun formatEgp(amount: Double): String {
         return "EGP ${String.format(Locale.US, "%,.2f", amount)}"
+    }
+
+    private fun renderLocalProfileFallback() {
+        binding.merchantName.text = "Merchant account"
+        binding.merchantHandle.text = config.merchantHandle
+        binding.profileName.text = "Merchant account"
+        binding.profileHandle.text = config.merchantHandle
+        binding.profileGateway.text = gatewayBaseUrl()
+        binding.profilePlan.text = "Syncing"
+        binding.profileMode.text = "Merchant detector · received payments"
+    }
+
+    private fun gatewayBaseUrl(): String {
+        val url = config.gatewayUrl
+        return if (url.contains("/api/webhooks/instapay")) {
+            url.substring(0, url.indexOf("/api/webhooks/instapay"))
+        } else {
+            url.trimEnd('/')
+        }
     }
 
     private fun pluralPayments(count: Int): String =
