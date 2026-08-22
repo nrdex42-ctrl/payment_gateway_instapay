@@ -2,10 +2,12 @@ package com.instapaydetector.app
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.instapaydetector.app.BuildConfig
 import com.instapaydetector.app.databinding.ActivityLoginBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -21,6 +23,7 @@ import java.util.concurrent.TimeUnit
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
+    private val loginTag = "InstaPayDetectorLogin"
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
@@ -31,6 +34,7 @@ class LoginActivity : AppCompatActivity() {
         
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.tvBuildInfo.text = "Build ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
 
         val config = GatewayConfig.get(this)
 
@@ -44,8 +48,10 @@ class LoginActivity : AppCompatActivity() {
         val password = binding.etPassword.text?.toString()?.trim() ?: ""
         val otp = binding.etOtp.text?.toString()?.trim() ?: ""
 
+        Log.d(loginTag, "handleLogin(version=${BuildConfig.VERSION_NAME}, code=${BuildConfig.VERSION_CODE}, email=$email, otpVisible=${binding.etOtp.visibility == View.VISIBLE}, otpProvided=${otp.isNotBlank()})")
+
         if (email.isEmpty() || password.isEmpty()) {
-            showError(if (otp.isBlank()) "Enter your email and password to receive a verification code." else "Enter the verification code sent to your email.")
+            showError(if (otp.isBlank()) "[v${BuildConfig.VERSION_NAME}] Enter your email and password to receive a verification code." else "[v${BuildConfig.VERSION_NAME}] Enter the verification code sent to your email.")
             return
         }
 
@@ -60,6 +66,7 @@ class LoginActivity : AppCompatActivity() {
 
             result.fold(
                 onSuccess = { responseJson ->
+                    Log.d(loginTag, "loginResponse=${responseJson}")
                     val apiKey = responseJson.optString("apiKey", "")
                     val detectToken = responseJson.optString("detectToken", "")
                     val instapayHandle = responseJson.optString("instapayHandle", "")
@@ -71,7 +78,7 @@ class LoginActivity : AppCompatActivity() {
                         config.pendingVerificationId = responseJson.optString("verificationId")
                         binding.etOtp.visibility = View.VISIBLE
                         binding.btnLogin.text = "Verify and log in"
-                        showError("Verification code sent to your email.")
+                        showError("[v${BuildConfig.VERSION_NAME}] Verification code sent to your email.")
                         binding.btnLogin.isEnabled = true
                     } else if (apiKey.isNotEmpty() && detectToken.isNotEmpty() && instapayHandle.isNotEmpty()) {
                         config.gatewayUrl = "https://instapay-ruddy.vercel.app/api/webhooks/instapay"
@@ -91,13 +98,15 @@ class LoginActivity : AppCompatActivity() {
                     } else {
                         binding.btnLogin.isEnabled = true
                         binding.btnLogin.text = "Log In"
+                        Log.w(loginTag, "Invalid login response payload: ${responseJson}")
                         showError("Invalid response from server.")
                     }
                 },
                 onFailure = { exception ->
+                    Log.e(loginTag, "loginFailed", exception)
                     binding.btnLogin.isEnabled = true
                     binding.btnLogin.text = "Log In"
-                    showError(exception.message ?: "Connection failed.")
+                    showError("[v${BuildConfig.VERSION_NAME}] ${exception.message ?: "Connection failed."}")
                 }
             )
         }
@@ -125,6 +134,7 @@ class LoginActivity : AppCompatActivity() {
         return try {
             httpClient.newCall(request).execute().use { response ->
                 val bodyStr = response.body?.string().orEmpty()
+                Log.d(loginTag, "HTTP ${response.code} body=$bodyStr")
                 if (response.code == 200) {
                     Result.success(JSONObject(bodyStr))
                 } else {

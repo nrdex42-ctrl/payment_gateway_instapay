@@ -29,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
         // Redirect to Login if not logged in
         val config = GatewayConfig.get(this)
         if (!config.isLoggedIn) {
@@ -52,7 +54,6 @@ class MainActivity : AppCompatActivity() {
             androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(targetMode)
         }
 
-        super.onCreate(savedInstanceState)
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 4101)
         }
