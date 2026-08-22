@@ -110,7 +110,7 @@ class DashboardFragment : Fragment() {
         binding.profileHandle.text = dash.merchant.handle
         binding.profileEmail.text = dash.merchant.email.ifBlank { config.merchantEmail.ifBlank { "Email unavailable" } }
         binding.profileGateway.text = gatewayBaseUrl()
-        binding.profileMode.text = "Merchant detector · received payments"
+        binding.profileMode.text = "Merchant detector · ${dash.subscription?.plan?.replace("_", " ") ?: config.subscriptionPlan.replace("_", " ")}"
 
         // Stat cards — each include layout has inner views accessible via the include's binding
         binding.cardToday.statLabel.text = getString(R.string.dash_today)
@@ -292,7 +292,7 @@ class DashboardFragment : Fragment() {
         binding.profileGateway.text = gatewayBaseUrl()
         binding.profilePlan.text = config.subscriptionPlan.replace("_", " ")
         binding.profileDuration.text = formatSubscriptionDuration(config.subscriptionEndsAt)
-        binding.profileMode.text = "Merchant detector · received payments"
+        binding.profileMode.text = "Merchant detector · ${config.subscriptionPlan.replace("_", " ")}"
     }
 
     private fun gatewayBaseUrl(): String {
