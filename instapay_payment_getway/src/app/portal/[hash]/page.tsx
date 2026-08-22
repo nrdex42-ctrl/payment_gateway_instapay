@@ -31,7 +31,6 @@ import {
   Eye,
   EyeOff,
   Calendar,
-  DollarSign
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -80,6 +79,60 @@ interface RecentTx {
   createdAt: string
 }
 
+interface TransactionLog extends RecentTx {
+  createdAtEgypt?: string
+}
+
+interface WebhookLog {
+  id: string
+  event: string
+  businessName: string
+  url: string
+  isSuccess: boolean
+  statusCode: number | null
+  payload: string
+  response: string | null
+  createdAt: string
+}
+
+interface AuditLog {
+  id: string
+  action: string
+  details: string
+  createdAt: string
+}
+
+type AdminTab = 'merchants' | 'transactions' | 'webhooks' | 'audit'
+
+const adminTabs: Array<{ id: AdminTab; label: string; description: string; icon: React.ReactNode }> = [
+  { id: 'merchants', label: 'Merchants', description: 'Approve, manage, suspend accounts', icon: <Users className="h-4 w-4" /> },
+  { id: 'transactions', label: 'Transactions', description: 'Search, audit, force-confirm payments', icon: <Activity className="h-4 w-4" /> },
+  { id: 'webhooks', label: 'Webhooks', description: 'Delivery success, failures, payloads', icon: <Globe className="h-4 w-4" /> },
+  { id: 'audit', label: 'Audit', description: 'Administrative action history', icon: <Shield className="h-4 w-4" /> },
+]
+
+function formatEgp(value: number) {
+  return new Intl.NumberFormat('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+}
+
+function maskSecret(value: string | null | undefined) {
+  if (!value) return 'Not generated'
+  if (value.length <= 12) return '••••••••'
+  return `${value.slice(0, 6)}••••••••${value.slice(-4)}`
+}
+
+function safeJsonFormat(value: string) {
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2)
+  } catch {
+    return value || 'No payload captured.'
+  }
+}
+
+function usagePercent(count: number, limit: number) {
+  return Math.min(100, (count / Math.max(limit, 1)) * 100)
+}
+
 export default function AdminPortalPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = use(params)
   const expectedHash = process.env.NEXT_PUBLIC_ADMIN_PORTAL_PATH
@@ -120,10 +173,10 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [updatingSettings, setUpdatingSettings] = useState(false)
 
   // Advanced features states
-  const [activeTab, setActiveTab] = useState<'merchants' | 'transactions' | 'webhooks' | 'audit'>('merchants')
-  const [allTransactions, setAllTransactions] = useState<any[]>([])
-  const [webhookLogs, setWebhookLogs] = useState<any[]>([])
-  const [auditLogs, setAuditLogs] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState<AdminTab>('merchants')
+  const [allTransactions, setAllTransactions] = useState<TransactionLog[]>([])
+  const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([])
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
 
   const [txFilters, setTxFilters] = useState({
     q: '',
@@ -143,7 +196,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [txLoading, setTxLoading] = useState(false)
   const [webhookLoading, setWebhookLoading] = useState(false)
   const [auditLoading, setAuditLoading] = useState(false)
-  const [selectedLogDetail, setSelectedLogDetail] = useState<any | null>(null)
+  const [selectedLogDetail, setSelectedLogDetail] = useState<WebhookLog | null>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('owner_secret_token')
@@ -205,14 +258,16 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
     try {
       const headers = { Authorization: `Bearer ${token}` }
       
-      const statsRes = await fetch('/api/admin/dashboard', { headers })
-      const statsData = await statsRes.json()
-      
-      const clientsRes = await fetch('/api/admin/clients', { headers })
-      const clientsData = await clientsRes.json()
-
-      const settingsRes = await fetch('/api/settings', { headers })
-      const settingsData = await settingsRes.json()
+      const [statsRes, clientsRes, settingsRes] = await Promise.all([
+        fetch('/api/admin/dashboard', { headers }),
+        fetch('/api/admin/clients', { headers }),
+        fetch('/api/settings', { headers }),
+      ])
+      const [statsData, clientsData, settingsData] = await Promise.all([
+        statsRes.json(),
+        clientsRes.json(),
+        settingsRes.json(),
+      ])
 
       if (statsData.ok && clientsData.ok) {
         setPlatformStats(statsData.stats)
@@ -521,20 +576,20 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   // --- Render Login Page ---
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-indigo-950 p-4 font-sans">
+      <div className="min-h-screen flex items-center justify-center bg-[#070a12] p-4 font-sans">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl space-y-6"
+          className="w-full max-w-md bg-slate-950/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6"
         >
           <div className="text-center space-y-2">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-indigo-400 shadow-md">
-              <Shield className="h-6 w-6 text-white" />
+            <div className="inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 shadow-lg shadow-indigo-950/40">
+              <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
             </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Platform Admin Login</h1>
+            <h1 className="text-xl font-black text-white tracking-tight">InstaPay Gateway Admin</h1>
             <p className="text-sm text-neutral-400">
-              Enter your credentials and TOTP code to access setup controls.
+              Secure owner access for merchant approvals, transaction operations, billing, and platform observability.
             </p>
           </div>
 
@@ -594,9 +649,9 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
 
             <Button
               type="submit"
-              className="h-11 w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 hover:from-violet-700 hover:to-indigo-700"
+              className="h-11 w-full rounded-xl bg-indigo-500 text-sm font-bold text-white shadow-lg shadow-indigo-950/30 hover:bg-indigo-400"
             >
-              Sign In
+              Sign in securely
             </Button>
           </form>
         </motion.div>
@@ -606,13 +661,13 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
 
   // --- Render Dashboard UI ---
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#070a12] text-neutral-100 flex flex-col font-sans">
       {/* Header */}
-      <header className="border-b border-neutral-900 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-40">
+      <header className="border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl sticky top-0 z-40">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-emerald-400 shadow-md">
-              <Shield className="h-5 w-5 text-white" />
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg shadow-indigo-950/40">
+              <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -621,7 +676,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                   Platform Admin
                 </span>
               </div>
-              <p className="text-xs text-neutral-500">Secure Obscured Router Panel</p>
+              <p className="text-xs text-neutral-500">Owner operations console</p>
             </div>
           </div>
 
@@ -631,7 +686,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
               size="sm"
               onClick={loadData}
               disabled={refreshing}
-              className="text-neutral-400 border-neutral-800 hover:bg-neutral-900 hover:text-white"
+              className="rounded-xl text-neutral-300 border-white/10 bg-white/[0.03] hover:bg-white/10 hover:text-white"
             >
               <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
@@ -640,7 +695,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="text-neutral-500 hover:text-red-400 hover:bg-red-500/10"
+              className="rounded-xl text-neutral-500 hover:text-red-300 hover:bg-red-500/10"
             >
               Sign Out
             </Button>
@@ -650,6 +705,43 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
 
       {/* Main body */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 space-y-6">
+        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,.28),transparent_34%),linear-gradient(135deg,rgba(15,23,42,.98),rgba(2,6,23,.92))] p-6 shadow-2xl shadow-black/20">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-400/10 px-3 py-1 text-xs font-bold text-violet-200">
+                <Shield className="h-3.5 w-3.5" />
+                Platform owner console
+              </div>
+              <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+                Operate merchants, payments, and delivery health from one control plane.
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">
+                Review merchant onboarding, monitor transaction volume, inspect webhook delivery, manage subscriptions, and audit administrative actions.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[440px]">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Merchants</div>
+                <div className="mt-2 text-sm font-black text-white">{clients.length.toLocaleString()}</div>
+                <div className="mt-1 text-xs text-slate-500">{activeMerchants.length.toLocaleString()} approved</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Approvals</div>
+                <div className={`mt-2 text-sm font-black ${pendingApprovals.length > 0 ? 'text-amber-300' : 'text-emerald-300'}`}>
+                  {pendingApprovals.length.toLocaleString()} pending
+                </div>
+                <div className="mt-1 text-xs text-slate-500">{pendingApprovals.length > 0 ? 'Review required' : 'Queue clear'}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Egypt time</div>
+                <div className="mt-2 text-sm font-black text-white">{currentEgyptTime || 'Loading'}</div>
+                <div className="mt-1 text-xs text-slate-500">DST mode: {dstMode}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Stats Grid */}
         {platformStats && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
@@ -663,7 +755,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
             <StatCard
               icon={<Wallet className="h-5 w-5" />}
               label="Revenue (Today)"
-              value={`${platformStats.today.totalEgp.toFixed(2)}`}
+              value={formatEgp(platformStats.today.totalEgp)}
               unit="EGP"
               sub={`${platformStats.today.count} transaction${platformStats.today.count === 1 ? '' : 's'}`}
               tone="emerald"
@@ -671,7 +763,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
             <StatCard
               icon={<TrendingUp className="h-5 w-5" />}
               label="Volume (7 Days)"
-              value={`${platformStats.sevenDays.totalEgp.toFixed(2)}`}
+              value={formatEgp(platformStats.sevenDays.totalEgp)}
               unit="EGP"
               sub={`${platformStats.sevenDays.count} transaction${platformStats.sevenDays.count === 1 ? '' : 's'}`}
               tone="blue"
@@ -679,7 +771,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
             <StatCard
               icon={<Activity className="h-5 w-5" />}
               label="Pending"
-              value={`${platformStats.pending.totalEgp.toFixed(2)}`}
+              value={formatEgp(platformStats.pending.totalEgp)}
               unit="EGP"
               sub={`${platformStats.pending.count} transaction${platformStats.pending.count === 1 ? '' : 's'}`}
               tone="amber"
@@ -741,24 +833,22 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
           {/* Left Column: Navigable Tabs System */}
           <div className="lg:col-span-2 space-y-5">
             {/* Tabs Navigation */}
-            <div className="flex items-center gap-1 border-b border-neutral-900 pb-2 overflow-x-auto">
-              {[
-                { id: 'merchants', label: 'Active Merchants', icon: <Users className="h-4 w-4" /> },
-                { id: 'transactions', label: 'Platform Transactions', icon: <Activity className="h-4 w-4" /> },
-                { id: 'webhooks', label: 'Webhook Deliveries', icon: <Globe className="h-4 w-4" /> },
-                { id: 'audit', label: 'Audit Logs', icon: <Shield className="h-4 w-4" /> },
-              ].map((t) => (
+            <div className="grid gap-2 border-b border-neutral-900 pb-3 sm:grid-cols-2 xl:grid-cols-4">
+              {adminTabs.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => setActiveTab(t.id as any)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold tracking-wider whitespace-nowrap transition-all border ${
+                  onClick={() => setActiveTab(t.id)}
+                  className={`flex items-start gap-3 rounded-2xl border p-3 text-left transition-all ${
                     activeTab === t.id
-                      ? 'bg-violet-600/10 border-violet-500 text-violet-400 font-bold shadow-md shadow-violet-600/5'
-                      : 'text-neutral-500 border-transparent hover:text-neutral-300 hover:bg-neutral-900/40'
+                      ? 'bg-violet-600/10 border-violet-500/60 text-violet-200 shadow-lg shadow-violet-950/20'
+                      : 'text-neutral-500 border-neutral-900 bg-neutral-900/20 hover:text-neutral-300 hover:bg-neutral-900/50'
                   }`}
                 >
-                  {t.icon}
-                  {t.label}
+                  <span className={`mt-0.5 ${activeTab === t.id ? 'text-violet-300' : 'text-neutral-500'}`}>{t.icon}</span>
+                  <span>
+                    <span className="block text-xs font-black tracking-wide">{t.label}</span>
+                    <span className="mt-1 block text-[10px] leading-4 text-neutral-500">{t.description}</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -874,11 +964,11 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                                     ? 'bg-amber-500'
                                     : 'bg-gradient-to-r from-violet-600 to-indigo-500'
                                 }`}
-                                style={{ width: `${Math.min(100, ((c.txCount ?? 0) / Math.max(c.txLimit ?? 1, 1)) * 100)}%` }}
+                                style={{ width: `${usagePercent(c.txCount ?? 0, c.txLimit ?? 1)}%` }}
                               />
                             </div>
                             {(c.txCount ?? 0) >= (c.txLimit ?? 1) && (
-                              <p className="text-[9px] text-red-400 font-semibold">⚠ Limit reached — merchant cannot create new checkouts</p>
+                              <p className="text-[9px] text-red-400 font-semibold">Limit reached — merchant cannot create new checkouts</p>
                             )}
                           </div>
 
@@ -890,7 +980,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                                   <Key className="h-3 w-3" /> API Key (apiKey)
                                 </span>
                                 <div className="flex items-center gap-1.5 font-mono text-neutral-400 select-all">
-                                  <span>{c.apiKey}</span>
+                                  <span className="truncate rounded-md border border-neutral-800 bg-neutral-900/70 px-2 py-1 text-[10px]">{maskSecret(c.apiKey)}</span>
                                   <button
                                     onClick={() => copyToClipboard(c.apiKey!, `api-${c.id}`)}
                                     className="text-neutral-600 hover:text-neutral-300 transition-colors"
@@ -906,7 +996,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                                   <Smartphone className="h-3 w-3" /> APK Token (detectToken)
                                 </span>
                                 <div className="flex items-center gap-1.5 font-mono text-neutral-400 select-all">
-                                  <span>{c.detectToken}</span>
+                                  <span className="truncate rounded-md border border-neutral-800 bg-neutral-900/70 px-2 py-1 text-[10px]">{maskSecret(c.detectToken)}</span>
                                   <button
                                     onClick={() => copyToClipboard(c.detectToken!, `det-${c.id}`)}
                                     className="text-neutral-600 hover:text-neutral-300 transition-colors"
@@ -936,7 +1026,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                           <div className="text-right">
                             <span className="text-[10px] uppercase text-neutral-500 tracking-wider font-semibold">Total Revenue</span>
                             <div className="text-base font-black text-emerald-400 mt-0.5">
-                              {c.confirmedVolume.toFixed(2)} <span className="text-[10px] font-normal text-neutral-500">EGP</span>
+                              {formatEgp(c.confirmedVolume)} <span className="text-[10px] font-normal text-neutral-500">EGP</span>
                             </div>
                             <span className="text-[10px] text-neutral-500 block">{c.totalTransactions} transactions</span>
                           </div>
@@ -1195,7 +1285,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                         </div>
                         <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                           <div className="text-right">
-                            <span className="font-black text-white text-sm">+{tx.amountEgp.toFixed(2)} EGP</span>
+                            <span className="font-black text-white text-sm">+{formatEgp(tx.amountEgp)} EGP</span>
                           </div>
                           {tx.status === 'PENDING' && (
                             <Button
@@ -1409,7 +1499,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                         </div>
 
                         <div className="text-right shrink-0">
-                          <span className="text-xs font-black text-white">+{tx.amountEgp.toFixed(2)}</span>
+                          <span className="text-xs font-black text-white">+{formatEgp(tx.amountEgp)}</span>
                           <span
                             className={`block text-[9px] font-bold uppercase mt-1 ${
                               tx.status === 'CONFIRMED'
@@ -1769,7 +1859,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                   <div className="space-y-1">
                     <span className="text-neutral-500 font-semibold block">Payload Sent (JSON)</span>
                     <pre className="font-mono bg-neutral-900/60 p-3 rounded-lg border border-neutral-850 text-[10px] text-neutral-300 overflow-x-auto select-all max-h-48">
-                      {JSON.stringify(JSON.parse(selectedLogDetail.payload), null, 2)}
+                      {safeJsonFormat(selectedLogDetail.payload)}
                     </pre>
                   </div>
 
