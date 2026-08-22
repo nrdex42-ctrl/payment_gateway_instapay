@@ -5,26 +5,19 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Activity,
-  ArrowDownLeft,
-  ChevronRight,
   Clock,
   Copy,
   Download,
   ExternalLink,
   Globe,
   Key,
-  LayoutDashboard,
   LogOut,
   RefreshCw,
-  Settings,
-  Shield,
   Terminal,
   TrendingUp,
   Wallet,
-  Smartphone,
   Filter,
   Eye,
-  Search,
   CheckCircle2,
   AlertCircle,
   CreditCard
@@ -72,6 +65,21 @@ interface RecentTx {
   createdAt: string
 }
 
+interface TransactionLog extends RecentTx {
+  createdAtEgypt?: string
+}
+
+interface WebhookLog {
+  id: string
+  event: string
+  url: string
+  isSuccess: boolean
+  statusCode: number | null
+  payload: string
+  response: string | null
+  createdAt: string
+}
+
 interface Snippets {
   curl: string
   javascript: string
@@ -98,6 +106,38 @@ interface SubscriptionCheckout {
   qrCodeDataUrl: string
   status: string
   expiresAt: string
+}
+
+type DashboardTab = 'integration' | 'billing' | 'transactions' | 'webhooks'
+
+const tabItems: Array<{ id: DashboardTab; label: string; description: string; icon: React.ReactNode }> = [
+  { id: 'integration', label: 'Developers', description: 'API keys, webhooks, checkout setup', icon: <Key className="h-4 w-4" /> },
+  { id: 'billing', label: 'Billing', description: 'Plans, quota, subscription checkout', icon: <CreditCard className="h-4 w-4" /> },
+  { id: 'transactions', label: 'Transactions', description: 'Search, filter, export history', icon: <Activity className="h-4 w-4" /> },
+  { id: 'webhooks', label: 'Webhooks', description: 'Delivery attempts and failures', icon: <Globe className="h-4 w-4" /> },
+]
+
+function formatEgp(value: number) {
+  return new Intl.NumberFormat('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+}
+
+function formatShortDate(value: string | null) {
+  if (!value) return 'Not set'
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function maskSecret(value: string | null | undefined) {
+  if (!value) return 'Not generated'
+  if (value.length <= 12) return '••••••••'
+  return `${value.slice(0, 6)}••••••••${value.slice(-4)}`
+}
+
+function safeJsonFormat(value: string) {
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2)
+  } catch {
+    return value || 'No payload captured.'
+  }
 }
 
 export default function MerchantDashboardPage() {
@@ -127,9 +167,9 @@ export default function MerchantDashboardPage() {
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null)
 
   // Advanced features states
-  const [activeTab, setActiveTab] = useState<'integration' | 'billing' | 'transactions' | 'webhooks'>('integration')
-  const [allTransactions, setAllTransactions] = useState<any[]>([])
-  const [webhookLogs, setWebhookLogs] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState<DashboardTab>('integration')
+  const [allTransactions, setAllTransactions] = useState<TransactionLog[]>([])
+  const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([])
   const [plans, setPlans] = useState<Plan[]>([])
   const [subscriptionCheckout, setSubscriptionCheckout] = useState<SubscriptionCheckout | null>(null)
   const [billingError, setBillingError] = useState<string | null>(null)
@@ -138,7 +178,7 @@ export default function MerchantDashboardPage() {
   const [webhookFilters, setWebhookFilters] = useState({ success: '' })
   const [txLoading, setTxLoading] = useState(false)
   const [webhookLoading, setWebhookLoading] = useState(false)
-  const [selectedLogDetail, setSelectedLogDetail] = useState<any | null>(null)
+  const [selectedLogDetail, setSelectedLogDetail] = useState<WebhookLog | null>(null)
 
   useEffect(() => {
     async function checkSession() {
@@ -413,10 +453,13 @@ export default function MerchantDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-neutral-400">
-        <div className="text-center space-y-2">
-          <RefreshCw className="h-8 w-8 animate-spin text-violet-500 mx-auto" />
-          <p className="text-xs">Validating login session…</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#070a12] text-neutral-400">
+        <div className="text-center space-y-4">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white p-2">
+            <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
+          </div>
+          <RefreshCw className="h-5 w-5 animate-spin text-violet-400 mx-auto" />
+          <p className="text-xs">Validating secure merchant session…</p>
         </div>
       </div>
     )
@@ -448,24 +491,31 @@ export default function MerchantDashboardPage() {
   ]
   const completedSetupItems = setupItems.filter((item) => item.done).length
   const setupComplete = completedSetupItems === setupItems.length
+  const usagePercent = client.txLimit > 0 ? Math.min(100, (client.txCount / client.txLimit) * 100) : 0
+  const quotaState = client.txLimit > 0 && client.txCount >= client.txLimit
+    ? 'limit-reached'
+    : client.txLimit > 0 && client.txCount >= client.txLimit * 0.8
+    ? 'near-limit'
+    : 'healthy'
+  const subscriptionLabel = client.subscriptionPlan.replaceAll('_', ' ')
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#070a12] text-neutral-100 flex flex-col font-sans">
       {/* Header */}
-      <header className="border-b border-neutral-900 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-40">
+      <header className="border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl sticky top-0 z-40">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-emerald-400 shadow-md">
-              <Shield className="h-5 w-5 text-white" />
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg shadow-indigo-950/40">
+              <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold text-white">{client.businessName}</h1>
-                <span className="rounded-md bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-400 border border-emerald-500/30">
+                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-300 border border-emerald-500/30">
                   Approved
                 </span>
               </div>
-              <p className="text-xs text-neutral-500">Merchant Console · Slug: <span className="font-semibold">/{client.slug}</span></p>
+              <p className="text-xs text-neutral-500">Merchant console · <span className="font-semibold text-neutral-400">/{client.slug}</span></p>
             </div>
           </div>
 
@@ -475,7 +525,7 @@ export default function MerchantDashboardPage() {
               size="sm"
               onClick={loadDashboardData}
               disabled={refreshing}
-              className="text-neutral-400 border-neutral-800 hover:bg-neutral-900 hover:text-white"
+              className="rounded-xl text-neutral-300 border-white/10 bg-white/[0.03] hover:bg-white/10 hover:text-white"
             >
               <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
@@ -484,7 +534,7 @@ export default function MerchantDashboardPage() {
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="text-neutral-500 hover:text-red-400 hover:bg-red-500/10"
+              className="rounded-xl text-neutral-500 hover:text-red-300 hover:bg-red-500/10"
             >
               <LogOut className="h-4 w-4 mr-1.5" />
               Logout
@@ -495,6 +545,44 @@ export default function MerchantDashboardPage() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 space-y-6">
+        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,.28),transparent_34%),linear-gradient(135deg,rgba(15,23,42,.98),rgba(2,6,23,.92))] p-6 shadow-2xl shadow-black/20">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
+                <Activity className="h-3.5 w-3.5" />
+                Live merchant operations
+              </div>
+              <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+                Payments, billing, and integrations in one workspace.
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">
+                Monitor confirmation volume, manage the Android listener integration, subscribe to gateway plans, and troubleshoot webhook delivery from a single control plane.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[440px]">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Plan</div>
+                <div className="mt-2 text-sm font-black text-white">{subscriptionLabel}</div>
+                <div className="mt-1 text-xs text-slate-500">{client.isFreeTrial ? 'Free trial' : 'Active merchant'}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Setup</div>
+                <div className="mt-2 text-sm font-black text-white">{completedSetupItems}/{setupItems.length} complete</div>
+                <div className={`mt-1 text-xs ${setupComplete ? 'text-emerald-300' : 'text-amber-300'}`}>
+                  {setupComplete ? 'Production ready' : 'Action needed'}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Quota</div>
+                <div className={`mt-2 text-sm font-black ${quotaState === 'limit-reached' ? 'text-red-300' : quotaState === 'near-limit' ? 'text-amber-300' : 'text-emerald-300'}`}>
+                  {quotaState === 'limit-reached' ? 'Limit reached' : quotaState === 'near-limit' ? 'Near limit' : 'Healthy'}
+                </div>
+                <div className="mt-1 text-xs text-slate-500">{client.txCount.toLocaleString()} / {client.txLimit.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+        </section>
         {/* Merchant setup checklist */}
         <div className={`rounded-2xl border p-5 ${
           setupComplete
@@ -550,7 +638,7 @@ export default function MerchantDashboardPage() {
           <div className="space-y-1.5 flex-1 w-full">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-white tracking-tight uppercase">
-                Plan: <span className="text-violet-400 font-extrabold">{client.subscriptionPlan.replace('_', ' ')}</span>
+                Plan: <span className="text-violet-400 font-extrabold">{subscriptionLabel}</span>
               </h2>
               {client.isFreeTrial && (
                 <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-500 border border-amber-500/20">
@@ -566,9 +654,9 @@ export default function MerchantDashboardPage() {
                     const remainMs = endDate.getTime() - Date.now()
                     const remainDays = Math.ceil(remainMs / (1000 * 60 * 60 * 24))
                     if (remainDays > 0) {
-                      return `Expires on ${endDate.toLocaleDateString()} — ${remainDays} day${remainDays !== 1 ? 's' : ''} remaining`
+                      return `Expires on ${formatShortDate(client.subscriptionEndsAt)} — ${remainDays} day${remainDays !== 1 ? 's' : ''} remaining`
                     }
-                    return `Expired on ${endDate.toLocaleDateString()}`
+                    return `Expired on ${formatShortDate(client.subscriptionEndsAt)}`
                   })()
                 : 'Unlimited plan expiration'}
             </p>
@@ -584,26 +672,28 @@ export default function MerchantDashboardPage() {
               <div className="h-2 w-full bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    client.txCount >= client.txLimit
+                    quotaState === 'limit-reached'
                       ? 'bg-red-500'
-                      : client.txCount >= client.txLimit * 0.8
+                      : quotaState === 'near-limit'
                       ? 'bg-amber-500'
                       : 'bg-gradient-to-r from-violet-600 to-indigo-500'
                   }`}
-                  style={{ width: `${Math.min(100, (client.txCount / client.txLimit) * 100)}%` }}
+                  style={{ width: `${usagePercent}%` }}
                 />
               </div>
-              {client.txCount >= client.txLimit && (
+              {quotaState === 'limit-reached' && (
                 <p className="text-[10px] text-red-400 pt-1">
-                  ⚠️ Your limit is reached. Please pay your provider to renew/upgrade.
+                  Your quota is fully used. Subscribe to a higher plan or renew from Billing.
                 </p>
               )}
             </div>
           </div>
 
           <div className="flex flex-col items-stretch md:items-end space-y-1 bg-neutral-950 p-4 rounded-xl border border-neutral-900 text-center md:text-right shrink-0">
-            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider">Renewal Info</span>
-            <span className="text-xs text-neutral-300">Contact provider to extend quota</span>
+            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider">Monthly billing</span>
+            <button type="button" onClick={() => setActiveTab('billing')} className="text-xs text-violet-300 hover:text-violet-200">
+              View plans and renew quota
+            </button>
             <span className="text-sm font-bold text-white pt-1">{client.subscriptionPlan === 'BASIC' ? '200 EGP / month' : client.subscriptionPlan === 'PRO' ? '500 EGP / month' : client.subscriptionPlan === 'ENTERPRISE' ? '700 EGP / month' : 'Free'}</span>
           </div>
         </div>
@@ -614,7 +704,7 @@ export default function MerchantDashboardPage() {
             <StatCard
               icon={<Wallet className="h-5 w-5" />}
               label="Today's Confirmed"
-              value={`${stats.today.totalEgp.toFixed(2)}`}
+              value={formatEgp(stats.today.totalEgp)}
               unit="EGP"
               sub={`${stats.today.count} payments confirmed`}
               tone="emerald"
@@ -622,7 +712,7 @@ export default function MerchantDashboardPage() {
             <StatCard
               icon={<TrendingUp className="h-5 w-5" />}
               label="Last 7 Days"
-              value={`${stats.sevenDays.totalEgp.toFixed(2)}`}
+              value={formatEgp(stats.sevenDays.totalEgp)}
               unit="EGP"
               sub={`${stats.sevenDays.count} payments confirmed`}
               tone="violet"
@@ -630,7 +720,7 @@ export default function MerchantDashboardPage() {
             <StatCard
               icon={<Clock className="h-5 w-5" />}
               label="Pending"
-              value={`${stats.pending.totalEgp.toFixed(2)}`}
+              value={formatEgp(stats.pending.totalEgp)}
               unit="EGP"
               sub={`${stats.pending.count} transactions awaiting confirmation`}
               tone="amber"
@@ -643,24 +733,22 @@ export default function MerchantDashboardPage() {
           {/* Left Column: Navigable Tabs System */}
           <div className="lg:col-span-2 space-y-5">
             {/* Tabs Navigation */}
-            <div className="flex items-center gap-1 border-b border-neutral-900 pb-2 overflow-x-auto">
-              {[
-                { id: 'integration', label: 'Developer Integration', icon: <Key className="h-4 w-4" /> },
-                { id: 'billing', label: 'Plans & Billing', icon: <CreditCard className="h-4 w-4" /> },
-                { id: 'transactions', label: 'Transaction Reports', icon: <Activity className="h-4 w-4" /> },
-                { id: 'webhooks', label: 'Webhook logs', icon: <Globe className="h-4 w-4" /> },
-              ].map((t) => (
+            <div className="grid gap-2 border-b border-neutral-900 pb-3 sm:grid-cols-2 xl:grid-cols-4">
+              {tabItems.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => setActiveTab(t.id as any)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold tracking-wider whitespace-nowrap transition-all border ${
+                  onClick={() => setActiveTab(t.id)}
+                  className={`flex items-start gap-3 rounded-2xl border p-3 text-left transition-all ${
                     activeTab === t.id
-                      ? 'bg-violet-600/10 border-violet-500 text-violet-400 font-bold shadow-md shadow-violet-600/5'
-                      : 'text-neutral-500 border-transparent hover:text-neutral-300 hover:bg-neutral-900/40'
+                      ? 'bg-violet-600/10 border-violet-500/60 text-violet-200 shadow-lg shadow-violet-950/20'
+                      : 'text-neutral-500 border-neutral-900 bg-neutral-900/20 hover:text-neutral-300 hover:bg-neutral-900/50'
                   }`}
                 >
-                  {t.icon}
-                  {t.label}
+                  <span className={`mt-0.5 ${activeTab === t.id ? 'text-violet-300' : 'text-neutral-500'}`}>{t.icon}</span>
+                  <span>
+                    <span className="block text-xs font-black tracking-wide">{t.label}</span>
+                    <span className="mt-1 block text-[10px] leading-4 text-neutral-500">{t.description}</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -679,15 +767,15 @@ export default function MerchantDashboardPage() {
 
                   <div className="space-y-3 bg-neutral-950 p-4 rounded-xl border border-neutral-900 text-xs">
                     {/* API Key */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="space-y-0.5">
                         <span className="text-neutral-300 font-semibold flex items-center gap-1">
                           API Key (`apiKey`)
                         </span>
                         <p className="text-[10px] text-neutral-500">Bearer token for generating checkouts from your backend server.</p>
                       </div>
-                      <div className="flex items-center gap-2 font-mono text-neutral-300">
-                        <span className="select-all">{client.apiKey}</span>
+                      <div className="flex min-w-0 items-center gap-2 font-mono text-neutral-300">
+                        <span className="truncate rounded-lg border border-neutral-800 bg-neutral-900/70 px-2 py-1 text-[11px] select-all">{maskSecret(client.apiKey)}</span>
                         <button
                           onClick={() => copyToClipboard(client.apiKey || '', 'api-key')}
                           className="text-neutral-500 hover:text-neutral-300 transition-colors"
@@ -705,15 +793,15 @@ export default function MerchantDashboardPage() {
                     </div>
 
                     {/* APK detectToken */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-neutral-900/60 pt-3 mt-3">
+                    <div className="flex flex-col gap-3 border-t border-neutral-900/60 pt-3 mt-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="space-y-0.5">
                         <span className="text-neutral-300 font-semibold flex items-center gap-1">
                           APK Token (`detectToken`)
                         </span>
                         <p className="text-[10px] text-neutral-500">Configure inside your Android Notification listener APK.</p>
                       </div>
-                      <div className="flex items-center gap-2 font-mono text-neutral-300">
-                        <span className="select-all">{client.detectToken}</span>
+                      <div className="flex min-w-0 items-center gap-2 font-mono text-neutral-300">
+                        <span className="truncate rounded-lg border border-neutral-800 bg-neutral-900/70 px-2 py-1 text-[11px] select-all">{maskSecret(client.detectToken)}</span>
                         <button
                           onClick={() => copyToClipboard(client.detectToken || '', 'detect-token')}
                           className="text-neutral-500 hover:text-neutral-300 transition-colors"
@@ -731,15 +819,15 @@ export default function MerchantDashboardPage() {
                     </div>
 
                     {/* Webhook Secret */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-neutral-900/60 pt-3 mt-3">
+                    <div className="flex flex-col gap-3 border-t border-neutral-900/60 pt-3 mt-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="space-y-0.5">
                         <span className="text-neutral-300 font-semibold flex items-center gap-1">
                           Webhook Secret (`webhookSecret`)
                         </span>
                         <p className="text-[10px] text-neutral-500">HMAC-SHA256 secret key for signing payloads forwarded to your server.</p>
                       </div>
-                      <div className="flex items-center gap-2 font-mono text-neutral-300">
-                        <span className="select-all">{client.webhookSecret || 'Not Generated'}</span>
+                      <div className="flex min-w-0 items-center gap-2 font-mono text-neutral-300">
+                        <span className="truncate rounded-lg border border-neutral-800 bg-neutral-900/70 px-2 py-1 text-[11px] select-all">{maskSecret(client.webhookSecret)}</span>
                         <button
                           onClick={() => copyToClipboard(client.webhookSecret || '', 'webhook-secret')}
                           className="text-neutral-500 hover:text-neutral-300 transition-colors"
@@ -939,7 +1027,7 @@ export default function MerchantDashboardPage() {
                     <div className="space-y-3">
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-violet-300 font-bold">Pending subscription payment</p>
-                        <h3 className="text-xl font-black text-white">{subscriptionCheckout.planName} · {subscriptionCheckout.amountEgp.toFixed(2)} {subscriptionCheckout.currency}</h3>
+                        <h3 className="text-xl font-black text-white">{subscriptionCheckout.planName} · {formatEgp(subscriptionCheckout.amountEgp)} {subscriptionCheckout.currency}</h3>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                         <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3">
@@ -987,7 +1075,7 @@ export default function MerchantDashboardPage() {
                             )}
                           </div>
                           <p className="text-3xl font-black text-white mt-2">
-                            {plan.priceEgp.toFixed(0)} <span className="text-sm text-neutral-500">EGP / month</span>
+                            {plan.priceEgp.toLocaleString('en-EG')} <span className="text-sm text-neutral-500">EGP / month</span>
                           </p>
                         </div>
 
@@ -1161,7 +1249,7 @@ export default function MerchantDashboardPage() {
                           </p>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="font-black text-white text-sm">+{tx.amountEgp.toFixed(2)} EGP</span>
+                          <span className="font-black text-white text-sm">+{formatEgp(tx.amountEgp)} EGP</span>
                         </div>
                       </div>
                     ))
@@ -1326,7 +1414,7 @@ export default function MerchantDashboardPage() {
                         </div>
                         
                         <div className="text-right shrink-0">
-                          <span className="font-black text-emerald-400">+{tx.amountEgp.toFixed(2)} EGP</span>
+                          <span className="font-black text-emerald-400">+{formatEgp(tx.amountEgp)} EGP</span>
                           <span className="block text-[9px] text-neutral-500 mt-1 uppercase font-semibold">{tx.status}</span>
                         </div>
                       </div>
@@ -1382,7 +1470,7 @@ export default function MerchantDashboardPage() {
                   <div className="space-y-1">
                     <span className="text-neutral-500 font-semibold block">Payload Sent (JSON)</span>
                     <pre className="font-mono bg-neutral-900/60 p-3 rounded-lg border border-neutral-850 text-[10px] text-neutral-300 overflow-x-auto select-all max-h-48">
-                      {JSON.stringify(JSON.parse(selectedLogDetail.payload), null, 2)}
+                      {safeJsonFormat(selectedLogDetail.payload)}
                     </pre>
                   </div>
 
