@@ -38,6 +38,7 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState('')
   const [otp, setOtp] = useState('')
   const [verificationId, setVerificationId] = useState('')
+  const [loginCodeSent, setLoginCodeSent] = useState(false)
   const [resetCodeSent, setResetCodeSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -56,10 +57,15 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, verificationId, otp }),
       })
       const data = await res.json()
-      if (data.ok) {
+      if (data.ok && data.otpRequired) {
+        setVerificationId(data.verificationId || '')
+        setLoginCodeSent(Boolean(data.verificationId))
+        setOtp('')
+        setSuccessMessage(data.message || 'Login verification code sent.')
+      } else if (data.ok) {
         router.push('/dashboard')
       } else {
         setErrorMessage(data.error || 'Invalid credentials or inactive account.')
@@ -115,6 +121,7 @@ export default function LoginPage() {
         setOtp('')
         setVerificationId('')
         setResetCodeSent(false)
+        setLoginCodeSent(false)
         setMode('login')
       } else {
         setErrorMessage(data.error || 'Failed to reset password.')
@@ -133,6 +140,7 @@ export default function LoginPage() {
     setOtp('')
     setVerificationId('')
     setResetCodeSent(false)
+    setLoginCodeSent(false)
   }
 
   return (
@@ -223,7 +231,9 @@ export default function LoginPage() {
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-400">
                   {mode === 'login'
-                    ? 'Use your approved merchant credentials.'
+                    ? loginCodeSent
+                      ? 'Enter the 6-digit code sent to your merchant email.'
+                      : 'Use your approved merchant credentials. A verification code is required before access.'
                     : 'Receive a 6-digit code by email and set a new password.'}
                 </p>
               </div>
@@ -234,7 +244,7 @@ export default function LoginPage() {
 
             {mode === 'login' ? (
               <form onSubmit={handleLogin} className="mt-7 space-y-5">
-                <EmailField email={email} setEmail={setEmail} disabled={submitting} />
+                <EmailField email={email} setEmail={setEmail} disabled={submitting || loginCodeSent} />
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
@@ -253,20 +263,68 @@ export default function LoginPage() {
                     onChange={setPassword}
                     show={showPassword}
                     setShow={setShowPassword}
-                    disabled={submitting}
+                    disabled={submitting || loginCodeSent}
                     placeholder="Your password"
                   />
                 </div>
+
+                {loginCodeSent && (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="loginOtp" className="text-xs font-semibold text-slate-300">
+                        Login verification code
+                      </Label>
+                      <Input
+                        id="loginOtp"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        placeholder="000000"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-center font-mono text-lg tracking-[0.35em] text-white placeholder:text-slate-700 focus-visible:ring-indigo-500"
+                        required
+                        disabled={submitting}
+                      />
+                      <p className="text-xs leading-5 text-slate-500">
+                        The code expires in 10 minutes. Use the link below to resend a new code.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <StatusMessages error={errorMessage} success={successMessage} />
 
                 <Button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || (loginCodeSent && otp.length !== 6)}
                   className="h-12 w-full rounded-2xl bg-indigo-500 font-bold text-white hover:bg-indigo-400 disabled:opacity-60"
                 >
-                  {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in</> : <>Sign in<ArrowRight className="ml-2 h-4 w-4" /></>}
+                  {submitting ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{loginCodeSent ? 'Verifying' : 'Sending code'}</>
+                  ) : loginCodeSent ? (
+                    <>Verify and sign in<ArrowRight className="ml-2 h-4 w-4" /></>
+                  ) : (
+                    <>Continue<ArrowRight className="ml-2 h-4 w-4" /></>
+                  )}
                 </Button>
+
+                {loginCodeSent && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginCodeSent(false)
+                      setVerificationId('')
+                      setOtp('')
+                      setErrorMessage(null)
+                      setSuccessMessage(null)
+                    }}
+                    className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-200"
+                  >
+                    Change credentials or resend code
+                  </button>
+                )}
               </form>
             ) : (
               <form onSubmit={confirmPasswordReset} className="mt-7 space-y-5">

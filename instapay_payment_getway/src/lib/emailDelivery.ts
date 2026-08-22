@@ -88,7 +88,7 @@ function renderOtpHtml(otp: string): string {
     <div style="font-family:Inter,Arial,sans-serif;background:#070a12;color:#f8fafc;padding:32px">
       <div style="max-width:520px;margin:0 auto;background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:28px">
         <h1 style="font-size:22px;margin:0 0 12px">Verify your email</h1>
-        <p style="color:#94a3b8;line-height:1.6;margin:0 0 22px">Use this code to continue your InstaPay Gateway merchant signup.</p>
+        <p style="color:#94a3b8;line-height:1.6;margin:0 0 22px">Use this code to continue your InstaPay Gateway account verification.</p>
         <div style="letter-spacing:8px;font-size:34px;font-weight:800;background:#111827;border-radius:18px;padding:18px;text-align:center">${otp}</div>
         <p style="color:#64748b;font-size:13px;line-height:1.6;margin:22px 0 0">This code expires in 10 minutes. If you did not request this, ignore this email.</p>
       </div>
