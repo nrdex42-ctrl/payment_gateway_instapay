@@ -140,8 +140,8 @@ export default function LoginPage() {
       <header className="border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <a href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400">
-              <ShieldCheck className="h-5 w-5" />
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5">
+              <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
             </div>
             <div>
               <div className="text-sm font-black tracking-tight">InstaPay Gateway</div>
@@ -174,7 +174,7 @@ export default function LoginPage() {
             Access transactions, webhook delivery, API credentials, subscription billing, and receiving account configuration from one dashboard.
           </p>
           <p className="mt-3 text-sm leading-7 text-slate-400">
-            System email:{' '}
+            Merchant support:{' '}
             <a href={`mailto:${SYSTEM_EMAIL}`} className="font-semibold text-indigo-300 hover:text-indigo-200">
               {SYSTEM_EMAIL}
             </a>

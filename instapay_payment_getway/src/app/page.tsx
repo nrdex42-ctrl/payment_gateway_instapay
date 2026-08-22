@@ -124,8 +124,8 @@ export default async function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <a href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400 shadow-lg shadow-indigo-950/40">
-              <ShieldCheck className="h-5 w-5 text-white" />
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg shadow-indigo-950/40">
+              <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
             </div>
             <div>
               <div className="text-sm font-black tracking-tight sm:text-base">InstaPay Gateway</div>
@@ -460,8 +460,8 @@ if (\`v1=\${expected}\` !== signatureHeader) {
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400">
-                  <ShieldCheck className="h-4 w-4 text-white" />
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5">
+                  <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
                 </div>
                 <div className="text-sm font-black tracking-tight">InstaPay Gateway</div>
               </div>

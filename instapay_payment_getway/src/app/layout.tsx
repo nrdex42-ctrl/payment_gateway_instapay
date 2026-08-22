@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "InstaPay Gateway" }],
   icons: {
-    icon: "/logo.svg",
+    icon: "/IPN.svg",
   },
   openGraph: {
     title: "InstaPay Gateway · Payment Infrastructure for Egypt",
