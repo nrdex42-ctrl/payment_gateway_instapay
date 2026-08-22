@@ -268,31 +268,29 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {loginCodeSent && (
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="loginOtp" className="text-xs font-semibold text-slate-300">
-                        Login verification code
-                      </Label>
-                      <Input
-                        id="loginOtp"
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]{6}"
-                        maxLength={6}
-                        placeholder="000000"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-center font-mono text-lg tracking-[0.35em] text-white placeholder:text-slate-700 focus-visible:ring-indigo-500"
-                        required
-                        disabled={submitting}
-                      />
-                      <p className="text-xs leading-5 text-slate-500">
-                        The code expires in 10 minutes. Use the link below to resend a new code.
-                      </p>
-                    </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="loginOtp" className="text-xs font-semibold text-slate-300">
+                      Login verification code
+                    </Label>
+                    <Input
+                      id="loginOtp"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-center font-mono text-lg tracking-[0.35em] text-white placeholder:text-slate-700 focus-visible:ring-indigo-500"
+                      required={loginCodeSent}
+                      disabled={submitting || !loginCodeSent}
+                    />
+                    <p className="text-xs leading-5 text-slate-500">
+                      {loginCodeSent ? 'The code expires in 10 minutes. Use the link below to resend a new code.' : 'Request the code first, then paste it here.'}
+                    </p>
                   </div>
-                )}
+                </div>
 
                 <StatusMessages error={errorMessage} success={successMessage} />
 

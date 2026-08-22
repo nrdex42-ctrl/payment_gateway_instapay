@@ -113,8 +113,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="20dp"
-                        android:hint="Email verification code"
-                        android:visibility="gone">
+                        android:hint="Email verification code">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_otp"
@@ -124,6 +123,15 @@
                             android:textColor="@color/text_primary"
                             android:textSize="14sp" />
                     </com.google.android.material.textfield.TextInputLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Paste the 6-digit code here after the app sends it to your email."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:layout_marginTop="-12dp"
+                        android:layout_marginBottom="20dp" />
 
                     <!-- Error Text -->
                     <TextView
