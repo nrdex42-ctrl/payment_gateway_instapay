@@ -42,15 +42,6 @@ class SettingsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         config = GatewayConfig.get(requireContext())
 
-        // Hide mode toggle card since APK is always client-specific received mode now
-        binding.modeToggleGroup.visibility = View.GONE
-        // Hide the description and label next to it
-        binding.modeToggleGroup.parent?.let { parentView ->
-            if (parentView is View) {
-                parentView.visibility = View.GONE
-            }
-        }
-
         // Load saved config
         binding.gatewayUrlInput.setText(config.gatewayUrl)
         binding.authTokenInput.setText(config.authToken)
@@ -58,6 +49,7 @@ class SettingsFragment : Fragment() {
         
         // Always hide myHandle input since CLIENT mode is removed
         binding.myHandleInputLayout.visibility = View.GONE
+        updateSummaryHeader()
 
         binding.saveButton.setOnClickListener {
             val url = binding.gatewayUrlInput.text.toString().trim()
@@ -81,11 +73,8 @@ class SettingsFragment : Fragment() {
             
             val confirmationText = if (currentLang == "ar") "تم حفظ الإعدادات بنجاح" else "Config Saved Successfully"
             Toast.makeText(requireContext(), confirmationText, Toast.LENGTH_SHORT).show()
-
-            binding.monitoredHandleLabel.text = "Reporting payments received by: $merchantHandle"
+            updateSummaryHeader()
         }
-
-        binding.monitoredHandleLabel.text = "Reporting payments received by: ${config.merchantHandle}"
         binding.grantPermissionButton.setOnClickListener { openNotificationAccessSettings() }
         binding.testButton.setOnClickListener { sendTestNotification() }
         binding.logoutButton.setOnClickListener {
@@ -118,6 +107,7 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         refreshPermissionStatus()
+        updateSummaryHeader()
     }
 
     private fun refreshPermissionStatus() {
@@ -161,6 +151,14 @@ class SettingsFragment : Fragment() {
             .getSharedPreferences(DETECTIONS_PREFS, android.content.Context.MODE_PRIVATE)
             .getString(KEY_LAST_DETECTION, null)
         binding.lastDetectionText.text = lastDetection ?: getString(R.string.last_detection_none)
+    }
+
+    private fun updateSummaryHeader() {
+        binding.summaryMerchantName.text = config.merchantHandle.substringBefore('@').replaceFirstChar { it.uppercaseChar() }
+        binding.summaryMerchantHandle.text = config.merchantHandle
+        binding.summaryGatewayUrl.text = config.gatewayUrl.removeSuffix("/api/webhooks/instapay").trimEnd('/')
+        binding.summaryDetectorMode.text = "Merchant detector"
+        binding.monitoredHandleLabel.text = getString(R.string.monitored_handle_label, config.merchantHandle)
     }
 
     private fun openNotificationAccessSettings() {
