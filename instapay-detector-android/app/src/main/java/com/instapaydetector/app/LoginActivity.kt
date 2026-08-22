@@ -45,7 +45,7 @@ class LoginActivity : AppCompatActivity() {
         val otp = binding.etOtp.text?.toString()?.trim() ?: ""
 
         if (email.isEmpty() || password.isEmpty()) {
-            showError("All fields are required.")
+            showError(if (otp.isBlank()) "Enter your email and password to receive a verification code." else "Enter the verification code sent to your email.")
             return
         }
 
