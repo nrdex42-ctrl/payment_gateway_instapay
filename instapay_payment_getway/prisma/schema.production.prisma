@@ -84,6 +84,7 @@ model Client {
   webhookLogs        WebhookLog[]
   mismatchedPayments MismatchedPayment[]
   detectorDevices    DetectorDevice[]
+  notifications      MerchantNotification[]
 
   @@index([instapayHandle])
   @@index([instapayPaymentUrl])
@@ -91,6 +92,20 @@ model Client {
   @@index([detectToken])
   @@index([apiKeyHash])
   @@index([detectTokenHash])
+}
+
+model MerchantNotification {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  severity  String   @default("INFO")
+  readAt   DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
+  @@index([clientId, readAt])
 }
 
 // ─── Checkout / payment transaction ────────────────────────────────

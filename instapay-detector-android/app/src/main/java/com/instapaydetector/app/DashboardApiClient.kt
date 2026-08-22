@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -64,6 +66,25 @@ class DashboardApiClient(private val ctx: Context) {
             loadCachedDashboard()?.let { return@withContext Result.success(it) }
             Result.failure(e)
         }
+    }
+
+    suspend fun fetchNotifications(): Result<List<MerchantNotification>> = withContext(Dispatchers.IO) {
+        try {
+            val res = get("${baseUrl()}/api/notifications")
+            if (!res.isSuccessful) return@withContext Result.failure(Exception("HTTP ${res.code}"))
+            val array = JSONObject(res.body).optJSONArray("notifications") ?: JSONArray()
+            Result.success((0 until array.length()).map { i ->
+                val item = array.getJSONObject(i)
+                MerchantNotification(item.getString("id"), item.getString("title"), item.getString("message"), item.optString("severity", "INFO"))
+            })
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun markNotificationsRead(ids: List<String>) = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext
+        val body = JSONObject().put("ids", JSONArray(ids)).toString().toRequestBody("application/json".toMediaType())
+        val request = Request.Builder().url("${baseUrl()}/api/notifications").addHeader("Authorization", "Bearer ${config.dashboardApiKey.ifBlank { config.authToken }}").patch(body).build()
+        httpClient.newCall(request).execute().close()
     }
 
     suspend fun fetchChart(days: Int = 30): Result<ChartData> = withContext(Dispatchers.IO) {

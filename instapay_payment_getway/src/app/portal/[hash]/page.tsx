@@ -31,6 +31,7 @@ import {
   Eye,
   EyeOff,
   Calendar,
+  Bell,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -109,11 +110,12 @@ interface Plan {
   maxTransactions: number
 }
 
-type AdminTab = 'merchants' | 'billing' | 'transactions' | 'webhooks' | 'audit'
+type AdminTab = 'merchants' | 'billing' | 'notifications' | 'transactions' | 'webhooks' | 'audit'
 
 const adminTabs: Array<{ id: AdminTab; label: string; description: string; icon: React.ReactNode }> = [
   { id: 'merchants', label: 'Merchants', description: 'Approve, manage, suspend accounts', icon: <Users className="h-4 w-4" /> },
   { id: 'billing', label: 'Billing', description: 'Plan pricing and subscription health', icon: <Calendar className="h-4 w-4" /> },
+  { id: 'notifications', label: 'Notifications', description: 'Message merchants on web and APK', icon: <Bell className="h-4 w-4" /> },
   { id: 'transactions', label: 'Transactions', description: 'Search, audit, force-confirm payments', icon: <Activity className="h-4 w-4" /> },
   { id: 'webhooks', label: 'Webhooks', description: 'Delivery success, failures, payloads', icon: <Globe className="h-4 w-4" /> },
   { id: 'audit', label: 'Audit', description: 'Administrative action history', icon: <Shield className="h-4 w-4" /> },
@@ -216,6 +218,25 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [auditLoading, setAuditLoading] = useState(false)
   const [selectedLogDetail, setSelectedLogDetail] = useState<WebhookLog | null>(null)
   const [subscriptionUpdatingId, setSubscriptionUpdatingId] = useState<string | null>(null)
+  const [notificationClientId, setNotificationClientId] = useState('')
+  const [notificationTitle, setNotificationTitle] = useState('')
+  const [notificationMessage, setNotificationMessage] = useState('')
+  const [notificationSeverity, setNotificationSeverity] = useState('INFO')
+  const [notificationSending, setNotificationSending] = useState(false)
+  const [notificationResult, setNotificationResult] = useState<string | null>(null)
+
+  const sendMerchantNotification = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setNotificationSending(true)
+    setNotificationResult(null)
+    try {
+      const res = await fetch('/api/admin/notifications', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ clientId: notificationClientId, title: notificationTitle, message: notificationMessage, severity: notificationSeverity }) })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to send notification')
+      setNotificationTitle(''); setNotificationMessage(''); setNotificationResult('Notification sent successfully.')
+    } catch (error) { setNotificationResult(error instanceof Error ? error.message : 'Failed to send notification.') }
+    finally { setNotificationSending(false) }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1173,6 +1194,20 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                   )}
                 </div>
               </div>
+            )}
+
+            {/* Tab: Billing */}
+            {activeTab === 'notifications' && (
+              <form onSubmit={sendMerchantNotification} className="space-y-5 rounded-2xl border border-violet-500/20 bg-neutral-900/30 p-5">
+                <div><h2 className="flex items-center gap-2 text-base font-bold text-white"><Bell className="h-4 w-4 text-violet-300" />Merchant notifications</h2><p className="mt-1 text-xs leading-6 text-neutral-500">Send a message that appears on the merchant website and as an Android detector notification.</p></div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2"><Label className="text-xs text-neutral-400">Merchant</Label><select required value={notificationClientId} onChange={(e) => setNotificationClientId(e.target.value)} className="mt-2 h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-sm text-white"><option value="">Select a merchant</option>{clients.filter((client) => client.isActive).map((client) => <option key={client.id} value={client.id}>{client.businessName} · {client.email}</option>)}</select></div>
+                  <div><Label className="text-xs text-neutral-400">Title</Label><Input required maxLength={120} value={notificationTitle} onChange={(e) => setNotificationTitle(e.target.value)} className="mt-2 border-neutral-800 bg-neutral-950 text-white" placeholder="System update" /></div>
+                  <div><Label className="text-xs text-neutral-400">Priority</Label><select value={notificationSeverity} onChange={(e) => setNotificationSeverity(e.target.value)} className="mt-2 h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-sm text-white"><option>INFO</option><option>SUCCESS</option><option>WARNING</option><option>URGENT</option></select></div>
+                  <div className="sm:col-span-2"><Label className="text-xs text-neutral-400">Message</Label><textarea required maxLength={2000} value={notificationMessage} onChange={(e) => setNotificationMessage(e.target.value)} className="mt-2 min-h-32 w-full rounded-xl border border-neutral-800 bg-neutral-950 p-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Write the message for this merchant..." /></div>
+                </div>
+                <div className="flex items-center justify-between gap-3"><p className={`text-xs ${notificationResult?.includes('successfully') ? 'text-emerald-400' : 'text-amber-400'}`}>{notificationResult}</p><Button disabled={notificationSending} className="bg-violet-600 text-white hover:bg-violet-700"><Bell className="mr-2 h-4 w-4" />{notificationSending ? 'Sending...' : 'Send notification'}</Button></div>
+              </form>
             )}
 
             {/* Tab: Billing */}

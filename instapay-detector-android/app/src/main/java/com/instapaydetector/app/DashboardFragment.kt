@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -86,6 +88,7 @@ class DashboardFragment : Fragment() {
             // Load dashboard stats + chart in parallel
             val dashResult = apiClient.fetchDashboard()
             val chartResult = apiClient.fetchChart(days = 30)
+            val notificationResult = apiClient.fetchNotifications()
 
             binding.swipeRefresh.isRefreshing = false
 
@@ -99,6 +102,34 @@ class DashboardFragment : Fragment() {
                 .onFailure {
                     // Chart failure is non-critical — just leave it empty
                 }
+
+            notificationResult.onSuccess { notifications ->
+                if (notifications.isNotEmpty()) {
+                    showMerchantNotifications(notifications)
+                    viewLifecycleOwner.lifecycleScope.launch { apiClient.markNotificationsRead(notifications.map { it.id }) }
+                }
+            }
+        }
+    }
+
+    private fun showMerchantNotifications(notifications: List<MerchantNotification>) {
+        val channelId = "merchant_messages"
+        val manager = requireContext().getSystemService(android.app.NotificationManager::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            manager.createNotificationChannel(android.app.NotificationChannel(channelId, "Merchant messages", android.app.NotificationManager.IMPORTANCE_HIGH))
+        }
+        notifications.forEach { item ->
+            try {
+                val notification = NotificationCompat.Builder(requireContext(), channelId)
+                    .setSmallIcon(com.instapaydetector.app.R.mipmap.ic_launcher)
+                    .setContentTitle(item.title)
+                    .setContentText(item.message)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(item.message))
+                    .setAutoCancel(true)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .build()
+                NotificationManagerCompat.from(requireContext()).notify(item.id.hashCode(), notification)
+            } catch (_: SecurityException) { }
         }
     }
 

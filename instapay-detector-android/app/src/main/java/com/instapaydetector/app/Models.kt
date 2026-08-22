@@ -28,6 +28,8 @@ data class DashboardStats(
     val subscription: SubscriptionInfo?,
 )
 
+data class MerchantNotification(val id: String, val title: String, val message: String, val severity: String)
+
 data class MerchantInfo(
     val handle: String,
     val name: String,
