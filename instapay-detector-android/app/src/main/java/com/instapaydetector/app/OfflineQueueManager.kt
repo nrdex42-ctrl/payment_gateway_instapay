@@ -32,7 +32,11 @@ class OfflineQueueManager private constructor(private val context: Context) {
         val recipientHandle: String?,
         val reference: String?,
         val timestampIso: String,
-        val retries: Int = 0
+        val retries: Int = 0,
+        val rawNotificationText: String? = null,
+        val notificationTitle: String? = null,
+        val sourcePackage: String? = null,
+        val confidence: Int? = null
     ) {
         fun toJson(): JSONObject = JSONObject().apply {
             put("id", id)
@@ -42,6 +46,10 @@ class OfflineQueueManager private constructor(private val context: Context) {
             put("reference", reference ?: "")
             put("timestampIso", timestampIso)
             put("retries", retries)
+            put("rawNotificationText", rawNotificationText ?: "")
+            put("notificationTitle", notificationTitle ?: "")
+            put("sourcePackage", sourcePackage ?: "")
+            confidence?.let { put("confidence", it) }
         }
 
         companion object {
@@ -52,7 +60,11 @@ class OfflineQueueManager private constructor(private val context: Context) {
                 recipientHandle = json.optString("recipientHandle").ifEmpty { null },
                 reference = json.optString("reference").ifEmpty { null },
                 timestampIso = json.optString("timestampIso", ""),
-                retries = json.optInt("retries", 0)
+                retries = json.optInt("retries", 0),
+                rawNotificationText = json.optString("rawNotificationText").ifEmpty { null },
+                notificationTitle = json.optString("notificationTitle").ifEmpty { null },
+                sourcePackage = json.optString("sourcePackage").ifEmpty { null },
+                confidence = if (json.has("confidence")) json.optInt("confidence") else null
             )
         }
     }
@@ -111,7 +123,11 @@ class OfflineQueueManager private constructor(private val context: Context) {
                         senderHandle = item.senderHandle,
                         recipientHandle = item.recipientHandle,
                         reference = item.reference,
-                        notificationTimestampIso = item.timestampIso
+                        notificationTimestampIso = item.timestampIso,
+                        rawNotificationText = item.rawNotificationText,
+                        notificationTitle = item.notificationTitle,
+                        sourcePackage = item.sourcePackage,
+                        confidence = item.confidence
                     )
 
                     if (result == ReportResult.SUCCESS) {

@@ -42,7 +42,11 @@ class GatewayClient(ctx: Context) {
         senderHandle: String?,
         recipientHandle: String?,
         reference: String?,
-        notificationTimestampIso: String
+        notificationTimestampIso: String,
+        rawNotificationText: String? = null,
+        notificationTitle: String? = null,
+        sourcePackage: String? = null,
+        confidence: Int? = null
     ): ReportResult = withContext(Dispatchers.IO) {
         val url = config.gatewayUrl
         val token = config.authToken
@@ -62,8 +66,12 @@ class GatewayClient(ctx: Context) {
             if (!recipientHandle.isNullOrBlank()) put("recipientHandle", recipientHandle)
             if (!reference.isNullOrBlank()) put("reference", reference)
             put("notificationTimestamp", notificationTimestampIso)
-            // Also include the raw text for debugging/fallback parsing on the server.
-            put("text", "You have received ${formatAmount(amountEgp)} EGP from $senderHandle")
+            if (!rawNotificationText.isNullOrBlank()) put("rawNotificationText", rawNotificationText)
+            if (!notificationTitle.isNullOrBlank()) put("notificationTitle", notificationTitle)
+            if (!sourcePackage.isNullOrBlank()) put("sourcePackage", sourcePackage)
+            confidence?.let { put("confidence", it) }
+            // Backwards-compatible fallback text for existing server parsers.
+            put("text", rawNotificationText ?: "You have received ${formatAmount(amountEgp)} EGP from $senderHandle")
         }
 
         val request = Request.Builder()
