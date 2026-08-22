@@ -62,7 +62,10 @@ export async function POST(request: NextRequest) {
     Object.entries(getRateLimitHeaders(rl)).forEach(([key, value]) => response.headers.set(key, value))
     return response
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to send verification code.'
-    return NextResponse.json({ ok: false, error: message }, { status: 500 })
+    console.error('[email-otp] failed to send verification code', err)
+    return NextResponse.json(
+      { ok: false, error: 'Email verification service is temporarily unavailable. Please try again later.' },
+      { status: 500 },
+    )
   }
 }
