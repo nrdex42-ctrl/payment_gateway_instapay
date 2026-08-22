@@ -35,11 +35,6 @@ export default function HostedCheckoutPage({ params }: { params: Promise<{ slug:
   useEffect(() => {
     async function loadClient() {
       try {
-        const res = await fetch(`/api/checkout?clientSlug=${slug}`)
-        // Let's create a GET handler on /api/checkout to return client info if clientSlug is passed as query!
-        // We'll write this inside /api/checkout/route.ts in a bit or let's look up /api/checkout.
-        // Wait, instead of creating a new API, we can fetch from a generic status or check client details.
-        // Let's verify if /api/checkout GET is defined. It is not currently defined. Let's make /api/checkout GET return the client info if requested.
         const response = await fetch(`/api/checkout?slug=${slug}`)
         if (response.ok) {
           const data = await response.json()

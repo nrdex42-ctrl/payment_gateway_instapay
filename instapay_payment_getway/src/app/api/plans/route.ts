@@ -4,13 +4,18 @@ import { db } from '@/lib/db'
 export async function GET() {
   try {
     const plans = await db.plan.findMany({
-      orderBy: { priceEgp: 'asc' }
+      select: {
+        id: true,
+        name: true,
+        priceEgp: true,
+        maxTransactions: true,
+      },
+      orderBy: { priceEgp: 'asc' },
     })
     return NextResponse.json({ ok: true, plans })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
+  } catch {
     return NextResponse.json(
-      { ok: false, error: `Failed to fetch plans: ${message}` },
+      { ok: false, error: 'Failed to fetch plans.' },
       { status: 500 }
     )
   }

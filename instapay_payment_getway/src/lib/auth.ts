@@ -10,7 +10,6 @@ import { db } from './db'
 import type { Client } from '@prisma/client'
 
 const SESSION_COOKIE_NAME = 'instapay_merchant_session'
-const OWNER_SECRET_DEFAULT = 'owner-sandbox-secret-token-2026'
 
 // ─── Password Hashing (Secure Scrypt) ──────────────────────────────
 

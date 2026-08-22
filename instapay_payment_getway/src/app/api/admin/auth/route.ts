@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 
-const ADMIN_EMAIL = 'instapay.payment.gateway@gmail.com'
-const ADMIN_PASSWORD = 'premiumservice@2026'
-// 32-character base32 key for TOTP
-const TOTP_SECRET_BASE32 = 'KVKVEV2UNJ3VOW3PMRUW4ZLDMUQHS4CT'
+function timingSafeEquals(a: string, b: string): boolean {
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) return false
+  return crypto.timingSafeEqual(bufA, bufB)
+}
 
 function base32Decode(base32: string): Buffer {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
@@ -71,40 +73,46 @@ export async function POST(request: NextRequest) {
     const { secret, email, password, totp } = body || {}
 
     const ownerSecret = process.env.OWNER_SECRET
-    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
+    if (!ownerSecret) {
+      return NextResponse.json({ ok: false, error: 'Server is not configured.' }, { status: 500 })
+    }
 
-    // Support email/password/totp authentication
+    // Email/password/TOTP authentication
     if (email !== undefined || password !== undefined || totp !== undefined) {
-      if (
-        email !== ADMIN_EMAIL ||
-        password !== ADMIN_PASSWORD ||
-        !totp ||
-        !verifyTOTP(TOTP_SECRET_BASE32, totp.trim())
-      ) {
+      const adminEmail = process.env.ADMIN_EMAIL
+      const adminPassword = process.env.ADMIN_PASSWORD
+      const totpSecret = process.env.ADMIN_TOTP_SECRET
+
+      if (!adminEmail || !adminPassword || !totpSecret) {
+        return NextResponse.json({ ok: false, error: 'Server is not configured.' }, { status: 500 })
+      }
+
+      const emailOk =
+        typeof email === 'string' &&
+        timingSafeEquals(email.trim().toLowerCase(), adminEmail.trim().toLowerCase())
+      const passwordOk = typeof password === 'string' && timingSafeEquals(password, adminPassword)
+      const totpOk = typeof totp === 'string' && verifyTOTP(totpSecret, totp.trim())
+
+      if (!emailOk || !passwordOk || !totpOk) {
         return NextResponse.json(
           { ok: false, error: 'Invalid admin credentials or 2FA code.' },
           { status: 401 }
         )
       }
-      return NextResponse.json({
-        ok: true,
-        token: ownerSecret,
-      })
+
+      return NextResponse.json({ ok: true, token: ownerSecret })
     }
 
-    // Support legacy secret authentication
-    if (!secret || secret !== ownerSecret) {
+    // Secret-token authentication
+    if (typeof secret !== 'string' || !timingSafeEquals(secret, ownerSecret)) {
       return NextResponse.json(
         { ok: false, error: 'Invalid admin secret token.' },
         { status: 401 }
       )
     }
 
-    return NextResponse.json({
-      ok: true,
-      token: ownerSecret,
-    })
-  } catch (err) {
+    return NextResponse.json({ ok: true, token: ownerSecret })
+  } catch {
     return NextResponse.json(
       { ok: false, error: 'Authentication failed.' },
       { status: 500 }

@@ -1315,7 +1315,7 @@ export default function MerchantDashboardPage() {
 
       {/* Footer */}
       <footer className="mt-auto border-t border-neutral-900 py-6 bg-neutral-950 text-center text-xs text-neutral-600">
-        InstaPay Egypt Egypt Gateway Merchant Panel · Sandbox Environment
+        InstaPay Gateway · Merchant Dashboard
       </footer>
     </div>
   )

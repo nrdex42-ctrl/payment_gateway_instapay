@@ -15,16 +15,7 @@ export async function GET(request: NextRequest) {
     const targetClientId = searchParams.get('clientId')
 
     let clientId = ''
-    let isOwner = await authenticateOwner(request)
-    
-    // Sandbox local development fallback for admin check
-    const ownerSecret = process.env.OWNER_SECRET
-    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
-    const authHeader = request.headers.get('authorization') || ''
-    const provided = authHeader.replace(/^Bearer\s+/, '').trim()
-    if (provided === ownerSecret) {
-      isOwner = true
-    }
+    const isOwner = await authenticateOwner(request)
 
     let client: Client | null = null
 
