@@ -77,6 +77,10 @@ class GatewayConfig private constructor(ctx: Context) {
             prefs.edit().putBoolean(KEY_IS_LOGGED_IN, value).apply()
         }
 
+    var pendingVerificationId: String
+        get() = prefs.getString(KEY_PENDING_VERIFICATION, "") ?: ""
+        set(value) { prefs.edit().putString(KEY_PENDING_VERIFICATION, value).apply() }
+
     companion object {
         private const val FILE_NAME = "gateway_config.xml"
         private const val KEY_URL = "gateway_url"
@@ -87,6 +91,7 @@ class GatewayConfig private constructor(ctx: Context) {
         private const val KEY_SUBSCRIPTION_PLAN = "subscription_plan"
         private const val KEY_SUBSCRIPTION_ENDS_AT = "subscription_ends_at"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
+        private const val KEY_PENDING_VERIFICATION = "pending_verification"
 
         private const val DEFAULT_URL =
             "https://your-gateway.example.com/api/webhooks/instapay"

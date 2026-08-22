@@ -71,23 +71,6 @@
                     android:orientation="vertical"
                     android:padding="20dp">
 
-                    <!-- Server URL -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.InstapayDetector.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        android:hint="Server URL">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_server_url"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textUri"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
                     <!-- Email Address -->
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.InstapayDetector.TextInputLayout"
@@ -124,19 +107,20 @@
                             android:textSize="14sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- InstaPay Handle -->
+                    <!-- Email verification code -->
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.InstapayDetector.TextInputLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="20dp"
-                        android:hint="InstaPay Handle">
+                        android:hint="Email verification code"
+                        android:visibility="gone">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_instapay_handle"
+                            android:id="@+id/et_otp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text"
+                            android:inputType="number"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp" />
                     </com.google.android.material.textfield.TextInputLayout>
@@ -149,7 +133,7 @@
                         android:visibility="gone"
                         android:textColor="@color/status_denied"
                         android:textSize="12sp"
-                        android:background="#2E1616"
+                        android:background="@color/status_expired_bg"
                         android:padding="12dp"
                         android:layout_marginBottom="16dp" />
 
