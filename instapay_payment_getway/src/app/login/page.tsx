@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
+const SYSTEM_EMAIL = 'instapay.payment.gateway@gmail.com'
+
 function passwordScore(password: string) {
   let score = 0
   if (password.length >= 8) score++
@@ -147,9 +149,14 @@ export default function LoginPage() {
             </div>
           </a>
 
-          <Button asChild variant="ghost" size="sm" className="text-slate-200 hover:bg-white/10 hover:text-white">
-            <a href="/register">Create account</a>
-          </Button>
+          <div className="flex items-center gap-3">
+            <a href={`mailto:${SYSTEM_EMAIL}`} className="hidden text-xs font-semibold text-slate-400 hover:text-slate-200 sm:inline">
+              {SYSTEM_EMAIL}
+            </a>
+            <Button asChild variant="ghost" size="sm" className="text-slate-200 hover:bg-white/10 hover:text-white">
+              <a href="/register">Create account</a>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -165,6 +172,12 @@ export default function LoginPage() {
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300">
             Access transactions, webhook delivery, API credentials, subscription billing, and receiving account configuration from one dashboard.
+          </p>
+          <p className="mt-3 text-sm leading-7 text-slate-400">
+            System email:{' '}
+            <a href={`mailto:${SYSTEM_EMAIL}`} className="font-semibold text-indigo-300 hover:text-indigo-200">
+              {SYSTEM_EMAIL}
+            </a>
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -331,6 +344,8 @@ export default function LoginPage() {
 
             <p className="mt-6 text-center text-xs leading-6 text-slate-500">
               Don&apos;t have an account? <a href="/register" className="font-semibold text-indigo-300 hover:text-indigo-200">Create merchant account</a>.
+              <br />
+              Need help? <a href={`mailto:${SYSTEM_EMAIL}`} className="font-semibold text-indigo-300 hover:text-indigo-200">{SYSTEM_EMAIL}</a>
             </p>
           </div>
         </section>

@@ -25,6 +25,8 @@ const onboardingSteps = [
   'Start creating checkout sessions from your backend',
 ]
 
+const SYSTEM_EMAIL = 'instapay.payment.gateway@gmail.com'
+
 const trustPoints = [
   'No payment credentials are collected during signup',
   'API keys are issued after account approval',
@@ -115,6 +117,13 @@ export default function RegisterPage() {
               Your merchant account is pending review. After approval, sign in to the dashboard to
               add your InstaPay receiving handle, static payment link, webhook endpoint, and API integration settings.
             </p>
+            <p className="mt-3 text-sm leading-7 text-slate-400">
+              For approval questions or account support, contact{' '}
+              <a href={`mailto:${SYSTEM_EMAIL}`} className="font-semibold text-indigo-300 hover:text-indigo-200">
+                {SYSTEM_EMAIL}
+              </a>
+              .
+            </p>
 
             <div className="mt-7 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-left">
               <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">What happens next</div>
@@ -153,9 +162,14 @@ export default function RegisterPage() {
             </div>
           </a>
 
-          <Button asChild variant="ghost" size="sm" className="text-slate-200 hover:bg-white/10 hover:text-white">
-            <a href="/login">Sign in</a>
-          </Button>
+          <div className="flex items-center gap-3">
+            <a href={`mailto:${SYSTEM_EMAIL}`} className="hidden text-xs font-semibold text-slate-400 hover:text-slate-200 sm:inline">
+              {SYSTEM_EMAIL}
+            </a>
+            <Button asChild variant="ghost" size="sm" className="text-slate-200 hover:bg-white/10 hover:text-white">
+              <a href="/login">Sign in</a>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -172,6 +186,12 @@ export default function RegisterPage() {
           <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300">
             Apply for access to the InstaPay payment gateway. After approval, the dashboard guides you
             through payment receiving details, webhook setup, API keys, and billing.
+          </p>
+          <p className="mt-3 text-sm leading-7 text-slate-400">
+            System email:{' '}
+            <a href={`mailto:${SYSTEM_EMAIL}`} className="font-semibold text-indigo-300 hover:text-indigo-200">
+              {SYSTEM_EMAIL}
+            </a>
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -369,6 +389,8 @@ export default function RegisterPage() {
             <p className="mt-6 text-center text-xs leading-6 text-slate-500">
               By creating an account, you confirm this is a business payment integration request.
               Already approved? <a href="/login" className="font-semibold text-indigo-300 hover:text-indigo-200">Sign in</a>.
+              <br />
+              Need help? <a href={`mailto:${SYSTEM_EMAIL}`} className="font-semibold text-indigo-300 hover:text-indigo-200">{SYSTEM_EMAIL}</a>
             </p>
           </div>
         </section>
