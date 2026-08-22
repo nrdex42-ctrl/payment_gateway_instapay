@@ -180,47 +180,6 @@ export default function MerchantDashboardPage() {
   const [webhookLoading, setWebhookLoading] = useState(false)
   const [selectedLogDetail, setSelectedLogDetail] = useState<WebhookLog | null>(null)
 
-  useEffect(() => {
-    async function checkSession() {
-      try {
-        const res = await fetch('/api/auth/session')
-        const data = await res.json()
-        if (data.ok) {
-          setClient(data.client)
-          setInstapayHandleInput(data.client.instapayHandle || '')
-          setWebhookUrlInput(data.client.webhookUrl || '')
-          setInstapayPaymentUrlInput(data.client.instapayPaymentUrl || '')
-          setCheckoutTtlInput(String(data.client.checkoutTtlMin || 10))
-        } else {
-          router.push('/login')
-        }
-      } catch {
-        router.push('/login')
-      } finally {
-        setLoading(false)
-      }
-    }
-    checkSession()
-  }, [router])
-
-  useEffect(() => {
-    if (client) {
-      loadDashboardData()
-      loadSnippets()
-      loadPlans()
-    }
-  }, [client])
-
-  useEffect(() => {
-    if (client) {
-      if (activeTab === 'transactions') {
-        loadTransactions()
-      } else if (activeTab === 'webhooks') {
-        loadWebhookLogs()
-      }
-    }
-  }, [activeTab, client])
-
   const loadTransactions = async () => {
     if (!client) return
     setTxLoading(true)
@@ -450,6 +409,47 @@ export default function MerchantDashboardPage() {
     setCopiedLabel(label)
     setTimeout(() => setCopiedLabel(null), 2000)
   }
+
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/session')
+        const data = await res.json()
+        if (data.ok) {
+          setClient(data.client)
+          setInstapayHandleInput(data.client.instapayHandle || '')
+          setWebhookUrlInput(data.client.webhookUrl || '')
+          setInstapayPaymentUrlInput(data.client.instapayPaymentUrl || '')
+          setCheckoutTtlInput(String(data.client.checkoutTtlMin || 10))
+        } else {
+          router.push('/login')
+        }
+      } catch {
+        router.push('/login')
+      } finally {
+        setLoading(false)
+      }
+    }
+    checkSession()
+  }, [router])
+
+  useEffect(() => {
+    if (client) {
+      loadDashboardData()
+      loadSnippets()
+      loadPlans()
+    }
+  }, [client])
+
+  useEffect(() => {
+    if (client) {
+      if (activeTab === 'transactions') {
+        loadTransactions()
+      } else if (activeTab === 'webhooks') {
+        loadWebhookLogs()
+      }
+    }
+  }, [activeTab, client])
 
   if (loading) {
     return (

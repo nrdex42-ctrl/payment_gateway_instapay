@@ -102,10 +102,18 @@ interface AuditLog {
   createdAt: string
 }
 
-type AdminTab = 'merchants' | 'transactions' | 'webhooks' | 'audit'
+interface Plan {
+  id: string
+  name: string
+  priceEgp: number
+  maxTransactions: number
+}
+
+type AdminTab = 'merchants' | 'billing' | 'transactions' | 'webhooks' | 'audit'
 
 const adminTabs: Array<{ id: AdminTab; label: string; description: string; icon: React.ReactNode }> = [
   { id: 'merchants', label: 'Merchants', description: 'Approve, manage, suspend accounts', icon: <Users className="h-4 w-4" /> },
+  { id: 'billing', label: 'Billing', description: 'Plan pricing and subscription health', icon: <Calendar className="h-4 w-4" /> },
   { id: 'transactions', label: 'Transactions', description: 'Search, audit, force-confirm payments', icon: <Activity className="h-4 w-4" /> },
   { id: 'webhooks', label: 'Webhooks', description: 'Delivery success, failures, payloads', icon: <Globe className="h-4 w-4" /> },
   { id: 'audit', label: 'Audit', description: 'Administrative action history', icon: <Shield className="h-4 w-4" /> },
@@ -133,6 +141,11 @@ function usagePercent(count: number, limit: number) {
   return Math.min(100, (count / Math.max(limit, 1)) * 100)
 }
 
+function daysRemaining(value: string | null) {
+  if (!value) return null
+  return Math.ceil((new Date(value).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+}
+
 export default function AdminPortalPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = use(params)
   const expectedHash = process.env.NEXT_PUBLIC_ADMIN_PORTAL_PATH
@@ -142,7 +155,9 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
     notFound()
   }
 
-  const [token, setToken] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : localStorage.getItem('owner_secret_token')
+  )
   const [adminEmail, setAdminEmail] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
   const [adminTotp, setAdminTotp] = useState('')
@@ -152,6 +167,9 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null)
   const [clients, setClients] = useState<ClientStats[]>([])
   const [recentTx, setRecentTx] = useState<RecentTx[]>([])
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [planDrafts, setPlanDrafts] = useState<Record<string, { priceEgp: string; maxTransactions: string }>>({})
+  const [planSaving, setPlanSaving] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
   // Client creation modal state
@@ -197,31 +215,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [webhookLoading, setWebhookLoading] = useState(false)
   const [auditLoading, setAuditLoading] = useState(false)
   const [selectedLogDetail, setSelectedLogDetail] = useState<WebhookLog | null>(null)
-
-  useEffect(() => {
-    const saved = localStorage.getItem('owner_secret_token')
-    if (saved) {
-      setToken(saved)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (token) {
-      loadData()
-    }
-  }, [token])
-
-  useEffect(() => {
-    if (token) {
-      if (activeTab === 'transactions') {
-        loadTransactions()
-      } else if (activeTab === 'webhooks') {
-        loadWebhookLogs()
-      } else if (activeTab === 'audit') {
-        loadAuditLogs()
-      }
-    }
-  }, [activeTab, token])
+  const [subscriptionUpdatingId, setSubscriptionUpdatingId] = useState<string | null>(null)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -258,15 +252,17 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
     try {
       const headers = { Authorization: `Bearer ${token}` }
       
-      const [statsRes, clientsRes, settingsRes] = await Promise.all([
+      const [statsRes, clientsRes, settingsRes, plansRes] = await Promise.all([
         fetch('/api/admin/dashboard', { headers }),
         fetch('/api/admin/clients', { headers }),
         fetch('/api/settings', { headers }),
+        fetch('/api/admin/plans', { headers }),
       ])
-      const [statsData, clientsData, settingsData] = await Promise.all([
+      const [statsData, clientsData, settingsData, plansData] = await Promise.all([
         statsRes.json(),
         clientsRes.json(),
         settingsRes.json(),
+        plansRes.json(),
       ])
 
       if (statsData.ok && clientsData.ok) {
@@ -282,6 +278,15 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
       if (settingsData && settingsData.ok) {
         setDstMode(settingsData.dstMode)
         setCurrentEgyptTime(settingsData.currentEgyptTime)
+      }
+      if (plansData && plansData.ok) {
+        setPlans(plansData.plans)
+        setPlanDrafts(Object.fromEntries(
+          plansData.plans.map((plan: Plan) => [
+            plan.name,
+            { priceEgp: String(plan.priceEgp), maxTransactions: String(plan.maxTransactions) },
+          ])
+        ))
       }
     } catch (err) {
       console.error(err)
@@ -527,6 +532,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   }
 
   const handleUpdateSubscription = async (id: string, plan: string, isTrial: boolean, addDays: number) => {
+    setSubscriptionUpdatingId(id)
     try {
       const client = clients.find(c => c.id === id)
       if (!client) return
@@ -556,11 +562,47 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
         }),
       })
       if (res.ok) {
-        alert(`Subscription updated successfully!`)
         loadData()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Failed to update subscription.')
       }
     } catch (err) {
       console.error(err)
+      alert('Network error while updating subscription.')
+    } finally {
+      setSubscriptionUpdatingId(null)
+    }
+  }
+
+  const handleUpdatePlan = async (planName: string) => {
+    const draft = planDrafts[planName]
+    if (!draft) return
+    setPlanSaving(planName)
+    try {
+      const res = await fetch('/api/admin/plans', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: planName,
+          priceEgp: Number(draft.priceEgp),
+          maxTransactions: Number(draft.maxTransactions),
+        }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        loadData()
+      } else {
+        alert(data.error || 'Failed to update plan.')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Network error while updating plan.')
+    } finally {
+      setPlanSaving(null)
     }
   }
 
@@ -569,6 +611,24 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
     setCopiedText(label)
     setTimeout(() => setCopiedText(null), 2000)
   }
+
+  useEffect(() => {
+    if (token) {
+      loadData()
+    }
+  }, [token])
+
+  useEffect(() => {
+    if (token) {
+      if (activeTab === 'transactions') {
+        loadTransactions()
+      } else if (activeTab === 'webhooks') {
+        loadWebhookLogs()
+      } else if (activeTab === 'audit') {
+        loadAuditLogs()
+      }
+    }
+  }, [activeTab, token])
 
   const pendingApprovals = clients.filter((c) => c.approvalStatus === 'PENDING')
   const activeMerchants = clients.filter((c) => c.approvalStatus === 'APPROVED')
@@ -1038,6 +1098,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleUpdateSubscription(c.id, 'FREE_TRIAL', true, 1)}
+                                  disabled={subscriptionUpdatingId === c.id}
                                   className="h-6 rounded text-[10px] bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500 hover:text-amber-950 px-2"
                                 >
                                   +1 Day Trial
@@ -1046,6 +1107,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleUpdateSubscription(c.id, 'PRO', false, 30)}
+                                  disabled={subscriptionUpdatingId === c.id}
                                   className="h-6 rounded text-[10px] bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30 hover:bg-fuchsia-500 hover:text-white px-2"
                                 >
                                   +30 Days Pro
@@ -1054,6 +1116,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleUpdateSubscription(c.id, 'EXPIRED', false, -9999)}
+                                  disabled={subscriptionUpdatingId === c.id}
                                   className="h-6 rounded text-[10px] bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500 hover:text-white px-2"
                                 >
                                   End Sub
@@ -1108,6 +1171,174 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                     </div>
                     ))
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Billing */}
+            {activeTab === 'billing' && (
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-base font-bold text-white">Subscription operations</h2>
+                      <p className="mt-1 text-xs leading-6 text-neutral-500">
+                        Control gateway pricing, monthly transaction limits, and merchant subscription state from one place.
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-neutral-950 px-4 py-3 text-right">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">Recurring plans</div>
+                      <div className="mt-1 text-lg font-black text-white">{plans.filter((plan) => plan.name !== 'FREE_TRIAL').length}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  {plans.filter((plan) => plan.name !== 'FREE_TRIAL').map((plan) => {
+                    const draft = planDrafts[plan.name] || { priceEgp: String(plan.priceEgp), maxTransactions: String(plan.maxTransactions) }
+                    return (
+                      <div key={plan.id} className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-lg font-black text-white">{plan.name}</h3>
+                            <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold text-violet-300">
+                              Public plan
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm text-neutral-500">
+                            Merchants activate this plan after the exact subscription payment is confirmed.
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] font-bold uppercase text-neutral-500">Monthly price</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={draft.priceEgp}
+                              onChange={(e) => setPlanDrafts((prev) => ({
+                                ...prev,
+                                [plan.name]: { ...draft, priceEgp: e.target.value },
+                              }))}
+                              className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px] font-bold uppercase text-neutral-500">Tx limit</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={draft.maxTransactions}
+                              onChange={(e) => setPlanDrafts((prev) => ({
+                                ...prev,
+                                [plan.name]: { ...draft, maxTransactions: e.target.value },
+                              }))}
+                              className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white"
+                            />
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={() => handleUpdatePlan(plan.name)}
+                          disabled={planSaving === plan.name}
+                          className="w-full rounded-xl bg-violet-600 text-white hover:bg-violet-700"
+                        >
+                          {planSaving === plan.name ? 'Saving plan…' : 'Save pricing and limit'}
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="rounded-2xl border border-neutral-900 bg-neutral-900/20 overflow-hidden">
+                  <div className="border-b border-neutral-900 bg-neutral-950/40 px-4 py-3">
+                    <h3 className="text-sm font-bold text-white">Merchant subscription health</h3>
+                    <p className="mt-1 text-xs text-neutral-500">Renew, upgrade, expire, and monitor quota usage.</p>
+                  </div>
+                  <div className="divide-y divide-neutral-900">
+                    {activeMerchants.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-neutral-600">No approved merchants yet.</div>
+                    ) : activeMerchants.map((merchant) => {
+                      const remaining = daysRemaining(merchant.subscriptionEndsAt)
+                      const expired = remaining !== null && remaining <= 0
+                      const nearLimit = merchant.txLimit > 0 && merchant.txCount >= merchant.txLimit * 0.8
+                      return (
+                        <div key={merchant.id} className="grid gap-4 p-4 lg:grid-cols-[1.3fr_1fr_auto] lg:items-center">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="truncate text-sm font-bold text-white">{merchant.businessName}</h4>
+                              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                                expired
+                                  ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                                  : merchant.isFreeTrial
+                                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                                  : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                              }`}>
+                                {expired ? 'Expired' : merchant.isFreeTrial ? 'Trial' : 'Active'}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-neutral-500">
+                              {merchant.email} · {merchant.subscriptionPlan.replaceAll('_', ' ')}
+                              {remaining !== null && ` · ${remaining > 0 ? `${remaining} days remaining` : 'expired'}`}
+                            </p>
+                          </div>
+
+                          <div>
+                            <div className="flex justify-between text-[10px] text-neutral-500">
+                              <span>Quota usage</span>
+                              <span>{merchant.txCount.toLocaleString()} / {merchant.txLimit.toLocaleString()}</span>
+                            </div>
+                            <div className="mt-1.5 h-2 overflow-hidden rounded-full border border-neutral-800 bg-neutral-950">
+                              <div
+                                className={`h-full rounded-full ${expired ? 'bg-red-500' : nearLimit ? 'bg-amber-500' : 'bg-gradient-to-r from-violet-600 to-indigo-500'}`}
+                                style={{ width: `${usagePercent(merchant.txCount, merchant.txLimit)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={subscriptionUpdatingId === merchant.id}
+                              onClick={() => handleUpdateSubscription(merchant.id, 'BASIC', false, 30)}
+                              className="h-8 rounded-lg border-neutral-800 bg-neutral-950 text-xs text-neutral-300 hover:bg-neutral-900"
+                            >
+                              BASIC +30d
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={subscriptionUpdatingId === merchant.id}
+                              onClick={() => handleUpdateSubscription(merchant.id, 'PRO', false, 30)}
+                              className="h-8 rounded-lg border-fuchsia-500/30 bg-fuchsia-500/10 text-xs text-fuchsia-300 hover:bg-fuchsia-500 hover:text-white"
+                            >
+                              PRO +30d
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={subscriptionUpdatingId === merchant.id}
+                              onClick={() => handleUpdateSubscription(merchant.id, 'ENTERPRISE', false, 30)}
+                              className="h-8 rounded-lg border-cyan-500/30 bg-cyan-500/10 text-xs text-cyan-300 hover:bg-cyan-500 hover:text-white"
+                            >
+                              ENT +30d
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={subscriptionUpdatingId === merchant.id}
+                              onClick={() => handleUpdateSubscription(merchant.id, 'EXPIRED', false, -1)}
+                              className="h-8 rounded-lg text-xs text-red-400 hover:bg-red-500/10"
+                            >
+                              Expire
+                            </Button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )}
