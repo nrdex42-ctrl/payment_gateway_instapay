@@ -27,8 +27,9 @@
                 android:id="@+id/img_logo"
                 android:layout_width="88dp"
                 android:layout_height="88dp"
-                android:src="@drawable/ic_brand_logo"
+                android:src="@mipmap/ic_launcher"
                 android:contentDescription="@string/app_name"
+                android:scaleType="fitCenter"
                 android:layout_marginBottom="8dp" />
 
             <!-- Title -->
@@ -39,6 +40,8 @@
                 android:textColor="@color/text_primary"
                 android:textSize="22sp"
                 android:textStyle="bold"
+                android:textAlignment="center"
+                android:maxLines="2"
                 android:layout_marginBottom="6dp" />
 
             <!-- Subtitle -->
@@ -49,6 +52,7 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 android:gravity="center"
+                android:textAlignment="center"
                 android:layout_marginBottom="28dp"
                 android:paddingHorizontal="16dp" />
 
