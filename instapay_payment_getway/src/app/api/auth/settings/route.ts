@@ -15,9 +15,24 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { webhookUrl, instapayPaymentUrl, checkoutTtlMin, regenerateWebhookSecret, regenerateApiKey, regenerateDetectToken } = body || {}
+    const { instapayHandle, webhookUrl, instapayPaymentUrl, checkoutTtlMin, regenerateWebhookSecret, regenerateApiKey, regenerateDetectToken } = body || {}
 
     const data: Record<string, any> = {}
+
+    if (instapayHandle !== undefined) {
+      const rawHandle = String(instapayHandle || '').trim().toLowerCase().replace(/^@/, '')
+      if (!rawHandle) {
+        return NextResponse.json({ ok: false, error: 'InstaPay receiving handle is required.' }, { status: 400 })
+      }
+      const localPart = rawHandle.split('@')[0]
+      if (!/^[a-z0-9._-]{3,64}$/.test(localPart)) {
+        return NextResponse.json(
+          { ok: false, error: 'InstaPay handle must be 3-64 characters using letters, numbers, dots, underscores, or dashes.' },
+          { status: 400 }
+        )
+      }
+      data.instapayHandle = `${localPart}@instapay`
+    }
 
     if (webhookUrl !== undefined) {
       const trimmedWebhookUrl = webhookUrl ? String(webhookUrl).trim() : ''
@@ -75,6 +90,7 @@ export async function PATCH(request: NextRequest) {
       message: 'Integration settings updated successfully.',
       client: {
         id: updated.id,
+        slug: updated.slug,
         businessName: updated.businessName,
         instapayHandle: updated.instapayHandle,
         instapayPaymentUrl: updated.instapayPaymentUrl,

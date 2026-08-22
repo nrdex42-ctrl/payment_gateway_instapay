@@ -115,6 +115,7 @@ export default function MerchantDashboardPage() {
   const [selectedSnippetTab, setSelectedSnippetTab] = useState<keyof Snippets>('curl')
 
   // Integration settings form state
+  const [instapayHandleInput, setInstapayHandleInput] = useState('')
   const [webhookUrlInput, setWebhookUrlInput] = useState('')
   const [instapayPaymentUrlInput, setInstapayPaymentUrlInput] = useState('')
   const [checkoutTtlInput, setCheckoutTtlInput] = useState('10')
@@ -146,6 +147,7 @@ export default function MerchantDashboardPage() {
         const data = await res.json()
         if (data.ok) {
           setClient(data.client)
+          setInstapayHandleInput(data.client.instapayHandle || '')
           setWebhookUrlInput(data.client.webhookUrl || '')
           setInstapayPaymentUrlInput(data.client.instapayPaymentUrl || '')
           setCheckoutTtlInput(String(data.client.checkoutTtlMin || 10))
@@ -350,6 +352,7 @@ export default function MerchantDashboardPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          instapayHandle: instapayHandleInput || null,
           webhookUrl: webhookUrlInput || null,
           instapayPaymentUrl: instapayPaymentUrlInput || null,
           checkoutTtlMin: parseInt(checkoutTtlInput) || 10,
@@ -421,6 +424,31 @@ export default function MerchantDashboardPage() {
 
   if (!client) return null
 
+  const setupItems = [
+    {
+      label: 'Receiving InstaPay handle',
+      done: Boolean(client.instapayHandle && !client.instapayHandle.startsWith(`${client.slug}@`)),
+      hint: client.instapayHandle || 'Not configured',
+    },
+    {
+      label: 'Static InstaPay payment URL',
+      done: Boolean(client.instapayPaymentUrl),
+      hint: client.instapayPaymentUrl ? 'Configured' : 'Required for checkout payment links',
+    },
+    {
+      label: 'Webhook endpoint',
+      done: Boolean(client.webhookUrl),
+      hint: client.webhookUrl ? 'Configured' : 'Add your HTTPS confirmation endpoint',
+    },
+    {
+      label: 'Webhook signing secret',
+      done: Boolean(client.webhookSecret),
+      hint: client.webhookSecret ? 'Generated' : 'Generate before production fulfillment',
+    },
+  ]
+  const completedSetupItems = setupItems.filter((item) => item.done).length
+  const setupComplete = completedSetupItems === setupItems.length
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
       {/* Header */}
@@ -467,6 +495,56 @@ export default function MerchantDashboardPage() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 space-y-6">
+        {/* Merchant setup checklist */}
+        <div className={`rounded-2xl border p-5 ${
+          setupComplete
+            ? 'border-emerald-500/20 bg-emerald-500/5'
+            : 'border-indigo-500/20 bg-indigo-500/5'
+        }`}>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className={`h-5 w-5 ${setupComplete ? 'text-emerald-400' : 'text-indigo-300'}`} />
+                <h2 className="text-base font-bold text-white">
+                  {setupComplete ? 'Gateway setup complete' : 'Complete your gateway setup'}
+                </h2>
+              </div>
+              <p className="max-w-2xl text-xs leading-6 text-neutral-400">
+                Signup only creates your merchant account. Configure the operational details here before sending production checkout traffic.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-neutral-950/70 px-4 py-3 text-sm font-bold text-white">
+              {completedSetupItems} / {setupItems.length} completed
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {setupItems.map((item) => (
+              <div key={item.label} className="rounded-xl border border-neutral-900 bg-neutral-950/60 p-3">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${item.done ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  <span className="text-xs font-bold text-neutral-200">{item.label}</span>
+                </div>
+                <p className="mt-2 truncate text-[10px] text-neutral-500">{item.hint}</p>
+              </div>
+            ))}
+          </div>
+
+          {!setupComplete && (
+            <div className="mt-4 flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setActiveTab('integration')}
+                className="rounded-xl bg-indigo-500 text-white hover:bg-indigo-400"
+              >
+                Open integration setup
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Subscription Usage Banner */}
         <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-1.5 flex-1 w-full">
@@ -689,6 +767,23 @@ export default function MerchantDashboardPage() {
                   </div>
 
                   <form onSubmit={handleUpdateSettings} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="instapayHandle" className="text-xs text-neutral-400">
+                        Receiving InstaPay Handle
+                      </Label>
+                      <Input
+                        id="instapayHandle"
+                        type="text"
+                        placeholder="youraccount@instapay"
+                        value={instapayHandleInput}
+                        onChange={(e) => setInstapayHandleInput(e.target.value)}
+                        className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
+                      />
+                      <p className="text-[10px] text-neutral-500">
+                        This is the InstaPay account that receives customer transfers. You can enter either <span className="font-mono">youraccount</span> or <span className="font-mono">youraccount@instapay</span>.
+                      </p>
+                    </div>
+
                     <div className="space-y-1.5">
                       <Label htmlFor="instapayPaymentUrl" className="text-xs text-neutral-400">
                         Static InstaPay Payment URL

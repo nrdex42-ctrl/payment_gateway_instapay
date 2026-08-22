@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = await request.json()
-    const { businessName, instapayHandle, email, password } = body || {}
+    const { businessName, email, password } = body || {}
 
-    if (!businessName?.trim() || !instapayHandle?.trim() || !email?.trim() || !password?.trim()) {
+    if (!businessName?.trim() || !email?.trim() || !password?.trim()) {
       return NextResponse.json({ ok: false, error: 'All fields are required.' }, { status: 400 })
     }
 
@@ -32,12 +32,6 @@ export async function POST(request: NextRequest) {
         { ok: false, error: 'Password must be at least 8 characters long and contain both letters and numbers.' },
         { status: 400 }
       )
-    }
-
-    // Normalize handle
-    let handle = instapayHandle.trim().toLowerCase().replace(/^@/, '')
-    if (!handle.endsWith('@instapay')) {
-      handle = `${handle.split('@')[0]}@instapay`
     }
 
     // Check if email already registered
@@ -60,6 +54,8 @@ export async function POST(request: NextRequest) {
       count++
     }
 
+    const provisionalHandle = `${slug}@instapay`
+
     const passwordHash = hashPassword(password)
 
     // Fetch FREE_TRIAL plan configurations
@@ -72,7 +68,7 @@ export async function POST(request: NextRequest) {
       data: {
         businessName: businessName.trim(),
         slug,
-        instapayHandle: handle,
+        instapayHandle: provisionalHandle,
         email: email.trim().toLowerCase(),
         passwordHash,
         approvalStatus: 'PENDING',

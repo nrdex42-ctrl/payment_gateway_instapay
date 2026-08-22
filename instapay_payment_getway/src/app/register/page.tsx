@@ -1,45 +1,66 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Shield, ArrowRight, Loader2, Sparkles, CheckCircle2, UserPlus, AlertCircle, Check } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import {
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2,
+  LockKeyhole,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+  UserPlus,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
+const onboardingSteps = [
+  'Create your merchant account',
+  'Admin reviews and approves your business',
+  'Complete payment link and webhook setup in the dashboard',
+  'Start creating checkout sessions from your backend',
+]
+
+const trustPoints = [
+  'No payment credentials are collected during signup',
+  'API keys are issued after account approval',
+  'Webhook and InstaPay receiving details are configured inside the dashboard',
+]
+
+function passwordScore(password: string) {
+  let score = 0
+  if (password.length >= 8) score++
+  if (/[a-z]/i.test(password)) score++
+  if (/[0-9]/.test(password)) score++
+  if (/[^a-zA-Z0-9]/.test(password)) score++
+  return score
+}
+
 export default function RegisterPage() {
   const [businessName, setBusinessName] = useState('')
-  const [instapayHandle, setInstapayHandle] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-
+  const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [plans, setPlans] = useState<any[]>([])
 
-  useEffect(() => {
-    async function loadPlans() {
-      try {
-        const res = await fetch('/api/plans')
-        if (res.ok) {
-          const data = await res.json()
-          if (data.ok) setPlans(data.plans)
-        }
-      } catch {}
-    }
-    loadPlans()
-  }, [])
+  const score = useMemo(() => passwordScore(password), [password])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage(null)
     setSubmitting(true)
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName, instapayHandle, email, password }),
+        body: JSON.stringify({ businessName, email, password }),
       })
       const data = await res.json()
       if (data.ok) {
@@ -54,222 +75,227 @@ export default function RegisterPage() {
     }
   }
 
-  // Live preview of the normalized handle
-  const normalizedPreview = (() => {
-    const raw = instapayHandle.trim()
-    if (!raw) return ''
-    const lower = raw.toLowerCase().replace(/^@/, '')
-    const local = lower.split('@')[0]
-    return local ? `${local}@instapay` : ''
-  })()
-
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-indigo-950 p-4 font-sans text-neutral-100">
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="w-full max-w-md bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-8 shadow-2xl text-center space-y-6"
-        >
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 mx-auto border border-emerald-500/20">
-            <CheckCircle2 className="h-8 w-8" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold text-white tracking-tight">Registration Submitted!</h2>
-            <p className="text-sm text-neutral-400 leading-relaxed">
-              Your merchant account is now **pending admin review**. The platform owner will check your details. Once approved, you will receive full access to your keys and dashboard.
+      <div className="min-h-screen bg-[#070a12] text-white">
+        <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 py-12 sm:px-6">
+          <div className="w-full max-w-xl rounded-[2rem] border border-white/10 bg-white/[0.06] p-8 text-center shadow-2xl shadow-black/30 backdrop-blur">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-400/20">
+              <CheckCircle2 className="h-9 w-9" />
+            </div>
+            <h1 className="mt-6 text-2xl font-black tracking-tight">Application submitted</h1>
+            <p className="mt-3 text-sm leading-7 text-slate-400">
+              Your merchant account is pending review. After approval, sign in to the dashboard to
+              add your InstaPay receiving handle, static payment link, webhook endpoint, and API integration settings.
             </p>
+
+            <div className="mt-7 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-left">
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">What happens next</div>
+              <div className="mt-4 space-y-3">
+                {onboardingSteps.slice(1).map((step, index) => (
+                  <div key={step} className="flex gap-3 text-sm text-slate-300">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-xs font-bold text-indigo-200">
+                      {index + 1}
+                    </span>
+                    <span>{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Button asChild className="mt-7 h-11 w-full rounded-2xl bg-white text-slate-950 hover:bg-slate-200">
+              <a href="/login">Go to sign in</a>
+            </Button>
           </div>
-          <Button
-            asChild
-            className="w-full h-11 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 font-semibold text-white shadow-lg shadow-violet-600/20 hover:from-violet-700 hover:to-indigo-700"
-          >
-            <a href="/login">Go to Login</a>
-          </Button>
-        </motion.div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-indigo-950 p-6 md:p-12 gap-8 font-sans text-neutral-100">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-md bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl space-y-6"
-      >
-        <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-indigo-400 shadow-md">
-            <UserPlus className="h-6 w-6 text-white" />
-          </div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Create Merchant Account</h1>
-          <p className="text-sm text-neutral-400">
-            Sign up to integrate the InstaPay gateway on your business projects.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="businessName" className="text-xs text-neutral-300">
-              Business / Developer Name
-            </Label>
-            <Input
-              id="businessName"
-              type="text"
-              placeholder="e.g. Ahmed Electronics"
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
-              required
-              disabled={submitting}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="instapayHandle" className="text-xs text-neutral-300">
-              InstaPay Handle (For receiving funds)
-            </Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 text-xs">
-                @
-              </span>
-              <Input
-                id="instapayHandle"
-                type="text"
-                placeholder="e.g. storename"
-                value={instapayHandle}
-                onChange={(e) => setInstapayHandle(e.target.value)}
-                className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 pl-7 focus-visible:ring-violet-500"
-                required
-                disabled={submitting}
-              />
+    <div className="min-h-screen bg-[#070a12] text-white">
+      <header className="border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <a href="/" className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400">
+              <ShieldCheck className="h-5 w-5" />
             </div>
-            {normalizedPreview && (
-              <p className="text-[10px] text-neutral-500 mt-1">
-                Your checkout deep links will direct payments to:{' '}
-                <span className="font-semibold text-neutral-400">{normalizedPreview}</span>
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs text-neutral-300">
-              Email Address
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="e.g. info@business.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
-              required
-              disabled={submitting}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-xs text-neutral-300">
-              Password (Min 8 chars, letters & numbers)
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
-              required
-              disabled={submitting}
-            />
-          </div>
-
-          {errorMessage && (
-            <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-3 text-xs text-red-400 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{errorMessage}</span>
+            <div>
+              <div className="text-sm font-black tracking-tight">InstaPay Gateway</div>
+              <div className="text-xs text-slate-400">Merchant onboarding</div>
             </div>
-          )}
+          </a>
 
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="h-11 w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-50"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Registering Account…
-              </>
-            ) : (
-              <>
-                Register Account
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
+          <Button asChild variant="ghost" size="sm" className="text-slate-200 hover:bg-white/10 hover:text-white">
+            <a href="/login">Sign in</a>
           </Button>
-        </form>
-
-        <div className="text-center pt-2 border-t border-neutral-800/60">
-          <p className="text-xs text-neutral-500">
-            Already have an account?{' '}
-            <a href="/login" className="text-violet-400 hover:underline">
-              Log In
-            </a>
-          </p>
         </div>
-      </motion.div>
+      </header>
 
-      {/* Pricing list column next to the form */}
-      {plans.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="w-full max-w-sm bg-neutral-900/30 border border-neutral-800/80 rounded-3xl p-6 shadow-xl space-y-5"
-        >
-          <div className="space-y-1">
-            <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-1.5 font-sans">
-              <Sparkles className="h-4 w-4 text-violet-400" />
-              Subscription Tiers
-            </h3>
-            <p className="text-xs text-neutral-400 leading-normal">
-              Each plan grants a quota of confirmed transactions to route.
-            </p>
+      <main className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_0.9fr] lg:px-8 lg:py-20">
+        <section className="flex flex-col justify-center">
+          <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-200">
+            <Sparkles className="h-3.5 w-3.5" />
+            Start with only the required account details
           </div>
 
-          <div className="space-y-3">
-            {plans.map((p) => (
-              <div
-                key={p.id}
-                className={`rounded-xl border p-3.5 space-y-1.5 transition-all ${
-                  p.name === 'PRO'
-                    ? 'border-violet-500 bg-violet-950/15 shadow-sm'
-                    : 'border-neutral-800/60 bg-neutral-950/20'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-neutral-300 uppercase tracking-wider">
-                    {p.name.replace('_', ' ')}
-                  </span>
-                  <span className="text-xs font-bold text-white">
-                    {p.priceEgp} EGP
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-neutral-400">
-                  <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                  <span>{p.maxTransactions.toLocaleString()} confirmed txs</span>
-                </div>
+          <h1 className="max-w-3xl text-4xl font-black tracking-tight sm:text-6xl">
+            Create your merchant account.
+          </h1>
+          <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300">
+            Apply for access to the InstaPay payment gateway. After approval, the dashboard guides you
+            through payment receiving details, webhook setup, API keys, and billing.
+          </p>
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            {trustPoints.map((point) => (
+              <div key={point} className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-slate-300">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                <span>{point}</span>
               </div>
             ))}
           </div>
 
-          <div className="rounded-xl bg-violet-500/5 border border-violet-500/10 p-3.5 text-[10px] text-neutral-400 leading-normal">
-            <strong>Free Trial:</strong> Every new merchant registers with a free trial of 5 transactions by default. No payment required to start.
+          <div className="mt-8 rounded-3xl border border-white/10 bg-slate-950/60 p-5">
+            <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Onboarding flow</div>
+            <div className="mt-5 grid gap-3">
+              {onboardingSteps.map((step, index) => (
+                <div key={step} className="flex items-center gap-3 text-sm text-slate-300">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-xs font-black text-white">
+                    {index + 1}
+                  </span>
+                  <span>{step}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </motion.div>
-      )}
+        </section>
+
+        <section className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-4 shadow-2xl shadow-black/30 backdrop-blur">
+          <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/80 p-6 sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-bold text-cyan-200">
+                  <UserPlus className="h-4 w-4" />
+                  Merchant application
+                </div>
+                <h2 className="mt-2 text-2xl font-black tracking-tight">Sign up</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  Operational details are completed after login.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-indigo-500/10 p-3 text-indigo-200 ring-1 ring-indigo-400/20">
+                <LockKeyhole className="h-5 w-5" />
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="businessName" className="text-xs font-semibold text-slate-300">
+                  Business name
+                </Label>
+                <div className="relative">
+                  <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <Input
+                    id="businessName"
+                    type="text"
+                    placeholder="Example Store"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="h-12 rounded-2xl border-white/10 bg-white/[0.04] pl-10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500"
+                    required
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-xs font-semibold text-slate-300">
+                  Work email
+                </Label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="owner@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-12 rounded-2xl border-white/10 bg-white/[0.04] pl-10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500"
+                    required
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-xs font-semibold text-slate-300">
+                  Password
+                </Label>
+                <div className="relative">
+                  <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="At least 8 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 rounded-2xl border-white/10 bg-white/[0.04] px-10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500"
+                    required
+                    disabled={submitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {[1, 2, 3, 4].map((level) => (
+                    <div
+                      key={level}
+                      className={`h-1 rounded-full ${score >= level ? 'bg-emerald-400' : 'bg-white/10'}`}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500">Use at least 8 characters with letters and numbers.</p>
+              </div>
+
+              {errorMessage && (
+                <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
+                  {errorMessage}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="h-12 w-full rounded-2xl bg-indigo-500 font-bold text-white hover:bg-indigo-400 disabled:opacity-60"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting application
+                  </>
+                ) : (
+                  <>
+                    Create account
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <p className="mt-6 text-center text-xs leading-6 text-slate-500">
+              By creating an account, you confirm this is a business payment integration request.
+              Already approved? <a href="/login" className="font-semibold text-indigo-300 hover:text-indigo-200">Sign in</a>.
+            </p>
+          </div>
+        </section>
+      </main>
     </div>
   )
 }
