@@ -1,24 +1,54 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { Shield, ArrowRight, Loader2, LogIn, AlertCircle } from 'lucide-react'
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Loader2,
+  LockKeyhole,
+  Mail,
+  ShieldCheck,
+  Terminal,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
+function passwordScore(password: string) {
+  let score = 0
+  if (password.length >= 8) score++
+  if (/[a-z]/i.test(password)) score++
+  if (/[0-9]/.test(password)) score++
+  if (/[^a-zA-Z0-9]/.test(password)) score++
+  return score
+}
+
 export default function LoginPage() {
   const router = useRouter()
+  const [mode, setMode] = useState<'login' | 'reset'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-
+  const [newPassword, setNewPassword] = useState('')
+  const [otp, setOtp] = useState('')
+  const [verificationId, setVerificationId] = useState('')
+  const [resetCodeSent, setResetCodeSent] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const score = useMemo(() => passwordScore(newPassword), [newPassword])
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage(null)
+    setSuccessMessage(null)
     setSubmitting(true)
     try {
       const res = await fetch('/api/auth/login', {
@@ -28,7 +58,6 @@ export default function LoginPage() {
       })
       const data = await res.json()
       if (data.ok) {
-        // Logged in successfully, redirect to dashboard
         router.push('/dashboard')
       } else {
         setErrorMessage(data.error || 'Invalid credentials or inactive account.')
@@ -40,92 +69,352 @@ export default function LoginPage() {
     }
   }
 
+  const requestResetCode = async () => {
+    setErrorMessage(null)
+    setSuccessMessage(null)
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/auth/password-reset/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setVerificationId(data.verificationId || '')
+        setResetCodeSent(Boolean(data.verificationId))
+        setSuccessMessage(data.message || 'If the account exists, a reset code has been sent.')
+      } else {
+        setErrorMessage(data.error || 'Failed to send reset code.')
+      }
+    } catch {
+      setErrorMessage('Connection error. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const confirmPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorMessage(null)
+    setSuccessMessage(null)
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/auth/password-reset/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, verificationId, otp, password: newPassword }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setSuccessMessage('Password updated. You can now sign in.')
+        setPassword('')
+        setNewPassword('')
+        setOtp('')
+        setVerificationId('')
+        setResetCodeSent(false)
+        setMode('login')
+      } else {
+        setErrorMessage(data.error || 'Failed to reset password.')
+      }
+    } catch {
+      setErrorMessage('Connection error. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const switchMode = (nextMode: 'login' | 'reset') => {
+    setMode(nextMode)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+    setOtp('')
+    setVerificationId('')
+    setResetCodeSent(false)
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-indigo-950 p-4 font-sans text-neutral-100">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-md bg-neutral-900/60 backdrop-blur-xl border border-neutral-800 rounded-3xl p-6 shadow-2xl space-y-6"
-      >
-        <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-indigo-400 shadow-md">
-            <LogIn className="h-5 w-5 text-white" />
-          </div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Merchant Dashboard Login</h1>
-          <p className="text-sm text-neutral-400">
-            Sign in to check stats, retrieve API keys, and configure webhooks.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs text-neutral-300">
-              Email Address
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="e.g. info@business.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
-              required
-              disabled={submitting}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-xs text-neutral-300">
-              Password
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
-              required
-              disabled={submitting}
-            />
-          </div>
-
-          {errorMessage && (
-            <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-3 text-xs text-red-400 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{errorMessage}</span>
+    <div className="min-h-screen bg-[#070a12] text-white">
+      <header className="border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <a href="/" className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400">
+              <ShieldCheck className="h-5 w-5" />
             </div>
-          )}
+            <div>
+              <div className="text-sm font-black tracking-tight">InstaPay Gateway</div>
+              <div className="text-xs text-slate-400">Merchant console</div>
+            </div>
+          </a>
 
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="h-11 w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-50"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing In…
-              </>
-            ) : (
-              <>
-                Login to Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
+          <Button asChild variant="ghost" size="sm" className="text-slate-200 hover:bg-white/10 hover:text-white">
+            <a href="/register">Create account</a>
           </Button>
-        </form>
-
-        <div className="text-center pt-2 border-t border-neutral-800/60">
-          <p className="text-xs text-neutral-500">
-            Don&apos;t have a merchant account?{' '}
-            <a href="/register" className="text-violet-400 hover:underline">
-              Sign Up
-            </a>
-          </p>
         </div>
-      </motion.div>
+      </header>
+
+      <main className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_0.9fr] lg:px-8 lg:py-20">
+        <section className="flex flex-col justify-center">
+          <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+            <LockKeyhole className="h-3.5 w-3.5" />
+            Secure merchant access
+          </div>
+
+          <h1 className="max-w-3xl text-4xl font-black tracking-tight sm:text-6xl">
+            Sign in to manage your payment gateway.
+          </h1>
+          <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300">
+            Access transactions, webhook delivery, API credentials, subscription billing, and receiving account configuration from one dashboard.
+          </p>
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            {[
+              { icon: <BarChart3 className="h-4 w-4" />, text: 'Payment analytics' },
+              { icon: <Terminal className="h-4 w-4" />, text: 'API credentials' },
+              { icon: <KeyRound className="h-4 w-4" />, text: 'Webhook security' },
+            ].map((item) => (
+              <div key={item.text} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                  <span className="text-cyan-200">{item.icon}</span>
+                  {item.text}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 rounded-3xl border border-white/10 bg-slate-950/60 p-5">
+            <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Account security</div>
+            <div className="mt-4 space-y-3 text-sm leading-6 text-slate-400">
+              <div className="flex gap-2.5">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                Password reset uses a time-limited email verification code.
+              </div>
+              <div className="flex gap-2.5">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                Access is only granted after admin approval and account activation.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-4 shadow-2xl shadow-black/30 backdrop-blur">
+          <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/80 p-6 sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-bold text-cyan-200">
+                  <ShieldCheck className="h-4 w-4" />
+                  {mode === 'login' ? 'Merchant login' : 'Password recovery'}
+                </div>
+                <h2 className="mt-2 text-2xl font-black tracking-tight">
+                  {mode === 'login' ? 'Welcome back' : 'Reset password'}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  {mode === 'login'
+                    ? 'Use your approved merchant credentials.'
+                    : 'Receive a 6-digit code by email and set a new password.'}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-indigo-500/10 p-3 text-indigo-200 ring-1 ring-indigo-400/20">
+                <LockKeyhole className="h-5 w-5" />
+              </div>
+            </div>
+
+            {mode === 'login' ? (
+              <form onSubmit={handleLogin} className="mt-7 space-y-5">
+                <EmailField email={email} setEmail={setEmail} disabled={submitting} />
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="password" className="text-xs font-semibold text-slate-300">Password</Label>
+                    <button
+                      type="button"
+                      onClick={() => switchMode('reset')}
+                      className="text-xs font-semibold text-indigo-300 hover:text-indigo-200"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <PasswordInput
+                    id="password"
+                    value={password}
+                    onChange={setPassword}
+                    show={showPassword}
+                    setShow={setShowPassword}
+                    disabled={submitting}
+                    placeholder="Your password"
+                  />
+                </div>
+
+                <StatusMessages error={errorMessage} success={successMessage} />
+
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="h-12 w-full rounded-2xl bg-indigo-500 font-bold text-white hover:bg-indigo-400 disabled:opacity-60"
+                >
+                  {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in</> : <>Sign in<ArrowRight className="ml-2 h-4 w-4" /></>}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={confirmPasswordReset} className="mt-7 space-y-5">
+                <EmailField email={email} setEmail={setEmail} disabled={submitting || resetCodeSent} />
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="resetOtp" className="text-xs font-semibold text-slate-300">
+                        Reset code
+                      </Label>
+                      <Input
+                        id="resetOtp"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        placeholder="000000"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-center font-mono text-lg tracking-[0.35em] text-white placeholder:text-slate-700 focus-visible:ring-indigo-500"
+                        required
+                        disabled={submitting || !resetCodeSent}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={requestResetCode}
+                      disabled={submitting || !email}
+                      className="h-12 rounded-2xl border-white/10 bg-white/[0.04] px-5 text-white hover:bg-white/10"
+                    >
+                      {submitting && !resetCodeSent ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending</> : resetCodeSent ? 'Resend code' : 'Send code'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword" className="text-xs font-semibold text-slate-300">New password</Label>
+                  <PasswordInput
+                    id="newPassword"
+                    value={newPassword}
+                    onChange={setNewPassword}
+                    show={showNewPassword}
+                    setShow={setShowNewPassword}
+                    disabled={submitting}
+                    placeholder="At least 8 characters"
+                  />
+                  <div className="grid grid-cols-4 gap-1">
+                    {[1, 2, 3, 4].map((level) => (
+                      <div key={level} className={`h-1 rounded-full ${score >= level ? 'bg-emerald-400' : 'bg-white/10'}`} />
+                    ))}
+                  </div>
+                </div>
+
+                <StatusMessages error={errorMessage} success={successMessage} />
+
+                <Button
+                  type="submit"
+                  disabled={submitting || !resetCodeSent || otp.length !== 6}
+                  className="h-12 w-full rounded-2xl bg-indigo-500 font-bold text-white hover:bg-indigo-400 disabled:opacity-60"
+                >
+                  {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating password</> : 'Update password'}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => switchMode('login')}
+                  className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-200"
+                >
+                  Back to login
+                </button>
+              </form>
+            )}
+
+            <p className="mt-6 text-center text-xs leading-6 text-slate-500">
+              Don&apos;t have an account? <a href="/register" className="font-semibold text-indigo-300 hover:text-indigo-200">Create merchant account</a>.
+            </p>
+          </div>
+        </section>
+      </main>
     </div>
+  )
+}
+
+function EmailField({ email, setEmail, disabled }: { email: string; setEmail: (value: string) => void; disabled: boolean }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="email" className="text-xs font-semibold text-slate-300">Email</Label>
+      <div className="relative">
+        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <Input
+          id="email"
+          type="email"
+          placeholder="owner@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="h-12 rounded-2xl border-white/10 bg-white/[0.04] pl-10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500"
+          required
+          disabled={disabled}
+        />
+      </div>
+    </div>
+  )
+}
+
+function PasswordInput({
+  id,
+  value,
+  onChange,
+  show,
+  setShow,
+  disabled,
+  placeholder,
+}: {
+  id: string
+  value: string
+  onChange: (value: string) => void
+  show: boolean
+  setShow: (value: boolean) => void
+  disabled: boolean
+  placeholder: string
+}) {
+  return (
+    <div className="relative">
+      <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+      <Input
+        id={id}
+        type={show ? 'text' : 'password'}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-12 rounded-2xl border-white/10 bg-white/[0.04] px-10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500"
+        required
+        disabled={disabled}
+      />
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+        aria-label={show ? 'Hide password' : 'Show password'}
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  )
+}
+
+function StatusMessages({ error, success }: { error: string | null; success: string | null }) {
+  return (
+    <>
+      {error && (
+        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm leading-6 text-emerald-200">
+          {success}
+        </div>
+      )}
+    </>
   )
 }
