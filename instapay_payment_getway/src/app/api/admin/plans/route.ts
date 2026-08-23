@@ -60,9 +60,20 @@ export async function PATCH(request: NextRequest) {
     if (priceEgp !== undefined) data.priceEgp = Number(priceEgp)
     if (maxTransactions !== undefined) data.maxTransactions = Number(maxTransactions)
 
-    const updated = await db.plan.update({
-      where: { name },
-      data,
+    const updated = await db.$transaction(async (tx) => {
+      const nextPlan = await tx.plan.update({
+        where: { name },
+        data,
+      })
+
+      if (maxTransactions !== undefined) {
+        await tx.client.updateMany({
+          where: { subscriptionPlan: name },
+          data: { txLimit: Number(maxTransactions) },
+        })
+      }
+
+      return nextPlan
     })
 
     await db.auditLog.create({

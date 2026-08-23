@@ -35,7 +35,21 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (webhookUrl !== undefined) data.webhookUrl = webhookUrl ? String(webhookUrl).trim() : null
     if (checkoutTtlMin !== undefined) data.checkoutTtlMin = Number(checkoutTtlMin)
     if (isActive !== undefined) data.isActive = Boolean(isActive)
-    if (subscriptionPlan !== undefined) data.subscriptionPlan = String(subscriptionPlan).trim()
+    if (subscriptionPlan !== undefined) {
+      const nextPlan = String(subscriptionPlan).trim()
+      data.subscriptionPlan = nextPlan
+
+      if (txLimit === undefined) {
+        const plan = await db.plan.findUnique({
+          where: { name: nextPlan },
+          select: { maxTransactions: true },
+        })
+        if (!plan) {
+          return NextResponse.json({ ok: false, error: `Plan '${nextPlan}' not found.` }, { status: 404 })
+        }
+        data.txLimit = plan.maxTransactions
+      }
+    }
     if (isFreeTrial !== undefined) data.isFreeTrial = Boolean(isFreeTrial)
     if (txLimit !== undefined) data.txLimit = Number(txLimit)
     if (txCount !== undefined) data.txCount = Number(txCount)
