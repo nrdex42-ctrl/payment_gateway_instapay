@@ -121,6 +121,11 @@ function formatEgp(value: number) {
   return new Intl.NumberFormat('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
 }
 
+function formatShortDate(value: string | null) {
+  if (!value) return 'Not set'
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 function maskSecret(value: string | null | undefined) {
   if (!value) return 'Not generated'
   if (value.length <= 12) return '••••••••'
@@ -462,6 +467,38 @@ export default function MerchantDashboardPage() {
 
   if (!client) return null
 
+  const setupItems = [
+    {
+      label: 'Receiving InstaPay handle',
+      done: Boolean(client.instapayHandle && !client.instapayHandle.startsWith(`${client.slug}@`)),
+      hint: client.instapayHandle || 'Not configured',
+    },
+    {
+      label: 'Static InstaPay payment URL',
+      done: Boolean(client.instapayPaymentUrl),
+      hint: client.instapayPaymentUrl ? 'Configured' : 'Required for checkout payment links',
+    },
+    {
+      label: 'Webhook endpoint',
+      done: Boolean(client.webhookUrl),
+      hint: client.webhookUrl ? 'Configured' : 'Add your HTTPS confirmation endpoint',
+    },
+    {
+      label: 'Webhook signing secret',
+      done: Boolean(client.webhookSecret),
+      hint: client.webhookSecret ? 'Generated' : 'Generate before production fulfillment',
+    },
+  ]
+  const completedSetupItems = setupItems.filter((item) => item.done).length
+  const setupComplete = completedSetupItems === setupItems.length
+  const usagePercent = client.txLimit > 0 ? Math.min(100, (client.txCount / client.txLimit) * 100) : 0
+  const quotaState = client.txLimit > 0 && client.txCount >= client.txLimit
+    ? 'limit-reached'
+    : client.txLimit > 0 && client.txCount >= client.txLimit * 0.8
+    ? 'near-limit'
+    : 'healthy'
+  const subscriptionLabel = client.subscriptionPlan.replaceAll('_', ' ')
+
   return (
     <div className="min-h-screen bg-[#070a12] text-neutral-100 flex flex-col font-sans">
       {/* Header */}
@@ -523,8 +560,144 @@ export default function MerchantDashboardPage() {
               </p>
             </div>
 
+            <div className="grid w-full gap-3 sm:grid-cols-3 lg:min-w-[440px] lg:max-w-xl">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Plan</div>
+                <div className="mt-2 text-sm font-black text-white">{subscriptionLabel}</div>
+                <div className="mt-1 text-xs text-slate-500">{client.isFreeTrial ? 'Free trial' : 'Active merchant'}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Setup</div>
+                <div className="mt-2 text-sm font-black text-white">{completedSetupItems}/{setupItems.length} complete</div>
+                <div className={`mt-1 text-xs ${setupComplete ? 'text-emerald-300' : 'text-amber-300'}`}>
+                  {setupComplete ? 'Production ready' : 'Action needed'}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Quota</div>
+                <div className={`mt-2 text-sm font-black ${quotaState === 'limit-reached' ? 'text-red-300' : quotaState === 'near-limit' ? 'text-amber-300' : 'text-emerald-300'}`}>
+                  {quotaState === 'limit-reached' ? 'Limit reached' : quotaState === 'near-limit' ? 'Near limit' : 'Healthy'}
+                </div>
+                <div className="mt-1 text-xs text-slate-500">{client.txCount.toLocaleString()} / {client.txLimit.toLocaleString()}</div>
+              </div>
+            </div>
           </div>
         </section>
+        {/* Merchant setup checklist */}
+        <div className={`rounded-2xl border p-5 ${
+          setupComplete
+            ? 'border-emerald-500/20 bg-emerald-500/5'
+            : 'border-indigo-500/20 bg-indigo-500/5'
+        }`}>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className={`h-5 w-5 ${setupComplete ? 'text-emerald-400' : 'text-indigo-300'}`} />
+                <h2 className="text-base font-bold text-white">
+                  {setupComplete ? 'Gateway setup complete' : 'Complete your gateway setup'}
+                </h2>
+              </div>
+              <p className="max-w-2xl text-xs leading-6 text-neutral-400">
+                Signup only creates your merchant account. Configure the operational details here before sending production checkout traffic.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-neutral-950/70 px-4 py-3 text-sm font-bold text-white">
+              {completedSetupItems} / {setupItems.length} completed
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {setupItems.map((item) => (
+              <div key={item.label} className="rounded-xl border border-neutral-900 bg-neutral-950/60 p-3">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${item.done ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  <span className="text-xs font-bold text-neutral-200">{item.label}</span>
+                </div>
+                <p className="mt-2 truncate text-[10px] text-neutral-500">{item.hint}</p>
+              </div>
+            ))}
+          </div>
+
+          {!setupComplete && (
+            <div className="mt-4 flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setActiveTab('integration')}
+                className="rounded-xl bg-indigo-500 text-white hover:bg-indigo-400"
+              >
+                Open integration setup
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Subscription Usage Banner */}
+        <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-1.5 flex-1 w-full">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-white tracking-tight uppercase">
+                Plan: <span className="text-violet-400 font-extrabold">{subscriptionLabel}</span>
+              </h2>
+              {client.isFreeTrial && (
+                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-500 border border-amber-500/20">
+                  Free Trial
+                </span>
+              )}
+            </div>
+            
+            <p className="text-xs text-neutral-400">
+              {client.subscriptionEndsAt
+                ? (() => {
+                    const endDate = new Date(client.subscriptionEndsAt!)
+                    const remainMs = endDate.getTime() - Date.now()
+                    const remainDays = Math.ceil(remainMs / (1000 * 60 * 60 * 24))
+                    if (remainDays > 0) {
+                      return `Expires on ${formatShortDate(client.subscriptionEndsAt)} — ${remainDays} day${remainDays !== 1 ? 's' : ''} remaining`
+                    }
+                    return `Expired on ${formatShortDate(client.subscriptionEndsAt)}`
+                  })()
+                : 'Unlimited plan expiration'}
+            </p>
+
+            {/* Progress Bar Container */}
+            <div className="pt-2 w-full max-w-md">
+              <div className="flex items-center justify-between text-xs pb-1">
+                <span className="text-neutral-500 font-medium">Confirmed Transactions</span>
+                <span className="font-bold text-neutral-300">
+                  {client.txCount.toLocaleString()} / {client.txLimit.toLocaleString()}
+                </span>
+              </div>
+              <div className="h-2 w-full bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    quotaState === 'limit-reached'
+                      ? 'bg-red-500'
+                      : quotaState === 'near-limit'
+                      ? 'bg-amber-500'
+                      : 'bg-gradient-to-r from-violet-600 to-indigo-500'
+                  }`}
+                  style={{ width: `${usagePercent}%` }}
+                />
+              </div>
+              {quotaState === 'limit-reached' && (
+                <p className="text-[10px] text-red-400 pt-1">
+                  Your quota is fully used. Subscribe to a higher plan or renew from Billing.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col items-stretch md:items-end space-y-1 bg-neutral-950 p-4 rounded-xl border border-neutral-900 text-center md:text-right shrink-0">
+            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider">Monthly billing</span>
+            <button type="button" onClick={() => setActiveTab('billing')} className="text-xs text-violet-300 hover:text-violet-200">
+              View plans and renew quota
+            </button>
+            <span className="text-sm font-bold text-white pt-1">{client.subscriptionPlan === 'BASIC' ? '200 EGP / month' : client.subscriptionPlan === 'PRO' ? '500 EGP / month' : client.subscriptionPlan === 'ENTERPRISE' ? '700 EGP / month' : 'Free'}</span>
+          </div>
+        </div>
+
         {/* Stats Grid */}
         {stats && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
