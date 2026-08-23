@@ -137,7 +137,7 @@ class InstaPayNotificationListener : NotificationListenerService() {
         }
 
         val notification = NotificationCompat.Builder(this, channel)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setSmallIcon(R.drawable.ic_ipn_notification)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -363,7 +363,7 @@ class InstaPayNotificationListener : NotificationListenerService() {
         )
 
         val notification = NotificationCompat.Builder(this, channel)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_ipn_notification)
             .setContentTitle(title)
             .setContentText(text)
             .setOngoing(true)

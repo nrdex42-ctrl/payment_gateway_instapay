@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="66"
+    android:viewportHeight="39">
+
+    <!-- Monochrome IPN status-bar glyph. Android system status bars mask small
+         notification icons to a single color, so this intentionally uses a
+         white silhouette derived from public/IPN.svg. -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M16.93,12.85H10.29L12.49,5.73C12.81,4.7 13.72,4 14.74,4H19.67L16.93,12.85Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M19.43,18.31C17.56,18.31 17.15,20.13 16.68,21.6C16.23,23.06 14.95,27.17 14.95,27.17L12.78,34.12H4L7.58,22.63C8.29,20.35 10.35,18.31 12.88,18.31H19.43V18.31Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M41,5.75L49.52,4.32L50.84,20L53.79,8.05C54.33,5.84 56.22,4.3 58.36,4.3H59.43C60.73,4.3 61.68,5.6 61.35,6.93L54.68,33.99L46.09,34.15L43.08,17.7L39.07,33.99H32.67L41.01,5.74L41,5.75Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M49.6,4.33C47.73,4.33 47.32,6.14 46.86,7.61C46.4,9.06 45.12,13.16 45.12,13.16L39.83,34.17H31.97L38.67,8.64C39.38,6.37 41.43,4.33 43.95,4.33H49.6Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M42.5,15.59C42.5,21.97 37.61,27.17 31.6,27.17H21.23C21.23,27.17 22.51,23.07 22.96,21.6C23.43,20.13 23.84,18.32 25.71,18.32H29.28V21.64L35.97,15.59C35.97,15.59 37.85,13.87 38.49,13.31C40.54,11.46 40.5,8.56 38.77,6.87C41.06,8.99 42.5,12.12 42.5,15.59Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M38.49,13.31C37.85,13.87 35.97,15.59 35.97,15.59L29.28,9.53V12.85H20.54L23.28,4H31.6C34.3,4 36.78,5.05 38.69,6.79C38.72,6.81 38.74,6.84 38.77,6.86C40.5,8.55 40.54,11.46 38.49,13.3V13.31Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M25.71,18.31C23.84,18.31 23.43,20.13 22.96,21.6C22.51,23.06 21.23,27.17 21.23,27.17L19.06,34.12H10.28L13.86,22.63C14.57,20.35 16.63,18.31 19.15,18.31H25.71V18.31Z" />
+</vector>
