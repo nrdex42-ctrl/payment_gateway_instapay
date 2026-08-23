@@ -195,6 +195,7 @@ class MerchantsFragment : Fragment() {
             orientation = android.widget.LinearLayout.VERTICAL
             val padding = (20 * resources.displayMetrics.density).toInt()
             setPadding(padding, padding, padding, padding)
+            setBackgroundColor(context.getColor(R.color.bg_card))
         }
 
         // Plan Spinner Label
@@ -209,7 +210,9 @@ class MerchantsFragment : Fragment() {
         // Plan Spinner
         val plans = arrayOf("FREE_TRIAL", "BASIC", "PRO", "ENTERPRISE")
         val planSpinner = android.widget.Spinner(context).apply {
-            adapter = android.widget.ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, plans)
+            adapter = android.widget.ArrayAdapter(context, R.layout.item_spinner_selected, plans).apply {
+                setDropDownViewResource(R.layout.item_spinner_dropdown)
+            }
             val index = plans.indexOf(currentPlan)
             if (index >= 0) setSelection(index)
         }
@@ -233,6 +236,9 @@ class MerchantsFragment : Fragment() {
         val txCountInput = android.widget.EditText(context).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
             setText(client.optInt("txCount", 0).toString())
+            setTextColor(context.getColor(R.color.text_primary))
+            setHintTextColor(context.getColor(R.color.text_tertiary))
+            setBackgroundColor(context.getColor(R.color.bg_input))
         }
         container.addView(txCountInput)
 
@@ -254,6 +260,9 @@ class MerchantsFragment : Fragment() {
         val txLimitInput = android.widget.EditText(context).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
             setText(client.optInt("txLimit", 5).toString())
+            setTextColor(context.getColor(R.color.text_primary))
+            setHintTextColor(context.getColor(R.color.text_tertiary))
+            setBackgroundColor(context.getColor(R.color.bg_input))
         }
         container.addView(txLimitInput)
 
@@ -286,6 +295,8 @@ class MerchantsFragment : Fragment() {
         val trialCheckBox = android.widget.CheckBox(context).apply {
             text = "Mark as Free Trial"
             isChecked = currentIsTrial
+            setTextColor(context.getColor(R.color.text_primary))
+            buttonTintList = android.content.res.ColorStateList.valueOf(context.getColor(R.color.brand_accent))
         }
         container.addView(trialCheckBox)
 
@@ -321,6 +332,8 @@ class MerchantsFragment : Fragment() {
         val dateDisplayFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
         val dateButton = android.widget.Button(context).apply {
             text = dateDisplayFormat.format(calendar.time)
+            setTextColor(context.getColor(R.color.text_on_primary))
+            setBackgroundColor(context.getColor(R.color.brand_primary))
             setOnClickListener {
                 android.app.DatePickerDialog(
                     context,

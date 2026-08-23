@@ -135,9 +135,11 @@ open class OpsFragment : Fragment() {
         }
         binding.spinnerMerchant.adapter = ArrayAdapter(
             requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
+            R.layout.item_spinner_selected,
             labels
-        )
+        ).apply {
+            setDropDownViewResource(R.layout.item_spinner_dropdown)
+        }
     }
 
     private fun sendNotification() {

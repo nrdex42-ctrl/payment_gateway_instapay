@@ -171,12 +171,16 @@ open class SettingsFragment : Fragment() {
         val layout = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(60, 40, 60, 20)
+            setBackgroundColor(ctx.getColor(R.color.bg_card))
         }
 
         val priceInput = EditText(ctx).apply {
             hint = "Price (EGP)"
             setText("%.0f".format(currentPrice))
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setTextColor(ctx.getColor(R.color.text_primary))
+            setHintTextColor(ctx.getColor(R.color.text_tertiary))
+            setBackgroundColor(ctx.getColor(R.color.bg_input))
         }
         layout.addView(priceInput)
 
@@ -184,6 +188,9 @@ open class SettingsFragment : Fragment() {
             hint = "Max Transactions"
             setText("$currentLimit")
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setTextColor(ctx.getColor(R.color.text_primary))
+            setHintTextColor(ctx.getColor(R.color.text_tertiary))
+            setBackgroundColor(ctx.getColor(R.color.bg_input))
         }
         layout.addView(limitInput)
 
