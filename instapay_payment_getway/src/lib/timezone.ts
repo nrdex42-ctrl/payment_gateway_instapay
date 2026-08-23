@@ -37,17 +37,22 @@ export async function getEgyptDstMode(): Promise<EgyptDstMode> {
 }
 
 export async function setEgyptDstMode(mode: EgyptDstMode): Promise<EgyptDstMode> {
-  if (['AUTO', 'SUMMER', 'WINTER'].includes(mode)) {
-    cachedDstMode = mode
-    activeDstMode = mode
-    try {
-      await db.owner.updateMany({
-        data: { dstMode: mode }
-      })
-    } catch {
-      // ignore
-    }
+  if (!['AUTO', 'SUMMER', 'WINTER'].includes(mode)) {
+    return activeDstMode
   }
+
+  const result = await db.owner.updateMany({
+    data: { dstMode: mode },
+  })
+
+  if (result.count === 0) {
+    throw new Error('No platform owner record was found to save DST mode.')
+  }
+
+  cachedDstMode = mode
+  activeDstMode = mode
+  cacheExpiresAt = Date.now() + 5000
+
   return mode
 }
 

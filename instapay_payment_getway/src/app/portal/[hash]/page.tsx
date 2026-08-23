@@ -196,6 +196,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [dstMode, setDstMode] = useState<'AUTO' | 'SUMMER' | 'WINTER'>('AUTO')
   const [currentEgyptTime, setCurrentEgyptTime] = useState('')
   const [updatingSettings, setUpdatingSettings] = useState(false)
+  const [settingsMessage, setSettingsMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Advanced features states
   const [activeTab, setActiveTab] = useState<AdminTab>('ops')
@@ -487,7 +488,10 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   }
 
   const handleUpdateDstMode = async (newMode: 'AUTO' | 'SUMMER' | 'WINTER') => {
+    const previousMode = dstMode
     setUpdatingSettings(true)
+    setSettingsMessage(null)
+    setDstMode(newMode)
     try {
       const res = await fetch('/api/settings', {
         method: 'POST',
@@ -498,13 +502,19 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
         body: JSON.stringify({ dstMode: newMode }),
       })
       const data = await res.json()
-      if (data.ok) {
-        setDstMode(data.dstMode)
-        setCurrentEgyptTime(data.currentEgyptTime)
-        loadData()
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Failed to update DST mode.')
       }
+      setDstMode(data.dstMode)
+      setCurrentEgyptTime(data.currentEgyptTime)
+      setSettingsMessage({ type: 'success', text: `DST mode saved as ${data.dstMode}.` })
     } catch (err) {
       console.error(err)
+      setDstMode(previousMode)
+      setSettingsMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to update DST mode.',
+      })
     } finally {
       setUpdatingSettings(false)
     }
@@ -2246,6 +2256,17 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                   <p className="text-[10px] text-neutral-600 leading-normal">
                     * AUTO uses standard laws (UTC+3 Summer, UTC+2 Winter). Force overrides DST mode globally across dashboard statistics and lists.
                   </p>
+                  {settingsMessage && (
+                    <p
+                      className={`rounded-xl border px-3 py-2 text-[10px] font-semibold ${
+                        settingsMessage.type === 'success'
+                          ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                          : 'border-red-500/20 bg-red-500/10 text-red-300'
+                      }`}
+                    >
+                      {settingsMessage.text}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
