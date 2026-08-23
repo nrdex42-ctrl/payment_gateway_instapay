@@ -47,6 +47,13 @@ interface SessionPayload {
   expiresAt: number
 }
 
+interface OwnerSessionPayload {
+  subject: 'owner'
+  scope: 'admin'
+  issuedAt: number
+  expiresAt: number
+}
+
 function getOwnerSecret(): string {
   const secret = process.env.OWNER_SECRET
   if (!secret) {
@@ -99,6 +106,41 @@ export function verifySessionToken(token: string | null): string | null {
     return payload.clientId
   } catch {
     return null
+  }
+}
+
+/**
+ * Creates a signed stateless admin session token.
+ *
+ * The browser should store this short-lived token instead of the raw OWNER_SECRET.
+ */
+export function createOwnerSessionToken(): string {
+  const secret = getOwnerSecret()
+  const payload: OwnerSessionPayload = {
+    subject: 'owner',
+    scope: 'admin',
+    issuedAt: Date.now(),
+    expiresAt: Date.now() + 8 * 60 * 60 * 1000, // 8 hours
+  }
+  const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const signature = crypto.createHmac('sha256', secret).update(base64Payload).digest('hex')
+  return `own.${base64Payload}.${signature}`
+}
+
+export function verifyOwnerSessionToken(token: string | null): boolean {
+  if (!token || !token.startsWith('own.')) return false
+  const [, base64Payload, signature] = token.split('.')
+  if (!base64Payload || !signature) return false
+
+  try {
+    const secret = getOwnerSecret()
+    const expectedSignature = crypto.createHmac('sha256', secret).update(base64Payload).digest('hex')
+    if (!timingSafeCompare(signature, expectedSignature)) return false
+
+    const payload = JSON.parse(Buffer.from(base64Payload, 'base64url').toString('utf8')) as OwnerSessionPayload
+    return payload.subject === 'owner' && payload.scope === 'admin' && Date.now() <= payload.expiresAt
+  } catch {
+    return false
   }
 }
 
@@ -208,6 +250,7 @@ export async function authenticateOwner(request: NextRequest): Promise<boolean> 
   }
 
   if (!token) return false
+  if (verifyOwnerSessionToken(token)) return true
   return timingSafeCompare(token, ownerSecret)
 }
 

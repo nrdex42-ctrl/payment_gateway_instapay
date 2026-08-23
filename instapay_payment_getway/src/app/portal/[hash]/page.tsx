@@ -32,6 +32,8 @@ import {
   EyeOff,
   Calendar,
   Bell,
+  Gauge,
+  Wrench,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -110,9 +112,10 @@ interface Plan {
   maxTransactions: number
 }
 
-type AdminTab = 'merchants' | 'billing' | 'notifications' | 'transactions' | 'webhooks' | 'audit'
+type AdminTab = 'ops' | 'merchants' | 'billing' | 'notifications' | 'transactions' | 'webhooks' | 'audit'
 
 const adminTabs: Array<{ id: AdminTab; label: string; description: string; icon: React.ReactNode }> = [
+  { id: 'ops', label: 'Ops Center', description: 'Risk, health, reliability, actions', icon: <Gauge className="h-4 w-4" /> },
   { id: 'merchants', label: 'Merchants', description: 'Approve, manage, suspend accounts', icon: <Users className="h-4 w-4" /> },
   { id: 'billing', label: 'Billing', description: 'Plan pricing and subscription health', icon: <Calendar className="h-4 w-4" /> },
   { id: 'notifications', label: 'Notifications', description: 'Message merchants on web and APK', icon: <Bell className="h-4 w-4" /> },
@@ -193,7 +196,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [updatingSettings, setUpdatingSettings] = useState(false)
 
   // Advanced features states
-  const [activeTab, setActiveTab] = useState<AdminTab>('merchants')
+  const [activeTab, setActiveTab] = useState<AdminTab>('ops')
   const [allTransactions, setAllTransactions] = useState<TransactionLog[]>([])
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
@@ -653,6 +656,31 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
 
   const pendingApprovals = clients.filter((c) => c.approvalStatus === 'PENDING')
   const activeMerchants = clients.filter((c) => c.approvalStatus === 'APPROVED')
+  const disabledApprovedMerchants = activeMerchants.filter((c) => !c.isActive)
+  const merchantsMissingWebhook = activeMerchants.filter((c) => !c.webhookUrl)
+  const merchantsMissingDetector = activeMerchants.filter((c) => !c.detectToken || !c.apiKey)
+  const expiredMerchants = activeMerchants.filter((c) => {
+    const remaining = daysRemaining(c.subscriptionEndsAt)
+    return remaining !== null && remaining <= 0
+  })
+  const nearExpiryMerchants = activeMerchants.filter((c) => {
+    const remaining = daysRemaining(c.subscriptionEndsAt)
+    return remaining !== null && remaining > 0 && remaining <= 3
+  })
+  const nearQuotaMerchants = activeMerchants.filter((c) => c.txLimit > 0 && c.txCount >= c.txLimit * 0.8)
+  const quotaBlockedMerchants = activeMerchants.filter((c) => c.txLimit > 0 && c.txCount >= c.txLimit)
+  const configuredMerchants = activeMerchants.filter((c) => Boolean(c.webhookUrl && c.apiKey && c.detectToken && c.isActive))
+  const operationalIssues =
+    pendingApprovals.length +
+    disabledApprovedMerchants.length +
+    merchantsMissingWebhook.length +
+    merchantsMissingDetector.length +
+    expiredMerchants.length +
+    quotaBlockedMerchants.length
+  const readinessPercent = activeMerchants.length > 0 ? Math.round((configuredMerchants.length / activeMerchants.length) * 100) : 100
+  const healthScore = Math.max(0, Math.min(100, readinessPercent - Math.min(40, operationalIssues * 5)))
+  const recentConfirmedCount = recentTx.filter((tx) => tx.status === 'CONFIRMED').length
+  const recentPendingCount = recentTx.filter((tx) => tx.status === 'PENDING').length
 
   // --- Render Login Page ---
   if (!token) {
@@ -935,6 +963,254 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
             </div>
 
             {/* TAB CONTENTS */}
+
+            {/* Tab: Ops Center */}
+            {activeTab === 'ops' && (
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-violet-500/20 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,.16),transparent_35%),rgba(23,23,23,.45)] p-5">
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Gauge className="h-5 w-5 text-violet-300" />
+                        <h2 className="text-base font-black text-white">Operations command center</h2>
+                        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                          healthScore >= 85
+                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                            : healthScore >= 65
+                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                            : 'border-red-500/30 bg-red-500/10 text-red-300'
+                        }`}>
+                          {healthScore >= 85 ? 'Healthy' : healthScore >= 65 ? 'Needs attention' : 'Critical'}
+                        </span>
+                      </div>
+                      <p className="mt-2 max-w-2xl text-xs leading-6 text-neutral-400">
+                        Monitor gateway readiness, merchant risk, subscription blockers, setup gaps, and operational controls from one place.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[520px]">
+                      {[
+                        { label: 'Health score', value: `${healthScore}%`, tone: healthScore >= 85 ? 'text-emerald-300' : healthScore >= 65 ? 'text-amber-300' : 'text-red-300' },
+                        { label: 'Ready merchants', value: `${configuredMerchants.length}/${activeMerchants.length}`, tone: 'text-cyan-300' },
+                        { label: 'Open issues', value: operationalIssues.toLocaleString(), tone: operationalIssues > 0 ? 'text-amber-300' : 'text-emerald-300' },
+                        { label: 'Pending tx', value: recentPendingCount.toLocaleString(), tone: recentPendingCount > 0 ? 'text-amber-300' : 'text-neutral-300' },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-2xl border border-white/10 bg-neutral-950/60 p-4">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-500">{item.label}</div>
+                          <div className={`mt-2 text-lg font-black ${item.tone}`}>{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-3">
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 xl:col-span-2">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-white">Risk queue</h3>
+                        <p className="mt-1 text-xs text-neutral-500">Prioritized admin actions affecting payment acceptance.</p>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={loadData} disabled={refreshing} className="rounded-xl border-neutral-800 bg-neutral-950 text-neutral-300">
+                        <RefreshCw className={`mr-2 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                        Recheck
+                      </Button>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {[
+                        {
+                          title: 'Pending approvals',
+                          count: pendingApprovals.length,
+                          detail: 'New merchants waiting for review',
+                          tone: 'amber',
+                          action: () => setActiveTab('merchants'),
+                        },
+                        {
+                          title: 'Expired subscriptions',
+                          count: expiredMerchants.length,
+                          detail: 'Merchants blocked by expiry',
+                          tone: 'red',
+                          action: () => setActiveTab('billing'),
+                        },
+                        {
+                          title: 'Quota blocked',
+                          count: quotaBlockedMerchants.length,
+                          detail: 'Merchants at or above transaction limit',
+                          tone: 'red',
+                          action: () => setActiveTab('billing'),
+                        },
+                        {
+                          title: 'Near quota',
+                          count: nearQuotaMerchants.length,
+                          detail: 'Merchants above 80% usage',
+                          tone: 'amber',
+                          action: () => setActiveTab('billing'),
+                        },
+                        {
+                          title: 'Webhook missing',
+                          count: merchantsMissingWebhook.length,
+                          detail: 'Merchants without callback URL',
+                          tone: 'violet',
+                          action: () => setActiveTab('merchants'),
+                        },
+                        {
+                          title: 'Detector/API setup missing',
+                          count: merchantsMissingDetector.length,
+                          detail: 'Merchants missing generated credentials',
+                          tone: 'violet',
+                          action: () => setActiveTab('merchants'),
+                        },
+                      ].map((item) => (
+                        <button
+                          key={item.title}
+                          type="button"
+                          onClick={item.action}
+                          className="rounded-2xl border border-neutral-900 bg-neutral-950/55 p-4 text-left transition hover:border-violet-500/40 hover:bg-neutral-900/50"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-xs font-bold text-white">{item.title}</div>
+                              <div className="mt-1 text-[11px] leading-5 text-neutral-500">{item.detail}</div>
+                            </div>
+                            <span className={`rounded-xl px-2.5 py-1 text-sm font-black ${
+                              item.tone === 'red'
+                                ? 'bg-red-500/10 text-red-300'
+                                : item.tone === 'amber'
+                                ? 'bg-amber-500/10 text-amber-300'
+                                : 'bg-violet-500/10 text-violet-300'
+                            }`}>
+                              {item.count}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5">
+                      <h3 className="flex items-center gap-2 text-sm font-bold text-white">
+                        <Shield className="h-4 w-4 text-emerald-300" />
+                        Security posture
+                      </h3>
+                      <div className="mt-4 space-y-3 text-xs">
+                        {[
+                          { label: 'Admin login uses email/password/TOTP', ok: true },
+                          { label: 'Browser receives signed admin session token', ok: true },
+                          { label: 'Raw owner secret remains server-side', ok: true },
+                          { label: 'Critical admin mutations write audit logs', ok: true },
+                        ].map((item) => (
+                          <div key={item.label} className="flex items-start gap-2 rounded-xl border border-neutral-900 bg-neutral-950/60 p-3">
+                            <CheckCircle className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${item.ok ? 'text-emerald-400' : 'text-amber-400'}`} />
+                            <span className="leading-5 text-neutral-400">{item.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5">
+                      <h3 className="flex items-center gap-2 text-sm font-bold text-white">
+                        <Wrench className="h-4 w-4 text-cyan-300" />
+                        Fast actions
+                      </h3>
+                      <div className="mt-4 grid gap-2">
+                        <Button type="button" onClick={() => setShowAddModal(true)} className="justify-start rounded-xl bg-violet-600 text-white hover:bg-violet-700">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create approved merchant
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => setActiveTab('notifications')} className="justify-start rounded-xl border-neutral-800 bg-neutral-950 text-neutral-300">
+                          <Bell className="mr-2 h-4 w-4" />
+                          Send merchant notification
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => { setTxFilters({ q: '', status: 'PENDING', minAmount: '', maxAmount: '', startDate: '', endDate: '', clientId: '' }); setActiveTab('transactions') }} className="justify-start rounded-xl border-neutral-800 bg-neutral-950 text-neutral-300">
+                          <Activity className="mr-2 h-4 w-4" />
+                          Review pending payments
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => setActiveTab('webhooks')} className="justify-start rounded-xl border-neutral-800 bg-neutral-950 text-neutral-300">
+                          <Globe className="mr-2 h-4 w-4" />
+                          Inspect webhook delivery
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5">
+                    <h3 className="text-sm font-bold text-white">Subscription watchlist</h3>
+                    <div className="mt-4 space-y-2">
+                      {[...expiredMerchants, ...nearExpiryMerchants].slice(0, 6).map((merchant) => {
+                        const remaining = daysRemaining(merchant.subscriptionEndsAt)
+                        return (
+                          <div key={merchant.id} className="flex items-center justify-between gap-3 rounded-xl border border-neutral-900 bg-neutral-950/60 p-3">
+                            <div className="min-w-0">
+                              <div className="truncate text-xs font-bold text-white">{merchant.businessName}</div>
+                              <div className="text-[10px] text-neutral-500">{merchant.subscriptionPlan.replaceAll('_', ' ')}</div>
+                            </div>
+                            <span className={`shrink-0 text-[10px] font-bold ${remaining !== null && remaining <= 0 ? 'text-red-300' : 'text-amber-300'}`}>
+                              {remaining !== null && remaining > 0 ? `${remaining}d left` : 'Expired'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                      {[...expiredMerchants, ...nearExpiryMerchants].length === 0 && (
+                        <div className="rounded-xl border border-neutral-900 bg-neutral-950/60 p-4 text-center text-xs text-neutral-500">No subscription expiry risk.</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5">
+                    <h3 className="text-sm font-bold text-white">Configuration gaps</h3>
+                    <div className="mt-4 space-y-2">
+                      {[...merchantsMissingWebhook, ...merchantsMissingDetector].filter((merchant, index, arr) => arr.findIndex((item) => item.id === merchant.id) === index).slice(0, 6).map((merchant) => (
+                        <div key={merchant.id} className="rounded-xl border border-neutral-900 bg-neutral-950/60 p-3">
+                          <div className="truncate text-xs font-bold text-white">{merchant.businessName}</div>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {!merchant.webhookUrl && <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">No webhook</span>}
+                            {!merchant.apiKey && <span className="rounded bg-red-500/10 px-2 py-0.5 text-[10px] text-red-300">No API key</span>}
+                            {!merchant.detectToken && <span className="rounded bg-red-500/10 px-2 py-0.5 text-[10px] text-red-300">No detector token</span>}
+                          </div>
+                        </div>
+                      ))}
+                      {merchantsMissingWebhook.length + merchantsMissingDetector.length === 0 && (
+                        <div className="rounded-xl border border-neutral-900 bg-neutral-950/60 p-4 text-center text-xs text-neutral-500">All approved merchants have core configuration.</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5">
+                    <h3 className="text-sm font-bold text-white">Recent payment signal</h3>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className="rounded-xl border border-neutral-900 bg-neutral-950/60 p-3">
+                        <div className="text-[10px] uppercase tracking-wider text-neutral-500">Confirmed</div>
+                        <div className="mt-1 text-xl font-black text-emerald-300">{recentConfirmedCount}</div>
+                      </div>
+                      <div className="rounded-xl border border-neutral-900 bg-neutral-950/60 p-3">
+                        <div className="text-[10px] uppercase tracking-wider text-neutral-500">Pending</div>
+                        <div className="mt-1 text-xl font-black text-amber-300">{recentPendingCount}</div>
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {recentTx.slice(0, 5).map((tx) => (
+                        <div key={tx.sessionId} className="flex items-center justify-between gap-3 rounded-xl border border-neutral-900 bg-neutral-950/60 p-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-xs font-bold text-white">{tx.businessName}</div>
+                            <div className="font-mono text-[10px] text-neutral-500">{tx.senderHandle}</div>
+                          </div>
+                          <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold ${tx.status === 'CONFIRMED' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-300'}`}>
+                            {tx.status}
+                          </span>
+                        </div>
+                      ))}
+                      {recentTx.length === 0 && (
+                        <div className="rounded-xl border border-neutral-900 bg-neutral-950/60 p-4 text-center text-xs text-neutral-500">No recent transactions.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Tab: Merchants */}
             {activeTab === 'merchants' && (

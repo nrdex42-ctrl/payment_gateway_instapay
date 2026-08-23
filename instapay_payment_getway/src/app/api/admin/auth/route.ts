@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
+import { createOwnerSessionToken } from '@/lib/auth'
 
 function timingSafeEquals(a: string, b: string): boolean {
   const bufA = Buffer.from(a)
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      return NextResponse.json({ ok: true, token: ownerSecret })
+      return NextResponse.json({ ok: true, token: createOwnerSessionToken(), expiresInSeconds: 8 * 60 * 60 })
     }
 
     // Secret-token authentication
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ ok: true, token: ownerSecret })
+    return NextResponse.json({ ok: true, token: createOwnerSessionToken(), expiresInSeconds: 8 * 60 * 60 })
   } catch {
     return NextResponse.json(
       { ok: false, error: 'Authentication failed.' },
