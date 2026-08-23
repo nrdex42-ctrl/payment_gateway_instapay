@@ -2160,21 +2160,25 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                     recentTx.map((tx) => (
                       <div
                         key={tx.sessionId}
-                        className="rounded-xl bg-neutral-950/50 p-3 border border-neutral-900 flex justify-between gap-2"
+                        className="rounded-xl bg-neutral-950/50 p-3 border border-neutral-900 flex flex-col gap-3 sm:flex-row sm:justify-between sm:gap-2"
                       >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-white truncate max-w-[120px]">{tx.senderHandle}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs font-bold text-white break-words">{tx.senderHandle}</span>
                             <ChevronRight className="h-3 w-3 text-neutral-600" />
-                            <span className="text-[10px] text-neutral-400 bg-neutral-900 px-1.5 py-0.5 rounded truncate max-w-[100px]" title={tx.businessName}>
+                            <span className="text-[10px] text-neutral-400 bg-neutral-900 px-1.5 py-0.5 rounded break-words" title={tx.businessName}>
                               {tx.businessName}
                             </span>
                           </div>
-                          <p className="text-[10px] text-neutral-500 mt-1 font-mono">{tx.detectedRef || tx.sessionId.slice(0, 12)}</p>
-                          <span className="text-[9px] text-neutral-600 block mt-0.5">{tx.detectedAtEgypt || new Date(tx.createdAt).toLocaleDateString()}</span>
+                          <p className="text-[10px] text-neutral-500 mt-1 font-mono break-all">
+                            {tx.detectedRef || tx.sessionId.slice(0, 12)}
+                          </p>
+                          <span className="text-[9px] text-neutral-600 block mt-0.5 break-words">
+                            {tx.detectedAtEgypt || new Date(tx.createdAt).toLocaleDateString()}
+                          </span>
                         </div>
 
-                        <div className="text-right shrink-0">
+                        <div className="text-left sm:text-right shrink-0">
                           <span className="text-xs font-black text-white">+{formatEgp(tx.amountEgp)}</span>
                           <span
                             className={`block text-[9px] font-bold uppercase mt-1 ${
