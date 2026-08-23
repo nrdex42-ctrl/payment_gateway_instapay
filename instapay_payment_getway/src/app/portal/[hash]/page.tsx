@@ -863,7 +863,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
 
   // --- Render Dashboard UI ---
   return (
-    <div className="min-h-screen bg-[#070a12] text-neutral-100 flex flex-col font-sans">
+    <div className="admin-portal min-h-screen bg-[#070a12] text-neutral-100 flex flex-col font-sans">
       {/* Header */}
       <header className="border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl sticky top-0 z-40">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
