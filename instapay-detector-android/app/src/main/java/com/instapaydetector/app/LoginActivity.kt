@@ -2,6 +2,7 @@ package com.instapaydetector.app
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -24,6 +25,9 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
     private val loginTag = "InstaPayDetectorLogin"
+    private lateinit var config: GatewayConfig
+    private var otpTimer: CountDownTimer? = null
+    private var otpExpiresAt: Long = 0L
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
@@ -36,7 +40,10 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
         binding.tvBuildInfo.text = "Build ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
 
-        val config = GatewayConfig.get(this)
+        config = GatewayConfig.get(this)
+
+        binding.btnSendOtp.setOnClickListener { requestOtp(config) }
+        updateOtpUi(false)
 
         binding.btnLogin.setOnClickListener {
             handleLogin(config)
@@ -47,11 +54,27 @@ class LoginActivity : AppCompatActivity() {
         val email = binding.etEmail.text?.toString()?.trim() ?: ""
         val password = binding.etPassword.text?.toString()?.trim() ?: ""
         val otp = binding.etOtp.text?.toString()?.trim() ?: ""
+        val otpRequested = config.pendingVerificationId.isNotBlank()
 
         Log.d(loginTag, "handleLogin(version=${BuildConfig.VERSION_NAME}, code=${BuildConfig.VERSION_CODE}, email=$email, otpVisible=${binding.etOtp.visibility == View.VISIBLE}, otpProvided=${otp.isNotBlank()})")
 
         if (email.isEmpty() || password.isEmpty()) {
             showError(if (otp.isBlank()) "[v${BuildConfig.VERSION_NAME}] Enter your email and password to receive a verification code." else "[v${BuildConfig.VERSION_NAME}] Enter the verification code sent to your email.")
+            return
+        }
+
+        if (!otpRequested) {
+            showError("[v${BuildConfig.VERSION_NAME}] Tap Send OTP first, then paste the code before signing in.")
+            return
+        }
+
+        if (otp.isBlank()) {
+            showError("[v${BuildConfig.VERSION_NAME}] Paste the 6-digit OTP before signing in.")
+            return
+        }
+
+        if (otp.length != 6) {
+            showError("[v${BuildConfig.VERSION_NAME}] OTP must be 6 digits.")
             return
         }
 
@@ -76,7 +99,7 @@ class LoginActivity : AppCompatActivity() {
 
                     if (responseJson.optBoolean("otpRequired", false)) {
                         config.pendingVerificationId = responseJson.optString("verificationId")
-                        binding.etOtp.visibility = View.VISIBLE
+                        startOtpCountdown(responseJson.optInt("expiresInSeconds", 600))
                         binding.btnLogin.text = "Verify and log in"
                         showError("[v${BuildConfig.VERSION_NAME}] Verification code sent to your email.")
                         binding.btnLogin.isEnabled = true
@@ -115,6 +138,84 @@ class LoginActivity : AppCompatActivity() {
     private fun showError(message: String) {
         binding.tvError.text = message
         binding.tvError.visibility = View.VISIBLE
+    }
+
+    private fun requestOtp(config: GatewayConfig) {
+        val email = binding.etEmail.text?.toString()?.trim() ?: ""
+        val password = binding.etPassword.text?.toString()?.trim() ?: ""
+        if (email.isBlank() || password.isBlank()) {
+            showError("[v${BuildConfig.VERSION_NAME}] Enter your email and password first.")
+            return
+        }
+        binding.btnSendOtp.isEnabled = false
+        binding.btnSendOtp.text = "Sending..."
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                performLoginRequest(email, password, config.pendingVerificationId, "")
+            }
+            result.fold(
+                onSuccess = { responseJson ->
+                    if (responseJson.optBoolean("otpRequired", false)) {
+                        config.pendingVerificationId = responseJson.optString("verificationId")
+                        startOtpCountdown(responseJson.optInt("expiresInSeconds", 600))
+                        showError("[v${BuildConfig.VERSION_NAME}] Verification code sent to your email.")
+                    } else {
+                        showError("[v${BuildConfig.VERSION_NAME}] Unable to request OTP right now.")
+                    }
+                },
+                onFailure = { exception ->
+                    showError("[v${BuildConfig.VERSION_NAME}] ${exception.message ?: "Failed to send OTP."}")
+                }
+            )
+            binding.btnSendOtp.isEnabled = true
+            binding.btnSendOtp.text = "Send OTP"
+        }
+    }
+
+    private fun startOtpCountdown(expiresInSeconds: Int) {
+        otpTimer?.cancel()
+        val totalMs = (expiresInSeconds.coerceAtLeast(1)) * 1000L
+        otpExpiresAt = System.currentTimeMillis() + totalMs
+        updateOtpUi(true)
+        otpTimer = object : CountDownTimer(totalMs, 1000L) {
+            override fun onTick(millisUntilFinished: Long) {
+                updateOtpCountdownLabel(millisUntilFinished)
+            }
+
+            override fun onFinish() {
+                otpExpiresAt = 0L
+                binding.etOtp.text?.clear()
+                config.pendingVerificationId = ""
+                updateOtpUi(false)
+                showError("[v${BuildConfig.VERSION_NAME}] OTP expired. Tap Send OTP to request a new code.")
+            }
+        }.start()
+    }
+
+    private fun updateOtpUi(active: Boolean) {
+        binding.btnSendOtp.text = if (active) "Resend OTP" else "Send OTP"
+        binding.btnSendOtp.isEnabled = true
+        binding.etOtp.isEnabled = active
+        binding.etOtp.isFocusable = active
+        binding.etOtp.isFocusableInTouchMode = active
+        binding.tvOtpTimer.visibility = View.VISIBLE
+        if (active) {
+            updateOtpCountdownLabel(otpExpiresAt - System.currentTimeMillis())
+        } else {
+            binding.tvOtpTimer.text = "OTP expires in 10:00"
+        }
+    }
+
+    private fun updateOtpCountdownLabel(millisRemaining: Long) {
+        val totalSeconds = (millisRemaining / 1000L).coerceAtLeast(0)
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        binding.tvOtpTimer.text = String.format("OTP expires in %02d:%02d", minutes, seconds)
+    }
+
+    override fun onDestroy() {
+        otpTimer?.cancel()
+        super.onDestroy()
     }
 
     private fun performLoginRequest(email: String, password: String, verificationId: String, otp: String): Result<JSONObject> {

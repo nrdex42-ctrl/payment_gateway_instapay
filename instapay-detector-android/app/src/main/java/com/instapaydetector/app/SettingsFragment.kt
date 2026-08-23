@@ -46,34 +46,17 @@ class SettingsFragment : Fragment() {
         binding.gatewayUrlInput.setText(config.gatewayUrl)
         binding.authTokenInput.setText(config.authToken)
         binding.merchantHandleInput.setText(config.merchantHandle)
+        binding.gatewayUrlInput.isEnabled = false
+        binding.authTokenInput.isEnabled = false
+        binding.merchantHandleInput.isEnabled = false
         
         // Always hide myHandle input since CLIENT mode is removed
         binding.myHandleInputLayout.visibility = View.GONE
         updateSummaryHeader()
-
-        binding.saveButton.setOnClickListener {
-            val url = binding.gatewayUrlInput.text.toString().trim()
-            val token = binding.authTokenInput.text.toString().trim()
-            val merchantHandle = binding.merchantHandleInput.text.toString().trim()
-            val currentLang = LocaleHelper.getLanguage(requireContext())
-
-            if (url.isEmpty()) {
-                val errText = if (currentLang == "ar") "يرجى إدخال رابط بوابة الدفع" else "Please enter the gateway URL"
-                Toast.makeText(requireContext(), errText, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (token.isEmpty()) {
-                val errText = if (currentLang == "ar") "يرجى إدخال رمز المصادقة" else "Please enter the auth token"
-                Toast.makeText(requireContext(), errText, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            config.gatewayUrl = url
-            config.authToken = token
-            config.merchantHandle = merchantHandle
-            
-            val confirmationText = if (currentLang == "ar") "تم حفظ الإعدادات بنجاح" else "Config Saved Successfully"
-            Toast.makeText(requireContext(), confirmationText, Toast.LENGTH_SHORT).show()
-            updateSummaryHeader()
+        loadDashboardSnapshot()
+        binding.openDashboardButton.setOnClickListener {
+            val dashboardUrl = "https://instapay-ruddy.vercel.app/dashboard"
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(dashboardUrl)))
         }
         binding.grantPermissionButton.setOnClickListener { openNotificationAccessSettings() }
         binding.testButton.setOnClickListener { sendTestNotification() }
@@ -112,6 +95,36 @@ class SettingsFragment : Fragment() {
         super.onResume()
         refreshPermissionStatus()
         updateSummaryHeader()
+        loadDashboardSnapshot()
+    }
+
+    private fun loadDashboardSnapshot() {
+        MainScope().launch {
+            val stats = try {
+                DashboardApiClient(requireContext()).fetchDashboard().getOrNull()
+            } catch (_: Exception) {
+                null
+            }
+            if (!isAdded || _binding == null) return@launch
+            if (stats != null) {
+                binding.summaryPlanText.text = stats.subscription?.plan?.replace("_", " ") ?: config.subscriptionPlan.replace("_", " ")
+                val sub = stats.subscription
+                val quotaText = if (sub != null) {
+                    "${sub.txCount}/${sub.txLimit} used"
+                } else {
+                    "Unavailable"
+                }
+                binding.summaryQuotaText.text = quotaText
+                binding.summarySetupText.text = buildString {
+                    append("Gateway settings are read-only here. ")
+                    append(if (config.gatewayUrl.isBlank() || config.authToken.isBlank() || config.merchantHandle.isBlank()) "Complete the dashboard setup." else "Configuration synced from the web dashboard.")
+                }
+            } else {
+                binding.summaryPlanText.text = config.subscriptionPlan.replace("_", " ")
+                binding.summaryQuotaText.text = "Unavailable"
+                binding.summarySetupText.text = "Open the web dashboard to manage profile, quota, and integration settings."
+            }
+        }
     }
 
     private fun refreshPermissionStatus() {
@@ -164,6 +177,9 @@ class SettingsFragment : Fragment() {
         binding.summaryGatewayUrl.text = config.gatewayUrl.removeSuffix("/api/webhooks/instapay").trimEnd('/')
         binding.summaryDetectorMode.text = "Merchant detector"
         binding.summarySubscription.text = "${config.subscriptionPlan.replace("_", " ")} · ${formatSubscriptionDuration(config.subscriptionEndsAt)}"
+        binding.summaryPlanText.text = config.subscriptionPlan.replace("_", " ")
+        binding.summarySetupText.text = "Open the web dashboard to manage profile, quota, and integration settings."
+        binding.summaryQuotaText.text = if (config.subscriptionEndsAt.isNullOrBlank()) "Unavailable" else "Subscription active"
         binding.monitoredHandleLabel.text = getString(R.string.monitored_handle_label, config.merchantHandle)
     }
 

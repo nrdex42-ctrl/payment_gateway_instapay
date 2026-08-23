@@ -137,11 +137,6 @@ class DashboardFragment : Fragment() {
         binding.errorText.visibility = View.GONE
         binding.merchantName.text = dash.merchant.name
         binding.merchantHandle.text = dash.merchant.handle
-        binding.profileName.text = dash.merchant.name
-        binding.profileHandle.text = dash.merchant.handle
-        binding.profileEmail.text = dash.merchant.email.ifBlank { config.merchantEmail.ifBlank { "Email unavailable" } }
-        binding.profileGateway.text = gatewayBaseUrl()
-        binding.profileMode.text = "Merchant detector · ${dash.subscription?.plan?.replace("_", " ") ?: config.subscriptionPlan.replace("_", " ")}"
 
         // Stat cards — each include layout has inner views accessible via the include's binding
         binding.cardToday.statLabel.text = getString(R.string.dash_today)
@@ -166,8 +161,6 @@ class DashboardFragment : Fragment() {
             binding.cardSubscription.visibility = View.VISIBLE
             val planLabel = sub.plan.replace("_", " ")
             binding.tvPlanName.text = if (sub.isFreeTrial) "FREE TRIAL" else planLabel
-            binding.profilePlan.text = if (sub.isFreeTrial) "Free trial" else planLabel
-            binding.profileDuration.text = formatSubscriptionDuration(sub.subscriptionEndsAt)
             binding.tvTxUsage.text = "${sub.txCount} / ${sub.txLimit} confirmed transactions used"
             config.subscriptionPlan = sub.plan
             config.subscriptionEndsAt = sub.subscriptionEndsAt
@@ -208,8 +201,6 @@ class DashboardFragment : Fragment() {
             }
         } else {
             binding.cardSubscription.visibility = View.GONE
-            binding.profilePlan.text = config.subscriptionPlan.replace("_", " ")
-            binding.profileDuration.text = formatSubscriptionDuration(config.subscriptionEndsAt)
         }
 
         // Recent transactions (show up to 5)
@@ -317,22 +308,6 @@ class DashboardFragment : Fragment() {
     private fun renderLocalProfileFallback() {
         binding.merchantName.text = "Merchant account"
         binding.merchantHandle.text = config.merchantHandle
-        binding.profileName.text = config.merchantHandle.substringBefore('@').replaceFirstChar { it.uppercaseChar() }
-        binding.profileHandle.text = config.merchantHandle
-        binding.profileEmail.text = config.merchantEmail.ifBlank { "Email unavailable" }
-        binding.profileGateway.text = gatewayBaseUrl()
-        binding.profilePlan.text = config.subscriptionPlan.replace("_", " ")
-        binding.profileDuration.text = formatSubscriptionDuration(config.subscriptionEndsAt)
-        binding.profileMode.text = "Merchant detector · ${config.subscriptionPlan.replace("_", " ")}"
-    }
-
-    private fun gatewayBaseUrl(): String {
-        val url = config.gatewayUrl
-        return if (url.contains("/api/webhooks/instapay")) {
-            url.substring(0, url.indexOf("/api/webhooks/instapay"))
-        } else {
-            url.trimEnd('/')
-        }
     }
 
     private fun formatSubscriptionDuration(value: String?): String {

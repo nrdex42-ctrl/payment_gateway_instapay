@@ -71,7 +71,7 @@
     <string name="last_detection_none">No detections yet</string>
 
     <string name="settings_about_title">About</string>
-    <string name="settings_about_body">InstaPay Detector v2.2.1 — Merchant dashboard. Real-time payment detection via InstaPay notifications. Release build.</string>
+    <string name="settings_about_body">InstaPay Detector v2.2.2 — Merchant dashboard. Real-time payment detection via InstaPay notifications. Release build.</string>
 
     <!-- Theme & Language preferences -->
     <string name="pref_category_title">App Preferences</string>

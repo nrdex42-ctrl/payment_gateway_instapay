@@ -12,8 +12,8 @@ android {
         // Android 8.0 (API 26) — matches the "Android 8+" requirement.
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "2.2.1"
+        versionCode = 6
+        versionName = "2.2.2"
         resValue("string", "app_name", "InstaPay Detector")
     }
 
