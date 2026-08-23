@@ -112,7 +112,7 @@ interface Plan {
   maxTransactions: number
 }
 
-type AdminTab = 'ops' | 'merchants' | 'billing' | 'notifications' | 'transactions' | 'webhooks' | 'audit'
+type AdminTab = 'ops' | 'merchants' | 'billing' | 'notifications' | 'transactions' | 'webhooks' | 'activity' | 'settings' | 'audit'
 
 const adminTabs: Array<{ id: AdminTab; label: string; description: string; icon: React.ReactNode }> = [
   { id: 'ops', label: 'Ops Center', description: 'Risk, health, reliability, actions', icon: <Gauge className="h-4 w-4" /> },
@@ -121,6 +121,8 @@ const adminTabs: Array<{ id: AdminTab; label: string; description: string; icon:
   { id: 'notifications', label: 'Notifications', description: 'Message merchants on web and APK', icon: <Bell className="h-4 w-4" /> },
   { id: 'transactions', label: 'Transactions', description: 'Search, audit, force-confirm payments', icon: <Activity className="h-4 w-4" /> },
   { id: 'webhooks', label: 'Webhooks', description: 'Delivery success, failures, payloads', icon: <Globe className="h-4 w-4" /> },
+  { id: 'activity', label: 'Activity', description: 'Recent platform payment stream', icon: <TrendingUp className="h-4 w-4" /> },
+  { id: 'settings', label: 'Settings', description: 'Timezone, DST, admin APK tools', icon: <Settings className="h-4 w-4" /> },
   { id: 'audit', label: 'Audit', description: 'Administrative action history', icon: <Shield className="h-4 w-4" /> },
 ]
 
@@ -937,17 +939,16 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
           </div>
         )}
 
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Navigable Tabs System */}
-          <div className="lg:col-span-2 space-y-5">
+        {/* Tabbed Admin Workspace */}
+        <div className="space-y-5">
             {/* Tabs Navigation */}
-            <div className="grid gap-2 border-b border-neutral-900 pb-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="sticky top-[73px] z-30 -mx-3 overflow-x-auto border-y border-neutral-900 bg-[#070a12]/95 px-3 py-3 backdrop-blur-xl sm:top-[73px] sm:mx-0 sm:rounded-2xl sm:border sm:bg-neutral-950/70">
+              <div className="flex min-w-max gap-2 xl:grid xl:min-w-0 xl:grid-cols-9">
               {adminTabs.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => setActiveTab(t.id)}
-                  className={`flex items-start gap-3 rounded-2xl border p-3 text-left transition-all ${
+                  className={`flex min-w-[168px] items-start gap-3 rounded-2xl border p-3 text-left transition-all xl:min-w-0 ${
                     activeTab === t.id
                       ? 'bg-violet-600/10 border-violet-500/60 text-violet-200 shadow-lg shadow-violet-950/20'
                       : 'text-neutral-500 border-neutral-900 bg-neutral-900/20 hover:text-neutral-300 hover:bg-neutral-900/50'
@@ -960,6 +961,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                   </span>
                 </button>
               ))}
+              </div>
             </div>
 
             {/* TAB CONTENTS */}
@@ -2011,9 +2013,9 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Right Column: Platform Activity */}
+            {/* Tab: Activity */}
+            {activeTab === 'activity' && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-neutral-400" />
@@ -2067,6 +2069,12 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
               </ScrollArea>
             </div>
 
+          </div>
+            )}
+
+            {/* Tab: Settings */}
+            {activeTab === 'settings' && (
+          <div className="grid gap-4 lg:grid-cols-2">
             {/* System settings card */}
             <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
               <div className="flex items-center gap-2">
@@ -2136,6 +2144,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
             </div>
 
           </div>
+            )}
         </div>
       </main>
 
