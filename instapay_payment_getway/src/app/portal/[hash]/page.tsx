@@ -229,6 +229,13 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [notificationSeverity, setNotificationSeverity] = useState('INFO')
   const [notificationSending, setNotificationSending] = useState(false)
   const [notificationResult, setNotificationResult] = useState<string | null>(null)
+  const [merchantFilters, setMerchantFilters] = useState({
+    q: '',
+    status: 'ALL',
+    setup: 'ALL',
+    subscription: 'ALL',
+    sort: 'RISK',
+  })
 
   const sendMerchantNotification = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -683,6 +690,55 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const healthScore = Math.max(0, Math.min(100, readinessPercent - Math.min(40, operationalIssues * 5)))
   const recentConfirmedCount = recentTx.filter((tx) => tx.status === 'CONFIRMED').length
   const recentPendingCount = recentTx.filter((tx) => tx.status === 'PENDING').length
+  const merchantRiskScore = (merchant: ClientStats) => {
+    const remaining = daysRemaining(merchant.subscriptionEndsAt)
+    let score = 0
+    if (!merchant.isActive) score += 40
+    if (remaining !== null && remaining <= 0) score += 40
+    else if (remaining !== null && remaining <= 3) score += 18
+    if (merchant.txLimit > 0 && merchant.txCount >= merchant.txLimit) score += 35
+    else if (merchant.txLimit > 0 && merchant.txCount >= merchant.txLimit * 0.8) score += 18
+    if (!merchant.webhookUrl) score += 15
+    if (!merchant.apiKey) score += 15
+    if (!merchant.detectToken) score += 15
+    return score
+  }
+  const filteredMerchants = activeMerchants
+    .filter((merchant) => {
+      const query = merchantFilters.q.trim().toLowerCase()
+      if (query) {
+        const haystack = `${merchant.businessName} ${merchant.email} ${merchant.instapayHandle} ${merchant.slug}`.toLowerCase()
+        if (!haystack.includes(query)) return false
+      }
+
+      if (merchantFilters.status === 'ENABLED' && !merchant.isActive) return false
+      if (merchantFilters.status === 'DISABLED' && merchant.isActive) return false
+
+      const setupMissing = !merchant.webhookUrl || !merchant.apiKey || !merchant.detectToken
+      if (merchantFilters.setup === 'READY' && setupMissing) return false
+      if (merchantFilters.setup === 'MISSING' && !setupMissing) return false
+
+      const remaining = daysRemaining(merchant.subscriptionEndsAt)
+      const expired = remaining !== null && remaining <= 0
+      const nearExpiry = remaining !== null && remaining > 0 && remaining <= 3
+      const nearLimit = merchant.txLimit > 0 && merchant.txCount >= merchant.txLimit * 0.8
+      const blocked = merchant.txLimit > 0 && merchant.txCount >= merchant.txLimit
+      if (merchantFilters.subscription === 'EXPIRED' && !expired) return false
+      if (merchantFilters.subscription === 'NEAR_EXPIRY' && !nearExpiry) return false
+      if (merchantFilters.subscription === 'QUOTA_RISK' && !nearLimit) return false
+      if (merchantFilters.subscription === 'BLOCKED' && !blocked) return false
+      if (merchantFilters.subscription === 'TRIAL' && !merchant.isFreeTrial) return false
+      if (merchantFilters.subscription === 'PAID' && (merchant.isFreeTrial || expired)) return false
+
+      return true
+    })
+    .sort((a, b) => {
+      if (merchantFilters.sort === 'REVENUE') return b.confirmedVolume - a.confirmedVolume
+      if (merchantFilters.sort === 'TRANSACTIONS') return b.totalTransactions - a.totalTransactions
+      if (merchantFilters.sort === 'NEWEST') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      if (merchantFilters.sort === 'NAME') return a.businessName.localeCompare(b.businessName)
+      return merchantRiskScore(b) - merchantRiskScore(a)
+    })
 
   // --- Render Login Page ---
   if (!token) {
@@ -1267,6 +1323,79 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                   </div>
                 </div>
 
+                <div className="rounded-3xl border border-neutral-900 bg-neutral-900/30 p-4">
+                  <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Search merchants</Label>
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-600" />
+                        <Input
+                          value={merchantFilters.q}
+                          onChange={(e) => setMerchantFilters((prev) => ({ ...prev, q: e.target.value }))}
+                          placeholder="Business name, email, InstaPay handle, slug..."
+                          className="h-10 rounded-xl border-neutral-800 bg-neutral-950 pl-9 text-white placeholder:text-neutral-700"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid w-full gap-3 sm:grid-cols-2 xl:w-auto xl:grid-cols-4">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Status</Label>
+                        <select value={merchantFilters.status} onChange={(e) => setMerchantFilters((prev) => ({ ...prev, status: e.target.value }))} className="h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-xs text-white outline-none focus:border-violet-500">
+                          <option value="ALL">All</option>
+                          <option value="ENABLED">Enabled</option>
+                          <option value="DISABLED">Disabled</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Setup</Label>
+                        <select value={merchantFilters.setup} onChange={(e) => setMerchantFilters((prev) => ({ ...prev, setup: e.target.value }))} className="h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-xs text-white outline-none focus:border-violet-500">
+                          <option value="ALL">All</option>
+                          <option value="READY">Ready</option>
+                          <option value="MISSING">Missing setup</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Risk</Label>
+                        <select value={merchantFilters.subscription} onChange={(e) => setMerchantFilters((prev) => ({ ...prev, subscription: e.target.value }))} className="h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-xs text-white outline-none focus:border-violet-500">
+                          <option value="ALL">All</option>
+                          <option value="EXPIRED">Expired</option>
+                          <option value="NEAR_EXPIRY">Near expiry</option>
+                          <option value="QUOTA_RISK">Quota risk</option>
+                          <option value="BLOCKED">Quota blocked</option>
+                          <option value="TRIAL">Trial</option>
+                          <option value="PAID">Paid active</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Sort</Label>
+                        <select value={merchantFilters.sort} onChange={(e) => setMerchantFilters((prev) => ({ ...prev, sort: e.target.value }))} className="h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-xs text-white outline-none focus:border-violet-500">
+                          <option value="RISK">Highest risk</option>
+                          <option value="REVENUE">Revenue</option>
+                          <option value="TRANSACTIONS">Transactions</option>
+                          <option value="NEWEST">Newest</option>
+                          <option value="NAME">Name A-Z</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-900 pt-4">
+                    <p className="text-xs text-neutral-500">
+                      Showing <span className="font-bold text-neutral-200">{filteredMerchants.length}</span> of <span className="font-bold text-neutral-200">{activeMerchants.length}</span> approved merchants.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMerchantFilters({ q: '', status: 'ALL', setup: 'ALL', subscription: 'ALL', sort: 'RISK' })}
+                      className="h-8 rounded-lg border border-neutral-800 text-xs text-neutral-400 hover:text-white"
+                    >
+                      Clear filters
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="space-y-4">
                   {activeMerchants.length === 0 ? (
                     <div className="rounded-3xl border border-neutral-900 bg-neutral-900/30 p-10 text-center">
@@ -1274,8 +1403,14 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                       <h3 className="mt-3 text-sm font-bold text-white">No approved merchants yet</h3>
                       <p className="mt-2 text-xs text-neutral-500">Approved merchant accounts will appear here after review.</p>
                     </div>
+                  ) : filteredMerchants.length === 0 ? (
+                    <div className="rounded-3xl border border-neutral-900 bg-neutral-900/30 p-10 text-center">
+                      <Search className="mx-auto h-8 w-8 text-neutral-700" />
+                      <h3 className="mt-3 text-sm font-bold text-white">No merchants match these filters</h3>
+                      <p className="mt-2 text-xs text-neutral-500">Clear or relax the filters to show more accounts.</p>
+                    </div>
                   ) : (
-                    activeMerchants.map((c) => {
+                    filteredMerchants.map((c) => {
                       const remaining = daysRemaining(c.subscriptionEndsAt)
                       const expired = remaining !== null && remaining <= 0
                       const nearLimit = c.txLimit > 0 && c.txCount >= c.txLimit * 0.8
@@ -1400,7 +1535,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                               </div>
                             </div>
 
-                            <div className="flex flex-col gap-2 xl:w-44">
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:flex xl:w-44 xl:flex-col">
                               <Button size="sm" onClick={() => { setTxFilters({ q: '', status: '', minAmount: '', maxAmount: '', startDate: '', endDate: '', clientId: c.id }); setActiveTab('transactions') }} className="justify-start rounded-xl bg-violet-600 text-white hover:bg-violet-700">
                                 <Activity className="mr-2 h-4 w-4" /> Transactions
                               </Button>
