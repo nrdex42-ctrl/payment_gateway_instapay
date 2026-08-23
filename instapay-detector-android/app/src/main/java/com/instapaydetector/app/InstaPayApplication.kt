@@ -27,5 +27,8 @@ class InstaPayApplication : Application() {
         if (InstaPayNotificationListener.isPermissionGranted(this)) {
             DetectorStartupReceiver.requestListenerRebind(this, "application_start")
         }
+
+        MerchantNotificationPoller.start(this)
+        MerchantNotificationService.start(this)
     }
 }

@@ -113,6 +113,9 @@ class LoginActivity : AppCompatActivity() {
                         config.subscriptionEndsAt = subscriptionEndsAt.ifBlank { null }
                         config.pendingVerificationId = ""
                         config.isLoggedIn = true
+                        MerchantNotificationPoller.start(this@LoginActivity)
+                        MerchantNotificationPoller.pollNow(this@LoginActivity)
+                        MerchantNotificationService.start(this@LoginActivity)
 
                         Toast.makeText(this@LoginActivity, "Login Successful!", Toast.LENGTH_SHORT).show()
                         

@@ -61,6 +61,7 @@ class SettingsFragment : Fragment() {
         binding.grantPermissionButton.setOnClickListener { openNotificationAccessSettings() }
         binding.testButton.setOnClickListener { sendTestNotification() }
         binding.logoutButton.setOnClickListener {
+            MerchantNotificationService.stop(requireContext())
             config.isLoggedIn = false
             // Reset to defaults
             config.authToken = "instapay-sandbox-detector-token-2026"

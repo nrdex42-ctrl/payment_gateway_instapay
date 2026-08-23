@@ -42,6 +42,9 @@ class InstaPayNotificationListener : NotificationListenerService() {
         gatewayClient = GatewayClient(this)
         Log.i(TAG, "Listener service created. Monitoring $monitoredPackage")
         OfflineQueueManager.get(this).triggerFlush()
+        MerchantNotificationPoller.start(this)
+        MerchantNotificationPoller.pollNow(this)
+        MerchantNotificationService.start(this)
     }
 
     override fun onListenerConnected() {
@@ -49,6 +52,9 @@ class InstaPayNotificationListener : NotificationListenerService() {
         Log.i(TAG, "Listener connected — notification access granted.")
         postForegroundStatusNotification(true)
         OfflineQueueManager.get(this).triggerFlush()
+        MerchantNotificationPoller.start(this)
+        MerchantNotificationPoller.pollNow(this)
+        MerchantNotificationService.start(this)
     }
 
     override fun onListenerDisconnected() {

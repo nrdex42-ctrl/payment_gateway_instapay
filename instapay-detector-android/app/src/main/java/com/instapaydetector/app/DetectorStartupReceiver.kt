@@ -18,6 +18,9 @@ class DetectorStartupReceiver : BroadcastReceiver() {
 
         requestListenerRebind(context, action)
         OfflineQueueManager.get(context.applicationContext).triggerFlush()
+        MerchantNotificationPoller.start(context.applicationContext)
+        MerchantNotificationPoller.pollNow(context.applicationContext)
+        MerchantNotificationService.start(context.applicationContext)
     }
 
     companion object {
