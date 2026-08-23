@@ -41,12 +41,32 @@ export async function setEgyptDstMode(mode: EgyptDstMode): Promise<EgyptDstMode>
     return activeDstMode
   }
 
-  const result = await db.owner.updateMany({
+  let result = await db.owner.updateMany({
     data: { dstMode: mode },
   })
 
   if (result.count === 0) {
-    throw new Error('No platform owner record was found to save DST mode.')
+    const fallbackEmail = (process.env.ADMIN_EMAIL || 'platform-owner@instapay.local').trim().toLowerCase()
+
+    try {
+      await db.owner.create({
+        data: {
+          email: fallbackEmail,
+          name: process.env.ADMIN_NAME || 'Platform Owner',
+          passwordHash: 'env-managed-admin-account',
+          dstMode: mode,
+        },
+      })
+      result = { count: 1 }
+    } catch {
+      result = await db.owner.updateMany({
+        data: { dstMode: mode },
+      })
+    }
+  }
+
+  if (result.count === 0) {
+    throw new Error('DST mode could not be saved because the platform owner settings row is unavailable.')
   }
 
   cachedDstMode = mode
