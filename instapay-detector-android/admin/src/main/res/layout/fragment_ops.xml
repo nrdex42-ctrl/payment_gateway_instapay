@@ -65,12 +65,16 @@
                                 android:padding="14dp">
 
                                 <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
                                     android:text="Merchants"
                                     android:textColor="@color/text_secondary"
                                     android:textSize="11sp" />
 
                                 <TextView
                                     android:id="@+id/tv_merchants_count"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
                                     android:text="0"
                                     android:textColor="@color/text_primary"
                                     android:textSize="20sp"
@@ -93,12 +97,16 @@
                                 android:padding="14dp">
 
                                 <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
                                     android:text="Ops State"
                                     android:textColor="@color/text_secondary"
                                     android:textSize="11sp" />
 
                                 <TextView
                                     android:id="@+id/tv_ops_state"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
                                     android:text="Ready"
                                     android:textColor="@color/text_primary"
                                     android:textSize="20sp"
@@ -177,22 +185,30 @@
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip_info"
                             style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="@string/ops_severity_info"
                             android:checked="true" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip_success"
                             style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="@string/ops_severity_success" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip_warning"
                             style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="@string/ops_severity_warning" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip_urgent"
                             style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="@string/ops_severity_urgent" />
                     </com.google.android.material.chip.ChipGroup>
 
