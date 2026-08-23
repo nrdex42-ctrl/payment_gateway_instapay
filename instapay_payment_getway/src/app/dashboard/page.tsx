@@ -544,15 +544,15 @@ export default function MerchantDashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 py-5 sm:px-6 sm:py-6 space-y-5 sm:space-y-6">
         <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,.28),transparent_34%),linear-gradient(135deg,rgba(15,23,42,.98),rgba(2,6,23,.92))] p-4 shadow-2xl shadow-black/20 sm:rounded-[2rem] sm:p-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
                 <Activity className="h-3.5 w-3.5" />
                 Live merchant operations
               </div>
-              <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+              <h2 className="text-2xl font-black tracking-tight text-white sm:text-4xl">
                 Payments, billing, and integrations in one workspace.
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">
@@ -560,7 +560,7 @@ export default function MerchantDashboardPage() {
               </p>
             </div>
 
-            <div className="grid w-full gap-3 sm:grid-cols-3 lg:min-w-[440px] lg:max-w-xl">
+            <div className="grid w-full min-w-0 gap-3 sm:grid-cols-3 lg:max-w-xl">
               <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Plan</div>
                 <div className="mt-2 text-sm font-black text-white">{subscriptionLabel}</div>
@@ -589,7 +589,7 @@ export default function MerchantDashboardPage() {
             ? 'border-emerald-500/20 bg-emerald-500/5'
             : 'border-indigo-500/20 bg-indigo-500/5'
         }`}>
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className={`h-5 w-5 ${setupComplete ? 'text-emerald-400' : 'text-indigo-300'}`} />
@@ -634,7 +634,7 @@ export default function MerchantDashboardPage() {
         </div>
 
         {/* Subscription Usage Banner */}
-        <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-4 sm:p-5 flex min-w-0 flex-col md:flex-row items-stretch md:items-center justify-between gap-5 md:gap-6">
           <div className="space-y-1.5 flex-1 w-full">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-white tracking-tight uppercase">
@@ -663,7 +663,7 @@ export default function MerchantDashboardPage() {
 
             {/* Progress Bar Container */}
             <div className="pt-2 w-full max-w-md">
-              <div className="flex items-center justify-between text-xs pb-1">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs pb-1">
                 <span className="text-neutral-500 font-medium">Confirmed Transactions</span>
                 <span className="font-bold text-neutral-300">
                   {client.txCount.toLocaleString()} / {client.txLimit.toLocaleString()}
@@ -1020,8 +1020,8 @@ export default function MerchantDashboardPage() {
                 )}
 
                 {subscriptionCheckout && (
-                  <div className="rounded-2xl border border-violet-500/30 bg-violet-950/10 p-5 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-5">
-                    <div className="rounded-xl bg-white p-2">
+                  <div className="rounded-2xl border border-violet-500/30 bg-violet-950/10 p-4 sm:p-5 grid grid-cols-1 md:grid-cols-[minmax(140px,180px)_minmax(0,1fr)] gap-5">
+                    <div className="mx-auto w-full max-w-[180px] rounded-xl bg-white p-2 md:max-w-none">
                       <img src={subscriptionCheckout.qrCodeDataUrl} alt="Subscription payment QR" className="w-full h-auto" />
                     </div>
                     <div className="space-y-3">
@@ -1066,7 +1066,7 @@ export default function MerchantDashboardPage() {
                         }`}
                       >
                         <div>
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
                             <h3 className="text-lg font-black text-white">{plan.name}</h3>
                             {isCurrent && (
                               <span className="rounded-full bg-violet-500/10 border border-violet-500/30 px-2 py-0.5 text-[10px] text-violet-300 font-bold">
@@ -1430,7 +1430,7 @@ export default function MerchantDashboardPage() {
       {/* Webhook Log Detail Modal */}
       <AnimatePresence>
         {selectedLogDetail && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1442,7 +1442,7 @@ export default function MerchantDashboardPage() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative z-10 space-y-4 max-h-[90vh] flex flex-col text-neutral-200"
+              className="relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col space-y-4 rounded-3xl border border-neutral-800 bg-neutral-950 p-4 text-neutral-200 shadow-2xl sm:max-h-[90vh] sm:p-6"
             >
               <div>
                 <h3 className="text-lg font-bold text-white">Webhook Attempt Detail</h3>
@@ -1451,7 +1451,7 @@ export default function MerchantDashboardPage() {
 
               <ScrollArea className="flex-1 pr-1 space-y-4">
                 <div className="space-y-3 text-xs">
-                  <div className="grid grid-cols-2 gap-2 bg-neutral-900/40 p-3 rounded-xl border border-neutral-850">
+                  <div className="grid grid-cols-1 gap-2 rounded-xl border border-neutral-850 bg-neutral-900/40 p-3 sm:grid-cols-2">
                     <div>
                       <span className="text-neutral-500 font-semibold block">Status</span>
                       <span className={`block font-bold mt-0.5 ${selectedLogDetail.isSuccess ? 'text-emerald-400' : 'text-red-400'}`}>

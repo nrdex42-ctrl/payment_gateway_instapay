@@ -146,7 +146,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#070a12] text-white">
       <header className="border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
           <a href="/" className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5">
               <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
@@ -157,7 +157,7 @@ export default function LoginPage() {
             </div>
           </a>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             <a href={`mailto:${SYSTEM_EMAIL}`} className="hidden text-xs font-semibold text-slate-400 hover:text-slate-200 sm:inline">
               {SYSTEM_EMAIL}
             </a>
@@ -168,7 +168,7 @@ export default function LoginPage() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_0.9fr] lg:px-8 lg:py-20">
+      <main className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:px-8 lg:py-20">
         <section className="flex flex-col justify-center">
           <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
             <LockKeyhole className="h-3.5 w-3.5" />
@@ -203,7 +203,7 @@ export default function LoginPage() {
             ))}
           </div>
 
-          <div className="mt-8 rounded-3xl border border-white/10 bg-slate-950/60 p-5">
+          <div className="mt-8 rounded-3xl border border-white/10 bg-slate-950/60 p-4 sm:p-5">
             <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Account security</div>
             <div className="mt-4 space-y-3 text-sm leading-6 text-slate-400">
               <div className="flex gap-2.5">
@@ -218,9 +218,9 @@ export default function LoginPage() {
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-4 shadow-2xl shadow-black/30 backdrop-blur">
-          <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/80 p-6 sm:p-8">
-            <div className="flex items-start justify-between gap-4">
+        <section className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-3 shadow-2xl shadow-black/30 backdrop-blur sm:p-4">
+          <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/80 p-4 sm:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 text-sm font-bold text-cyan-200">
                   <ShieldCheck className="h-4 w-4" />
@@ -247,7 +247,7 @@ export default function LoginPage() {
                 <EmailField email={email} setEmail={setEmail} disabled={submitting || loginCodeSent} />
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <Label htmlFor="password" className="text-xs font-semibold text-slate-300">Password</Label>
                     <button
                       type="button"

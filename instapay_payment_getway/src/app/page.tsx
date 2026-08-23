@@ -122,7 +122,7 @@ export default async function LandingPage() {
   return (
     <div className="min-h-screen bg-[#070a12] text-white">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
           <a href="/" className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg shadow-indigo-950/40">
               <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
@@ -140,7 +140,7 @@ export default async function LandingPage() {
             <a href="#pricing" className="hover:text-white">Pricing</a>
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <Button asChild variant="ghost" size="sm" className="hidden text-slate-200 hover:bg-white/10 hover:text-white sm:inline-flex">
               <a href="/login">Sign in</a>
             </Button>
@@ -376,7 +376,7 @@ if (\`v1=\${expected}\` !== signatureHeader) {
                           : 'border-white/10 bg-white/[0.04]'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <h3 className="text-xl font-black">
                           {copy?.label ?? plan.name.replace(/_/g, ' ')}
                         </h3>

@@ -785,15 +785,15 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
       </header>
 
       {/* Main body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 py-5 sm:px-6 sm:py-6 space-y-5 sm:space-y-6">
         <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,.28),transparent_34%),linear-gradient(135deg,rgba(15,23,42,.98),rgba(2,6,23,.92))] p-4 shadow-2xl shadow-black/20 sm:rounded-[2rem] sm:p-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-400/10 px-3 py-1 text-xs font-bold text-violet-200">
                 <Shield className="h-3.5 w-3.5" />
                 Platform owner console
               </div>
-              <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+              <h2 className="text-2xl font-black tracking-tight text-white sm:text-4xl">
                 Operate merchants, payments, and delivery health from one control plane.
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">
@@ -801,7 +801,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
               </p>
             </div>
 
-            <div className="grid w-full gap-3 sm:grid-cols-3 lg:min-w-[440px] lg:max-w-xl">
+            <div className="grid w-full min-w-0 gap-3 sm:grid-cols-3 lg:max-w-xl">
               <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Merchants</div>
                 <div className="mt-2 text-sm font-black text-white">{clients.length.toLocaleString()}</div>
@@ -875,7 +875,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                   className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 flex flex-col justify-between gap-3"
                 >
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <h4 className="font-bold text-white text-sm">{c.businessName}</h4>
                       <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full font-semibold">
                         Awaiting Approval
@@ -939,7 +939,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
             {/* Tab: Merchants */}
             {activeTab === 'merchants' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-neutral-400" />
                     <h2 className="text-base font-bold text-white">Active Merchants</h2>
@@ -1206,7 +1206,13 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                   <div><Label className="text-xs text-neutral-400">Priority</Label><select value={notificationSeverity} onChange={(e) => setNotificationSeverity(e.target.value)} className="mt-2 h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-sm text-white"><option>INFO</option><option>SUCCESS</option><option>WARNING</option><option>URGENT</option></select></div>
                   <div className="sm:col-span-2"><Label className="text-xs text-neutral-400">Message</Label><textarea required maxLength={2000} value={notificationMessage} onChange={(e) => setNotificationMessage(e.target.value)} className="mt-2 min-h-32 w-full rounded-xl border border-neutral-800 bg-neutral-950 p-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Write the message for this merchant..." /></div>
                 </div>
-                <div className="flex items-center justify-between gap-3"><p className={`text-xs ${notificationResult?.includes('successfully') ? 'text-emerald-400' : 'text-amber-400'}`}>{notificationResult}</p><Button disabled={notificationSending} className="bg-violet-600 text-white hover:bg-violet-700"><Bell className="mr-2 h-4 w-4" />{notificationSending ? 'Sending...' : 'Send notification'}</Button></div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className={`min-h-4 text-xs ${notificationResult?.includes('successfully') ? 'text-emerald-400' : 'text-amber-400'}`}>{notificationResult}</p>
+                  <Button disabled={notificationSending} className="w-full bg-violet-600 text-white hover:bg-violet-700 sm:w-auto">
+                    <Bell className="mr-2 h-4 w-4" />
+                    {notificationSending ? 'Sending...' : 'Send notification'}
+                  </Button>
+                </div>
               </form>
             )}
 
@@ -1234,7 +1240,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                     return (
                       <div key={plan.id} className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
                         <div>
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
                             <h3 className="text-lg font-black text-white">{plan.name}</h3>
                             <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold text-violet-300">
                               Public plan
@@ -1245,7 +1251,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                           </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div className="space-y-1">
                             <Label className="text-[10px] font-bold uppercase text-neutral-500">Monthly price</Label>
                             <Input
@@ -1691,7 +1697,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                 </div>
 
                 <div className="rounded-2xl border border-neutral-900 overflow-hidden bg-neutral-900/20">
-                  <div className="max-h-[500px] overflow-y-auto">
+                  <div className="max-h-[500px] overflow-auto">
                     {auditLoading ? (
                       <div className="py-12 text-center text-xs text-neutral-500">
                         <RefreshCw className="h-5 w-5 animate-spin mx-auto text-violet-500 mb-2" />
@@ -1700,7 +1706,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                     ) : auditLogs.length === 0 ? (
                       <div className="py-12 text-center text-xs text-neutral-600">No events logged.</div>
                     ) : (
-                      <table className="w-full text-left border-collapse text-xs">
+                      <table className="min-w-[720px] w-full text-left border-collapse text-xs">
                         <thead>
                           <tr className="border-b border-neutral-900 bg-neutral-950/40 text-neutral-500 font-semibold">
                             <th className="px-4 py-3">Timestamp</th>
@@ -1860,7 +1866,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
       {/* Add Client Dialog Modal */}
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1872,7 +1878,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative z-10 space-y-4"
+              className="relative z-10 w-full max-w-md rounded-3xl border border-neutral-800 bg-neutral-900 p-4 shadow-2xl sm:p-6 space-y-4"
             >
               <div>
                 <h3 className="text-lg font-bold text-white">Register Merchant (Direct Setup)</h3>
@@ -1990,7 +1996,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
       {/* Credentials Created Dialog */}
       <AnimatePresence>
         {createdCredentials && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -2001,7 +2007,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-md bg-neutral-900 border border-emerald-900/50 rounded-3xl p-6 shadow-2xl relative z-10 space-y-5"
+              className="relative z-10 w-full max-w-md rounded-3xl border border-emerald-900/50 bg-neutral-900 p-4 shadow-2xl sm:p-6 space-y-5"
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
@@ -2081,7 +2087,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
       {/* Webhook Log Detail Modal */}
       <AnimatePresence>
         {selectedLogDetail && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -2093,7 +2099,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative z-10 space-y-4 max-h-[90vh] flex flex-col text-neutral-200"
+              className="relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col space-y-4 rounded-3xl border border-neutral-800 bg-neutral-950 p-4 text-neutral-200 shadow-2xl sm:max-h-[90vh] sm:p-6"
             >
               <div>
                 <h3 className="text-lg font-bold text-white">Webhook Attempt Detail</h3>
@@ -2102,7 +2108,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
 
               <ScrollArea className="flex-1 pr-1 space-y-4">
                 <div className="space-y-3 text-xs">
-                  <div className="grid grid-cols-2 gap-2 bg-neutral-900/40 p-3 rounded-xl border border-neutral-850">
+                  <div className="grid grid-cols-1 gap-2 rounded-xl border border-neutral-850 bg-neutral-900/40 p-3 sm:grid-cols-2">
                     <div>
                       <span className="text-neutral-500 font-semibold block">Status</span>
                       <span className={`block font-bold mt-0.5 ${selectedLogDetail.isSuccess ? 'text-emerald-400' : 'text-red-400'}`}>
