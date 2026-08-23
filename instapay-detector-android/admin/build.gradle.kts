@@ -11,8 +11,8 @@ android {
         applicationId = "com.instapaydetector.admin"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1.0-admin-console"
+        versionCode = 3
+        versionName = "1.2.0-admin-portal-parity"
         resValue("string", "app_name", "InstaPay Admin")
     }
 

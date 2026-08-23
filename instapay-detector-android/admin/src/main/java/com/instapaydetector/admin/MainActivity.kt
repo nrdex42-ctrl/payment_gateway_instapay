@@ -6,7 +6,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
-import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.tabs.TabLayoutMediator
 import com.instapaydetector.admin.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -33,55 +33,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupViewPager() {
-        val fragments = listOf(
-            DashboardFragment(),
-            MerchantsFragment(),
-            TransactionsFragment(),
-            OpsFragment(),
-            SettingsFragment()
+        val tabs = listOf(
+            AdminTab("Ops Center", OpsFragment()),
+            AdminTab("Merchants", MerchantsFragment()),
+            AdminTab("Billing", BillingFragment()),
+            AdminTab("Notifications", NotificationsFragment()),
+            AdminTab("Transactions", TransactionsFragment()),
+            AdminTab("Webhooks", WebhooksFragment()),
+            AdminTab("Activity", ActivityFragment()),
+            AdminTab("Settings", SettingsFragment()),
+            AdminTab("Audit", AuditFragment())
         )
 
         binding.viewPager.adapter = object : FragmentStateAdapter(this) {
-            override fun getItemCount(): Int = fragments.size
-            override fun createFragment(position: Int): Fragment = fragments[position]
+            override fun getItemCount(): Int = tabs.size
+            override fun createFragment(position: Int): Fragment = tabs[position].fragment
         }
 
-        // Disable user swiping to prevent accidental navigation inside lists
+        // Keep tab changes deliberate; lists inside screens handle vertical gestures.
         binding.viewPager.isUserInputEnabled = false
 
-        binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                super.onPageSelected(position)
-                binding.bottomNav.menu.getItem(position).isChecked = true
-            }
-        })
-
-        binding.bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_dashboard -> {
-                    binding.viewPager.currentItem = 0
-                    true
-                }
-                R.id.nav_merchants -> {
-                    binding.viewPager.currentItem = 1
-                    true
-                }
-                R.id.nav_transactions -> {
-                    binding.viewPager.currentItem = 2
-                    true
-                }
-                R.id.nav_ops -> {
-                    binding.viewPager.currentItem = 3
-                    true
-                }
-                R.id.nav_settings -> {
-                    binding.viewPager.currentItem = 4
-                    true
-                }
-                else -> false
-            }
-        }
+        TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
+            tab.text = tabs[position].title
+        }.attach()
     }
+
+    private data class AdminTab(val title: String, val fragment: Fragment)
 
     private fun startSetupActivity() {
         startActivity(Intent(this, SetupActivity::class.java))

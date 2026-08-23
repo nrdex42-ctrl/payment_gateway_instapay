@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
-class OpsFragment : Fragment() {
+open class OpsFragment : Fragment() {
 
     private var _binding: FragmentOpsBinding? = null
     private val binding get() = _binding!!

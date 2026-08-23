@@ -16,7 +16,7 @@ import com.instapaydetector.admin.databinding.FragmentSettingsBinding
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-class SettingsFragment : Fragment() {
+open class SettingsFragment : Fragment() {
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
