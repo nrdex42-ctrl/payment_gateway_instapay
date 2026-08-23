@@ -608,6 +608,26 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
     }
   }
 
+  const handleSwapMerchantPlan = async (merchant: ClientStats, nextPlanName: string) => {
+    if (!nextPlanName || nextPlanName === merchant.subscriptionPlan) return
+
+    const nextPlan = subscriptionPlanOptions.find((plan) => plan.name === nextPlanName)
+    if (!nextPlan) {
+      alert(`Plan '${nextPlanName}' was not found.`)
+      return
+    }
+
+    const isTrial = nextPlan.name === 'FREE_TRIAL'
+    const addDays = isTrial ? 1 : 30
+    const confirmed = confirm(
+      `Switch ${merchant.businessName} to ${nextPlan.name.replaceAll('_', ' ')}?\n\n` +
+      `This will apply ${nextPlan.maxTransactions.toLocaleString()} monthly transactions and ${isTrial ? '1 trial day' : '30 paid-plan days'}.`
+    )
+    if (!confirmed) return
+
+    await handleUpdateSubscription(merchant.id, nextPlan.name, isTrial, addDays)
+  }
+
   const handleUpdatePlan = async (planName: string) => {
     const draft = planDrafts[planName]
     if (!draft) return
@@ -690,6 +710,14 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const healthScore = Math.max(0, Math.min(100, readinessPercent - Math.min(40, operationalIssues * 5)))
   const recentConfirmedCount = recentTx.filter((tx) => tx.status === 'CONFIRMED').length
   const recentPendingCount = recentTx.filter((tx) => tx.status === 'PENDING').length
+  const subscriptionPlanOptions = plans.length > 0
+    ? plans
+    : [
+        { id: 'fallback-free-trial', name: 'FREE_TRIAL', priceEgp: 0, maxTransactions: 5 },
+        { id: 'fallback-basic', name: 'BASIC', priceEgp: 200, maxTransactions: 1000 },
+        { id: 'fallback-pro', name: 'PRO', priceEgp: 500, maxTransactions: 3500 },
+        { id: 'fallback-enterprise', name: 'ENTERPRISE', priceEgp: 700, maxTransactions: 10000 },
+      ]
   const merchantRiskScore = (merchant: ClientStats) => {
     const remaining = daysRemaining(merchant.subscriptionEndsAt)
     let score = 0
@@ -1535,12 +1563,27 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:flex xl:w-44 xl:flex-col">
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:flex xl:w-56 xl:flex-col">
+                              <div className="col-span-2 rounded-2xl border border-neutral-900 bg-neutral-950/55 p-3 sm:col-span-3 xl:col-span-1">
+                                <Label className="text-[10px] font-black uppercase tracking-wider text-neutral-500">Plan control</Label>
+                                <select
+                                  value={c.subscriptionPlan}
+                                  disabled={subscriptionUpdatingId === c.id}
+                                  onChange={(event) => handleSwapMerchantPlan(c, event.target.value)}
+                                  className="mt-2 h-9 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-xs font-bold text-white outline-none transition focus:border-violet-500 disabled:opacity-50"
+                                >
+                                  {subscriptionPlanOptions.map((plan) => (
+                                    <option key={plan.id} value={plan.name}>
+                                      {plan.name.replaceAll('_', ' ')} · {plan.maxTransactions.toLocaleString()} tx
+                                    </option>
+                                  ))}
+                                </select>
+                                <p className="mt-2 text-[10px] leading-4 text-neutral-600">
+                                  Switching applies the selected plan quota and renews its duration.
+                                </p>
+                              </div>
                               <Button size="sm" onClick={() => { setTxFilters({ q: '', status: '', minAmount: '', maxAmount: '', startDate: '', endDate: '', clientId: c.id }); setActiveTab('transactions') }} className="justify-start rounded-xl bg-violet-600 text-white hover:bg-violet-700">
                                 <Activity className="mr-2 h-4 w-4" /> Transactions
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleUpdateSubscription(c.id, 'PRO', false, 30)} disabled={subscriptionUpdatingId === c.id} className="justify-start rounded-xl border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300 hover:bg-fuchsia-500 hover:text-white">
-                                <Calendar className="mr-2 h-4 w-4" /> Renew PRO
                               </Button>
                               <Button size="sm" variant="outline" onClick={() => handleUpdateSubscription(c.id, 'FREE_TRIAL', true, 1)} disabled={subscriptionUpdatingId === c.id} className="justify-start rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500 hover:text-amber-950">
                                 <Calendar className="mr-2 h-4 w-4" /> +1d trial
@@ -1707,34 +1750,19 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                            <Button
-                              size="sm"
-                              variant="outline"
+                          <div className="flex flex-col gap-2 lg:min-w-64">
+                            <select
+                              value={merchant.subscriptionPlan}
                               disabled={subscriptionUpdatingId === merchant.id}
-                              onClick={() => handleUpdateSubscription(merchant.id, 'BASIC', false, 30)}
-                              className="h-8 rounded-lg border-neutral-800 bg-neutral-950 text-xs text-neutral-300 hover:bg-neutral-900"
+                              onChange={(event) => handleSwapMerchantPlan(merchant, event.target.value)}
+                              className="h-9 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-xs font-bold text-white outline-none transition focus:border-violet-500 disabled:opacity-50"
                             >
-                              BASIC +30d
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={subscriptionUpdatingId === merchant.id}
-                              onClick={() => handleUpdateSubscription(merchant.id, 'PRO', false, 30)}
-                              className="h-8 rounded-lg border-fuchsia-500/30 bg-fuchsia-500/10 text-xs text-fuchsia-300 hover:bg-fuchsia-500 hover:text-white"
-                            >
-                              PRO +30d
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={subscriptionUpdatingId === merchant.id}
-                              onClick={() => handleUpdateSubscription(merchant.id, 'ENTERPRISE', false, 30)}
-                              className="h-8 rounded-lg border-cyan-500/30 bg-cyan-500/10 text-xs text-cyan-300 hover:bg-cyan-500 hover:text-white"
-                            >
-                              ENT +30d
-                            </Button>
+                              {subscriptionPlanOptions.map((plan) => (
+                                <option key={plan.id} value={plan.name}>
+                                  {plan.name.replaceAll('_', ' ')} · {plan.maxTransactions.toLocaleString()} tx
+                                </option>
+                              ))}
+                            </select>
                             <Button
                               size="sm"
                               variant="ghost"
