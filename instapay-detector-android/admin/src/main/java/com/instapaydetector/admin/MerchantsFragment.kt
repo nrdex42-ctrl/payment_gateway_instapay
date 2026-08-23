@@ -47,7 +47,7 @@ class MerchantsFragment : Fragment() {
             loadMerchants()
         }
 
-        binding.fabCreate.setOnClickListener {
+        binding.btnCreateTop.setOnClickListener {
             val bottomSheet = CreateMerchantBottomSheet {
                 binding.swipeRefresh.isRefreshing = true
                 loadMerchants()

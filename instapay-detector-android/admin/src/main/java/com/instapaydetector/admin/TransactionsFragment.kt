@@ -31,6 +31,8 @@ class TransactionsFragment : Fragment() {
 
     private var searchQuery = ""
     private var statusFilter = "" // Empty represents ALL, else PENDING, CONFIRMED, EXPIRED
+    private var minAmountFilter = ""
+    private var maxAmountFilter = ""
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -77,6 +79,31 @@ class TransactionsFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
+        binding.etMinAmount.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                minAmountFilter = s?.toString()?.trim() ?: ""
+                loadTransactions()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        binding.etMaxAmount.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                maxAmountFilter = s?.toString()?.trim() ?: ""
+                loadTransactions()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        binding.btnClearFilters.setOnClickListener {
+            binding.etSearch.setText("")
+            binding.etMinAmount.setText("")
+            binding.etMaxAmount.setText("")
+            binding.chipGroupStatus.check(R.id.chip_all)
+        }
+
         binding.chipGroupStatus.setOnCheckedStateChangeListener { _, checkedIds ->
             statusFilter = when (checkedIds.firstOrNull()) {
                 R.id.chip_pending -> "PENDING"
@@ -92,6 +119,12 @@ class TransactionsFragment : Fragment() {
         lifecycleScope.launch {
             val encodedQuery = URLEncoder.encode(searchQuery, "UTF-8")
             var path = "/api/transactions?q=$encodedQuery&status=$statusFilter"
+            if (minAmountFilter.isNotEmpty()) {
+                path += "&minAmount=${URLEncoder.encode(minAmountFilter, "UTF-8")}"
+            }
+            if (maxAmountFilter.isNotEmpty()) {
+                path += "&maxAmount=${URLEncoder.encode(maxAmountFilter, "UTF-8")}"
+            }
             val clientId = arguments?.getString("clientId")
             if (!clientId.isNullOrEmpty()) {
                 path += "&clientId=$clientId"
@@ -141,6 +174,12 @@ class TransactionsFragment : Fragment() {
 
         val encodedQuery = URLEncoder.encode(searchQuery, "UTF-8")
         var exportUrl = "$gatewayUrl/api/transactions/export?q=$encodedQuery&status=$statusFilter"
+        if (minAmountFilter.isNotEmpty()) {
+            exportUrl += "&minAmount=${URLEncoder.encode(minAmountFilter, "UTF-8")}"
+        }
+        if (maxAmountFilter.isNotEmpty()) {
+            exportUrl += "&maxAmount=${URLEncoder.encode(maxAmountFilter, "UTF-8")}"
+        }
         val clientId = arguments?.getString("clientId")
         if (!clientId.isNullOrEmpty()) {
             exportUrl += "&clientId=$clientId"
