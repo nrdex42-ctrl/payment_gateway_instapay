@@ -1216,259 +1216,215 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
             
             {/* Tab: Merchants */}
             {activeTab === 'merchants' && (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-neutral-400" />
-                    <h2 className="text-base font-bold text-white">Active Merchants</h2>
+              <div className="space-y-5">
+                <div className="rounded-3xl border border-neutral-900 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,.12),transparent_35%),rgba(23,23,23,.35)] p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Users className="h-5 w-5 text-violet-300" />
+                        <h2 className="text-lg font-black text-white">Merchant control center</h2>
+                        <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-300">
+                          {activeMerchants.length.toLocaleString()} approved
+                        </span>
+                      </div>
+                      <p className="mt-2 max-w-2xl text-xs leading-6 text-neutral-400">
+                        Review merchant readiness, credentials, subscriptions, quota, revenue, and account controls from structured operational cards.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setActiveTab('ops')}
+                        className="rounded-xl border-neutral-800 bg-neutral-950 text-neutral-300 hover:bg-neutral-900"
+                      >
+                        <Gauge className="mr-2 h-4 w-4" />
+                        Ops Center
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setShowAddModal(true)}
+                        className="rounded-xl bg-violet-600 text-white hover:bg-violet-700"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Merchant
+                      </Button>
+                    </div>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => setShowAddModal(true)}
-                    className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl"
-                  >
-                    <Plus className="mr-1 h-4 w-4" />
-                    Create Merchant (Direct)
-                  </Button>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {[
+                      { label: 'Active now', value: activeMerchants.filter((merchant) => merchant.isActive).length, tone: 'text-emerald-300' },
+                      { label: 'Disabled', value: disabledApprovedMerchants.length, tone: disabledApprovedMerchants.length ? 'text-amber-300' : 'text-neutral-300' },
+                      { label: 'Missing setup', value: [...merchantsMissingWebhook, ...merchantsMissingDetector].filter((merchant, index, arr) => arr.findIndex((item) => item.id === merchant.id) === index).length, tone: merchantsMissingWebhook.length + merchantsMissingDetector.length ? 'text-amber-300' : 'text-emerald-300' },
+                      { label: 'Quota risk', value: nearQuotaMerchants.length, tone: nearQuotaMerchants.length ? 'text-red-300' : 'text-emerald-300' },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-2xl border border-white/10 bg-neutral-950/55 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-500">{item.label}</div>
+                        <div className={`mt-2 text-xl font-black ${item.tone}`}>{item.value.toLocaleString()}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Clients Cards */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {activeMerchants.length === 0 ? (
-                    <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-8 text-center text-neutral-500">
-                      No active approved merchants found. Approved clients will show up here.
+                    <div className="rounded-3xl border border-neutral-900 bg-neutral-900/30 p-10 text-center">
+                      <Users className="mx-auto h-8 w-8 text-neutral-700" />
+                      <h3 className="mt-3 text-sm font-bold text-white">No approved merchants yet</h3>
+                      <p className="mt-2 text-xs text-neutral-500">Approved merchant accounts will appear here after review.</p>
                     </div>
                   ) : (
-                    activeMerchants.map((c) => (
-                      <div
-                        key={c.id}
-                        className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 hover:border-neutral-800 transition-all flex flex-col md:flex-row justify-between gap-4"
-                      >
-                        <div className="space-y-2 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-bold text-white truncate">{c.businessName}</h3>
-                            <span className="font-mono text-xs text-neutral-500 bg-neutral-950 px-2 py-0.5 rounded">
-                              /{c.slug}
-                            </span>
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                c.isActive
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                              }`}
-                            >
-                              {c.isActive ? <CheckCircle className="h-2.5 w-2.5" /> : <XCircle className="h-2.5 w-2.5" />}
-                              {c.isActive ? 'Active' : 'Disabled'}
-                            </span>
-                            
-                            {/* Subscription Badge */}
-                            {(() => {
-                              const isExpired = c.subscriptionEndsAt && new Date(c.subscriptionEndsAt).getTime() < Date.now()
-                              if (isExpired) {
-                                return (
-                                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
-                                    <AlertCircle className="h-2.5 w-2.5" />
-                                    Expired
+                    activeMerchants.map((c) => {
+                      const remaining = daysRemaining(c.subscriptionEndsAt)
+                      const expired = remaining !== null && remaining <= 0
+                      const nearLimit = c.txLimit > 0 && c.txCount >= c.txLimit * 0.8
+                      const blocked = c.txLimit > 0 && c.txCount >= c.txLimit
+                      const setupChecks = [
+                        { label: 'API key', ok: Boolean(c.apiKey) },
+                        { label: 'Detector', ok: Boolean(c.detectToken) },
+                        { label: 'Webhook', ok: Boolean(c.webhookUrl) },
+                        { label: 'Account', ok: c.isActive },
+                      ]
+                      const setupDone = setupChecks.filter((item) => item.ok).length
+
+                      return (
+                        <article
+                          key={c.id}
+                          className="overflow-hidden rounded-3xl border border-neutral-900 bg-neutral-900/25 shadow-2xl shadow-black/10 transition hover:border-violet-500/25"
+                        >
+                          <div className="border-b border-neutral-900 bg-neutral-950/45 p-5">
+                            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                              <div className="min-w-0 space-y-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3 className="truncate text-xl font-black text-white">{c.businessName}</h3>
+                                  <span className="rounded-lg border border-neutral-800 bg-neutral-950 px-2 py-1 font-mono text-[11px] font-bold text-neutral-400">/{c.slug}</span>
+                                  <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold ${c.isActive ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300' : 'border-red-500/25 bg-red-500/10 text-red-300'}`}>
+                                    {c.isActive ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                                    {c.isActive ? 'Enabled' : 'Disabled'}
                                   </span>
-                                )
-                              }
-                              return (
-                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${c.isFreeTrial ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30'} border`}>
-                                  <Calendar className="h-2.5 w-2.5" />
-                                  {c.subscriptionPlan}
-                                </span>
-                              )
-                            })()}
-                          </div>
+                                  <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold ${expired ? 'border-red-500/30 bg-red-500/10 text-red-300' : c.isFreeTrial ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300'}`}>
+                                    <Calendar className="h-3 w-3" />
+                                    {expired ? 'Expired' : c.subscriptionPlan.replaceAll('_', ' ')}
+                                  </span>
+                                </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-neutral-400">
-                            <div>
-                              <span className="text-neutral-600 font-medium">InstaPay Handle:</span>{' '}
-                              <span className="font-mono font-semibold text-neutral-300">{c.instapayHandle}</span>
-                            </div>
-                            <div>
-                              <span className="text-neutral-600 font-medium">Email Address:</span>{' '}
-                              <span className="font-mono font-semibold text-neutral-300">{c.email}</span>
-                            </div>
-                            <div>
-                              <span className="text-neutral-600 font-medium">Subscription Ends:</span>{' '}
-                              <span className="font-mono font-semibold text-neutral-300">
-                                {c.subscriptionEndsAt
-                                  ? (() => {
-                                      const endDate = new Date(c.subscriptionEndsAt!)
-                                      const remainMs = endDate.getTime() - Date.now()
-                                      const remainDays = Math.ceil(remainMs / (1000 * 60 * 60 * 24))
-                                      if (remainDays > 0) return `${endDate.toLocaleDateString()} (${remainDays}d left)`
-                                      return `${endDate.toLocaleDateString()} (EXPIRED)`
-                                    })()
-                                  : 'Lifetime'}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Transaction Usage Bar */}
-                          <div className="mt-2 space-y-1">
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className="text-neutral-500 font-medium">Transaction Usage</span>
-                              <span className="font-bold text-neutral-300">
-                                {(c.txCount ?? 0).toLocaleString()} / {(c.txLimit ?? 0).toLocaleString()}
-                              </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  (c.txCount ?? 0) >= (c.txLimit ?? 1)
-                                    ? 'bg-red-500'
-                                    : (c.txCount ?? 0) >= (c.txLimit ?? 1) * 0.8
-                                    ? 'bg-amber-500'
-                                    : 'bg-gradient-to-r from-violet-600 to-indigo-500'
-                                }`}
-                                style={{ width: `${usagePercent(c.txCount ?? 0, c.txLimit ?? 1)}%` }}
-                              />
-                            </div>
-                            {(c.txCount ?? 0) >= (c.txLimit ?? 1) && (
-                              <p className="text-[9px] text-red-400 font-semibold">Limit reached — merchant cannot create new checkouts</p>
-                            )}
-                          </div>
-
-                          {/* Keys & Tokens */}
-                          {c.apiKey && c.detectToken && (
-                            <div className="space-y-1 bg-neutral-950/60 p-3 rounded-xl border border-neutral-900 text-xs">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-neutral-500 flex items-center gap-1 font-medium">
-                                  <Key className="h-3 w-3" /> API Key (apiKey)
-                                </span>
-                                <div className="flex items-center gap-1.5 font-mono text-neutral-400 select-all">
-                                  <span className="truncate rounded-md border border-neutral-800 bg-neutral-900/70 px-2 py-1 text-[10px]">{maskSecret(c.apiKey)}</span>
-                                  <button
-                                    onClick={() => copyToClipboard(c.apiKey!, `api-${c.id}`)}
-                                    className="text-neutral-600 hover:text-neutral-300 transition-colors"
-                                  >
-                                    <Copy className="h-3.5 w-3.5" />
-                                  </button>
-                                  {copiedText === `api-${c.id}` && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
+                                <div className="grid gap-2 text-xs text-neutral-400 md:grid-cols-2 xl:grid-cols-3">
+                                  <div className="min-w-0 rounded-xl border border-neutral-900 bg-neutral-950/50 p-3">
+                                    <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">Email</div>
+                                    <div className="mt-1 truncate font-mono text-neutral-200" title={c.email}>{c.email}</div>
+                                  </div>
+                                  <div className="min-w-0 rounded-xl border border-neutral-900 bg-neutral-950/50 p-3">
+                                    <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">InstaPay handle</div>
+                                    <div className="mt-1 truncate font-mono text-neutral-200" title={c.instapayHandle}>{c.instapayHandle}</div>
+                                  </div>
+                                  <div className="min-w-0 rounded-xl border border-neutral-900 bg-neutral-950/50 p-3">
+                                    <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">Subscription</div>
+                                    <div className={`mt-1 font-bold ${expired ? 'text-red-300' : remaining !== null && remaining <= 3 ? 'text-amber-300' : 'text-neutral-200'}`}>
+                                      {remaining === null ? 'No expiry' : remaining > 0 ? `${remaining} day${remaining === 1 ? '' : 's'} remaining` : 'Expired'}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-between gap-2 border-t border-neutral-900/60 pt-1.5 mt-1.5">
-                                <span className="text-neutral-500 flex items-center gap-1 font-medium">
-                                  <Smartphone className="h-3 w-3" /> APK Token (detectToken)
-                                </span>
-                                <div className="flex items-center gap-1.5 font-mono text-neutral-400 select-all">
-                                  <span className="truncate rounded-md border border-neutral-800 bg-neutral-900/70 px-2 py-1 text-[10px]">{maskSecret(c.detectToken)}</span>
-                                  <button
-                                    onClick={() => copyToClipboard(c.detectToken!, `det-${c.id}`)}
-                                    className="text-neutral-600 hover:text-neutral-300 transition-colors"
-                                  >
-                                    <Copy className="h-3.5 w-3.5" />
-                                  </button>
-                                  {copiedText === `det-${c.id}` && <span className="text-[10px] text-emerald-400 font-sans">Copied!</span>}
+                              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:min-w-[420px]">
+                                <div className="rounded-2xl border border-neutral-900 bg-neutral-950/60 p-4">
+                                  <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">Revenue</div>
+                                  <div className="mt-1 text-lg font-black text-emerald-300">{formatEgp(c.confirmedVolume)}</div>
+                                  <div className="text-[10px] text-neutral-600">EGP confirmed</div>
+                                </div>
+                                <div className="rounded-2xl border border-neutral-900 bg-neutral-950/60 p-4">
+                                  <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">Transactions</div>
+                                  <div className="mt-1 text-lg font-black text-white">{c.totalTransactions.toLocaleString()}</div>
+                                  <div className="text-[10px] text-neutral-600">all time</div>
+                                </div>
+                                <div className="col-span-2 rounded-2xl border border-neutral-900 bg-neutral-950/60 p-4 sm:col-span-1">
+                                  <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">Setup</div>
+                                  <div className="mt-1 text-lg font-black text-cyan-300">{setupDone}/4</div>
+                                  <div className="text-[10px] text-neutral-600">ready checks</div>
                                 </div>
                               </div>
+                            </div>
+                          </div>
 
-                              {c.webhookUrl && (
-                                <div className="flex items-center justify-between gap-2 border-t border-neutral-900/60 pt-1.5 mt-1.5">
-                                  <span className="text-neutral-500 flex items-center gap-1 font-medium">
-                                    <Globe className="h-3 w-3" /> Webhook URL
-                                  </span>
-                                  <span className="font-mono text-neutral-400 truncate max-w-[200px]" title={c.webhookUrl}>
-                                    {c.webhookUrl}
+                          <div className="grid gap-4 p-5 xl:grid-cols-[1.05fr_1fr_auto]">
+                            <div className="space-y-4">
+                              <div>
+                                <div className="flex items-center justify-between gap-3 text-xs">
+                                  <span className="font-bold text-neutral-400">Monthly quota usage</span>
+                                  <span className={`font-black ${blocked ? 'text-red-300' : nearLimit ? 'text-amber-300' : 'text-neutral-200'}`}>
+                                    {c.txCount.toLocaleString()} / {c.txLimit.toLocaleString()}
                                   </span>
                                 </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                                <div className="mt-2 h-2.5 overflow-hidden rounded-full border border-neutral-800 bg-neutral-950">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-500 ${blocked ? 'bg-red-500' : nearLimit ? 'bg-amber-500' : 'bg-gradient-to-r from-violet-600 to-cyan-400'}`}
+                                    style={{ width: `${usagePercent(c.txCount, c.txLimit)}%` }}
+                                  />
+                                </div>
+                                {blocked && <p className="mt-2 text-[10px] font-semibold text-red-300">Quota reached — checkout creation is blocked until renewal or upgrade.</p>}
+                              </div>
 
-                        {/* Stats & Actions */}
-                        <div className="flex md:flex-col justify-between items-end gap-2 border-t md:border-t-0 border-neutral-900 pt-3 md:pt-0 shrink-0">
-                          <div className="text-right">
-                            <span className="text-[10px] uppercase text-neutral-500 tracking-wider font-semibold">Total Revenue</span>
-                            <div className="text-base font-black text-emerald-400 mt-0.5">
-                              {formatEgp(c.confirmedVolume)} <span className="text-[10px] font-normal text-neutral-500">EGP</span>
+                              <div className="flex flex-wrap gap-2">
+                                {setupChecks.map((item) => (
+                                  <span key={item.label} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold ${item.ok ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300' : 'border-amber-500/25 bg-amber-500/10 text-amber-300'}`}>
+                                    {item.ok ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                                    {item.label}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
-                            <span className="text-[10px] text-neutral-500 block">{c.totalTransactions} transactions</span>
+
+                            <div className="rounded-2xl border border-neutral-900 bg-neutral-950/45 p-4">
+                              <div className="mb-3 flex items-center justify-between gap-2">
+                                <h4 className="text-xs font-black uppercase tracking-wider text-neutral-400">Secure credentials</h4>
+                                {copiedText?.endsWith(c.id) && <span className="text-[10px] font-bold text-emerald-300">Copied</span>}
+                              </div>
+                              <div className="space-y-2 text-xs">
+                                <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-900 bg-neutral-900/45 p-3">
+                                  <span className="flex items-center gap-2 text-neutral-500"><Key className="h-3.5 w-3.5" /> API key</span>
+                                  <button type="button" onClick={() => c.apiKey && copyToClipboard(c.apiKey, `api-${c.id}`)} disabled={!c.apiKey} className="flex min-w-0 items-center gap-2 font-mono text-neutral-300 disabled:opacity-40">
+                                    <span className="truncate">{maskSecret(c.apiKey)}</span><Copy className="h-3.5 w-3.5 shrink-0" />
+                                  </button>
+                                </div>
+                                <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-900 bg-neutral-900/45 p-3">
+                                  <span className="flex items-center gap-2 text-neutral-500"><Smartphone className="h-3.5 w-3.5" /> Detector token</span>
+                                  <button type="button" onClick={() => c.detectToken && copyToClipboard(c.detectToken, `det-${c.id}`)} disabled={!c.detectToken} className="flex min-w-0 items-center gap-2 font-mono text-neutral-300 disabled:opacity-40">
+                                    <span className="truncate">{maskSecret(c.detectToken)}</span><Copy className="h-3.5 w-3.5 shrink-0" />
+                                  </button>
+                                </div>
+                                <div className="rounded-xl border border-neutral-900 bg-neutral-900/45 p-3">
+                                  <div className="flex items-center gap-2 text-neutral-500"><Globe className="h-3.5 w-3.5" /> Webhook URL</div>
+                                  <div className="mt-1 truncate font-mono text-neutral-300" title={c.webhookUrl || undefined}>{c.webhookUrl || 'Not configured'}</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2 xl:w-44">
+                              <Button size="sm" onClick={() => { setTxFilters({ q: '', status: '', minAmount: '', maxAmount: '', startDate: '', endDate: '', clientId: c.id }); setActiveTab('transactions') }} className="justify-start rounded-xl bg-violet-600 text-white hover:bg-violet-700">
+                                <Activity className="mr-2 h-4 w-4" /> Transactions
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleUpdateSubscription(c.id, 'PRO', false, 30)} disabled={subscriptionUpdatingId === c.id} className="justify-start rounded-xl border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300 hover:bg-fuchsia-500 hover:text-white">
+                                <Calendar className="mr-2 h-4 w-4" /> Renew PRO
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleUpdateSubscription(c.id, 'FREE_TRIAL', true, 1)} disabled={subscriptionUpdatingId === c.id} className="justify-start rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500 hover:text-amber-950">
+                                <Calendar className="mr-2 h-4 w-4" /> +1d trial
+                              </Button>
+                              <Button size="sm" variant="outline" asChild className="justify-start rounded-xl border-neutral-800 bg-neutral-950 text-neutral-300 hover:bg-neutral-900">
+                                <a href={`/pay/${c.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" /> Pay page</a>
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleToggleClientStatus(c.id, c.isActive)} className={`justify-start rounded-xl ${c.isActive ? 'text-amber-300 hover:bg-amber-500/10' : 'text-emerald-300 hover:bg-emerald-500/10'}`}>
+                                {c.isActive ? <XCircle className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                                {c.isActive ? 'Disable' : 'Enable'}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleDeleteClient(c.id)} className="justify-start rounded-xl text-red-300 hover:bg-red-500/10">
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </Button>
+                            </div>
                           </div>
-
-                          <div className="flex flex-col gap-1.5 w-full md:w-auto mt-3 md:mt-0 items-end">
-                            {/* Subscription Actions */}
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                               <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleUpdateSubscription(c.id, 'FREE_TRIAL', true, 1)}
-                                  disabled={subscriptionUpdatingId === c.id}
-                                  className="h-6 rounded text-[10px] bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500 hover:text-amber-950 px-2"
-                                >
-                                  +1 Day Trial
-                               </Button>
-                               <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleUpdateSubscription(c.id, 'PRO', false, 30)}
-                                  disabled={subscriptionUpdatingId === c.id}
-                                  className="h-6 rounded text-[10px] bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30 hover:bg-fuchsia-500 hover:text-white px-2"
-                                >
-                                  +30 Days Pro
-                               </Button>
-                               <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleUpdateSubscription(c.id, 'EXPIRED', false, -9999)}
-                                  disabled={subscriptionUpdatingId === c.id}
-                                  className="h-6 rounded text-[10px] bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500 hover:text-white px-2"
-                                >
-                                  End Sub
-                               </Button>
-                            </div>
-
-                            {/* Standard Actions */}
-                            <div className="flex items-center gap-1.5">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setTxFilters({ q: '', status: '', minAmount: '', maxAmount: '', startDate: '', endDate: '', clientId: c.id })
-                                setActiveTab('transactions')
-                              }}
-                              className="h-8 rounded-lg text-neutral-400 hover:text-violet-400 hover:bg-violet-500/10"
-                            >
-                              <Activity className="h-4 w-4 mr-1.5" />
-                              Transactions
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              asChild
-                              className="h-8 rounded-lg text-neutral-400 hover:text-white"
-                            >
-                              <a href={`/pay/${c.slug}`} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleToggleClientStatus(c.id, c.isActive)}
-                              className={`h-8 rounded-lg ${
-                                c.isActive ? 'text-amber-500 hover:bg-amber-500/10' : 'text-emerald-500 hover:bg-emerald-500/10'
-                              }`}
-                            >
-                              {c.isActive ? 'Disable' : 'Enable'}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteClient(c.id)}
-                              className="h-8 rounded-lg text-neutral-500 hover:text-red-500 hover:bg-red-500/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    ))
+                        </article>
+                      )
+                    })
                   )}
                 </div>
               </div>
