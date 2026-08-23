@@ -17,6 +17,7 @@
     <string name="nav_dashboard">Dashboard</string>
     <string name="nav_merchants">Merchants</string>
     <string name="nav_transactions">Transactions</string>
+    <string name="nav_ops">Ops</string>
     <string name="nav_settings">Settings</string>
 
     <!-- Dashboard -->
@@ -84,6 +85,23 @@
     <string name="label_amount">Amount</string>
     <string name="label_reference">Reference</string>
     <string name="label_detected_at">Detected At</string>
+
+    <!-- Operations -->
+    <string name="ops_title">Operations Center</string>
+    <string name="ops_subtitle">Notifications, webhooks, and audit visibility</string>
+    <string name="ops_send_notification">Send Notification</string>
+    <string name="ops_target_merchant">Target Merchant ID</string>
+    <string name="ops_title_hint">Notification title</string>
+    <string name="ops_message_hint">Message for the merchant</string>
+    <string name="ops_severity_info">Info</string>
+    <string name="ops_severity_success">Success</string>
+    <string name="ops_severity_warning">Warning</string>
+    <string name="ops_severity_urgent">Urgent</string>
+    <string name="ops_recent_webhooks">Recent Webhooks</string>
+    <string name="ops_audit_trail">Audit Trail</string>
+    <string name="ops_all_merchants">All merchants</string>
+    <string name="ops_notification_sent">Notification sent successfully.</string>
+    <string name="ops_notification_failed">Failed to send notification.</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

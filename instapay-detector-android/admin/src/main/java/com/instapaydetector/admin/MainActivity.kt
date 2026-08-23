@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity() {
             DashboardFragment(),
             MerchantsFragment(),
             TransactionsFragment(),
+            OpsFragment(),
             SettingsFragment()
         )
 
@@ -69,8 +70,12 @@ class MainActivity : AppCompatActivity() {
                     binding.viewPager.currentItem = 2
                     true
                 }
-                R.id.nav_settings -> {
+                R.id.nav_ops -> {
                     binding.viewPager.currentItem = 3
+                    true
+                }
+                R.id.nav_settings -> {
+                    binding.viewPager.currentItem = 4
                     true
                 }
                 else -> false

@@ -144,7 +144,8 @@ class MerchantAdapter(
                 } else {
                     expandedIds.add(id)
                 }
-                notifyItemChanged(adapterPosition)
+                val position = bindingAdapterPosition
+                if (position != RecyclerView.NO_POSITION) notifyItemChanged(position)
             }
 
             // Copy operations
