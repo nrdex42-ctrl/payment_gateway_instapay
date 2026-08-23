@@ -564,7 +564,13 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
     }
   }
 
-  const handleUpdateSubscription = async (id: string, plan: string, isTrial: boolean, addDays: number) => {
+  const handleUpdateSubscription = async (
+    id: string,
+    plan: string,
+    isTrial: boolean,
+    addDays: number,
+    mode: 'extend' | 'reset' = 'extend'
+  ) => {
     setSubscriptionUpdatingId(id)
     try {
       const client = clients.find(c => c.id === id)
@@ -572,9 +578,10 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
       
       let newDate: Date | null = null
       if (addDays > 0) {
-         const baseDate = client.subscriptionEndsAt && new Date(client.subscriptionEndsAt).getTime() > Date.now() 
-                          ? new Date(client.subscriptionEndsAt) 
-                          : new Date()
+         const baseDate =
+           mode === 'extend' && client.subscriptionEndsAt && new Date(client.subscriptionEndsAt).getTime() > Date.now()
+             ? new Date(client.subscriptionEndsAt)
+             : new Date()
          newDate = new Date(baseDate.getTime() + addDays * 24 * 60 * 60 * 1000)
       } else if (addDays < 0) {
          newDate = new Date(Date.now() - 24 * 60 * 60 * 1000) // expired yesterday
@@ -625,7 +632,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
     )
     if (!confirmed) return
 
-    await handleUpdateSubscription(merchant.id, nextPlan.name, isTrial, addDays)
+    await handleUpdateSubscription(merchant.id, nextPlan.name, isTrial, addDays, 'reset')
   }
 
   const handleUpdatePlan = async (planName: string) => {
