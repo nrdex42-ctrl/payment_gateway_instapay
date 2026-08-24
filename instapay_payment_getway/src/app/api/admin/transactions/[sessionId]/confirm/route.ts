@@ -95,7 +95,7 @@ export async function POST(
 
     // 4. Forward webhook callback if configured
     if (transaction.client.webhookUrl) {
-      void forwardToClientWebhook(
+      await forwardToClientWebhook(
         transaction.client.id,
         transaction.client.webhookUrl,
         transaction.client.webhookSecret,

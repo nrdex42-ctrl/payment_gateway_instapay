@@ -107,3 +107,83 @@ export async function forwardToClientWebhook(
     }
   }
 }
+
+export async function retryWebhook(logId: string) {
+  const log = await db.webhookLog.findUnique({
+    where: { id: logId },
+    include: {
+      client: {
+        select: {
+          webhookSecret: true
+        }
+      }
+    }
+  })
+  if (!log || log.isSuccess || log.attempt >= 5) return
+
+  const attempt = log.attempt + 1
+  let statusCode: number | null = null
+  let responseText = ''
+  let isSuccess = false
+  let nextAttemptAt: Date | null = null
+
+  const timestamp = Math.floor(Date.now() / 1000).toString()
+
+  try {
+    if (!isAllowedWebhookUrl(log.url)) {
+      throw new Error('Webhook URL is not allowed. Use a public HTTPS endpoint.')
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Instapay-Detector-Gateway/2.0',
+      'X-Instapay-Event-Id': log.eventId || crypto.randomUUID(),
+      'X-Instapay-Timestamp': timestamp,
+      'X-Instapay-Signature-Version': 'v1',
+    }
+
+    if (log.client.webhookSecret) {
+      const signature = await signPayload(`${timestamp}.${log.payload}`, log.client.webhookSecret)
+      headers['X-Instapay-Signature'] = `v1=${signature}`
+    }
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10_000)
+    let res: Response
+    try {
+      res = await fetch(log.url, {
+        method: 'POST',
+        headers,
+        body: log.payload,
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(timeout)
+    }
+
+    statusCode = res.status
+    isSuccess = res.ok
+    responseText = (await res.text()).slice(0, 1000)
+  } catch (err) {
+    responseText = err instanceof Error ? err.message : 'Connection failed'
+    const backoffMs = Math.pow(3, attempt) * 60 * 1000
+    nextAttemptAt = new Date(Date.now() + backoffMs)
+  } finally {
+    if (!isSuccess && !nextAttemptAt) {
+      const backoffMs = Math.pow(3, attempt) * 60 * 1000
+      nextAttemptAt = new Date(Date.now() + backoffMs)
+    }
+
+    await db.webhookLog.update({
+      where: { id: log.id },
+      data: {
+        statusCode,
+        response: responseText,
+        isSuccess,
+        attempt,
+        nextAttemptAt: isSuccess ? null : (attempt >= 5 ? null : nextAttemptAt),
+      }
+    })
+  }
+}
+

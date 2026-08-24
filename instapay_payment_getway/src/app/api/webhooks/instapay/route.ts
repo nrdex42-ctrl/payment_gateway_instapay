@@ -219,6 +219,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fallback 3: If still no match by handle, check if there is EXACTLY ONE pending/expired checkout
+    // for this client with the exact received amount. If so, match it! (Avoids handle spelling/mapping issues).
+    if (!match) {
+      const graceCutoff = new Date(now.getTime() - (30 * 60 * 1000))
+      const potentialMatches = await db.transaction.findMany({
+        where: {
+          clientId: client.id,
+          amountCents: receivedAmountCents,
+          amountEgp: receivedAmountRounded,
+          status: { in: ['PENDING', 'EXPIRED'] },
+          expiresAt: { gte: graceCutoff },
+        },
+      })
+      if (potentialMatches.length === 1) {
+        match = potentialMatches[0]
+        console.log(`[webhook] Fallback 3 matched! Exactly one pending checkout for ${receivedAmountRounded} EGP. Session: ${match.sessionId}`)
+      }
+    }
+
     // If still no match is found, this is an entirely unmatched (orphaned) payment
     if (!match) {
       try {
@@ -271,7 +290,7 @@ export async function POST(request: NextRequest) {
 
         // Trigger callback webhook for underpayment
         if (client.webhookUrl) {
-          void forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
+          await forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
             event: 'payment.underpaid',
             clientId: client.id,
             businessName: client.businessName,
@@ -391,7 +410,7 @@ export async function POST(request: NextRequest) {
 
     // If client has custom callback webhook, trigger it
     if (client.webhookUrl) {
-      void forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
+      await forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
         event: updated.purpose === 'SUBSCRIPTION' ? 'subscription.payment_confirmed' : 'payment.confirmed',
         clientId: client.id,
         businessName: client.businessName,

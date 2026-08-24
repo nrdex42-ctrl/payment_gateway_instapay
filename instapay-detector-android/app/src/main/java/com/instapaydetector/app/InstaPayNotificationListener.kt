@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -49,6 +50,7 @@ class InstaPayNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        isConnected = true
         Log.i(TAG, "Listener connected — notification access granted.")
         postForegroundStatusNotification(true)
         OfflineQueueManager.get(this).triggerFlush()
@@ -58,9 +60,15 @@ class InstaPayNotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
+        isConnected = false
         Log.w(TAG, "Listener disconnected — notification access was revoked.")
         postForegroundStatusNotification(false)
         super.onListenerDisconnected()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isConnected = false
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -92,39 +100,57 @@ class InstaPayNotificationListener : NotificationListenerService() {
         )
 
         scope.launch {
-            val result = gatewayClient.reportPayment(
-                amountEgp = payload.amount,
-                senderHandle = payload.senderHandle,
-                recipientHandle = config.merchantHandle,
-                reference = payload.reference,
-                notificationTimestampIso = isoTimestamp,
-                rawNotificationText = payload.rawText,
-                notificationTitle = payload.title,
-                sourcePackage = sbn.packageName,
-                confidence = payload.confidence
-            )
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "InstaPayDetector::ReportWakeLock")
+            try {
+                wakeLock.acquire(15_000L) // Keep CPU awake for up to 15 seconds
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to acquire wake lock: ${e.message}")
+            }
 
-            if (result == ReportResult.ERROR) {
-                Log.w(TAG, "Webhook POST failed — enqueueing report to OfflineQueueManager.")
-                OfflineQueueManager.get(this@InstaPayNotificationListener).enqueue(
-                    OfflineQueueManager.QueuedReport(
-                        id = payload.dedupeKey,
-                        amountEgp = payload.amount,
-                        senderHandle = payload.senderHandle,
-                        recipientHandle = config.merchantHandle,
-                        reference = payload.reference,
-                        timestampIso = isoTimestamp,
-                        rawNotificationText = payload.rawText,
-                        notificationTitle = payload.title,
-                        sourcePackage = sbn.packageName,
-                        confidence = payload.confidence
-                    )
+            try {
+                val result = gatewayClient.reportPayment(
+                    amountEgp = payload.amount,
+                    senderHandle = payload.senderHandle,
+                    recipientHandle = config.merchantHandle,
+                    reference = payload.reference,
+                    notificationTimestampIso = isoTimestamp,
+                    rawNotificationText = payload.rawText,
+                    notificationTitle = payload.title,
+                    sourcePackage = sbn.packageName,
+                    confidence = payload.confidence
                 )
-            } else if (result == ReportResult.SUBSCRIPTION_ENDED) {
-                Log.e(TAG, "Subscription/Trial ended. Webhook rejected payment.")
-                postErrorNotification("Subscription Ended", "Your free trial or subscription has ended. Payments are no longer being forwarded.")
-            } else {
-                Log.i(TAG, "Webhook POST ok=true")
+
+                if (result == ReportResult.ERROR) {
+                    Log.w(TAG, "Webhook POST failed — enqueueing report to OfflineQueueManager.")
+                    OfflineQueueManager.get(this@InstaPayNotificationListener).enqueue(
+                        OfflineQueueManager.QueuedReport(
+                            id = payload.dedupeKey,
+                            amountEgp = payload.amount,
+                            senderHandle = payload.senderHandle,
+                            recipientHandle = config.merchantHandle,
+                            reference = payload.reference,
+                            timestampIso = isoTimestamp,
+                            rawNotificationText = payload.rawText,
+                            notificationTitle = payload.title,
+                            sourcePackage = sbn.packageName,
+                            confidence = payload.confidence
+                        )
+                    )
+                } else if (result == ReportResult.SUBSCRIPTION_ENDED) {
+                    Log.e(TAG, "Subscription/Trial ended. Webhook rejected payment.")
+                    postErrorNotification("Subscription Ended", "Your free trial or subscription has ended. Payments are no longer being forwarded.")
+                } else {
+                    Log.i(TAG, "Webhook POST ok=true")
+                }
+            } finally {
+                try {
+                    if (wakeLock.isHeld) {
+                        wakeLock.release()
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to release wake lock: ${e.message}")
+                }
             }
         }
     }
@@ -194,8 +220,7 @@ class InstaPayNotificationListener : NotificationListenerService() {
             extracted.title,
             text,
             amount,
-            sender,
-            sbn.postTime
+            sender
         )
 
         return ParsedPayment(
@@ -288,10 +313,9 @@ class InstaPayNotificationListener : NotificationListenerService() {
         title: String?,
         text: String,
         amount: Double,
-        sender: String,
-        postTime: Long
+        sender: String
     ): String {
-        val source = listOf(packageName, title.orEmpty(), text, amount.toString(), sender, postTime / 1000L).joinToString("|")
+        val source = listOf(packageName, title.orEmpty(), text, amount.toString(), sender).joinToString("|")
         val digest = MessageDigest.getInstance("SHA-256").digest(source.toByteArray())
         return digest.joinToString("") { "%02x".format(it) }
     }
@@ -406,13 +430,16 @@ class InstaPayNotificationListener : NotificationListenerService() {
         private const val STATUS_NOTIFICATION_ID = 4242
         private const val MIN_FORWARD_CONFIDENCE = 60
 
+        @Volatile
+        var isConnected: Boolean = false
+
         private val ARABIC_EXACT_RECEIVED_PATTERN = Pattern.compile(
-            "لقد\\s+استلمت\\s+([0-9٠-٩]+(?:[\\.,][0-9٠-٩]{1,2})?)\\s*جنيه\\s+من\\s+([a-z0-9_.\\-]+@instapay)",
+            "لقد\\s+استلمت\\s+([0-9٠-٩]+(?:[\\.,][0-9٠-٩]+)*)\\s*(?:جنيه|ج\\.م|جنيهًا)?\\s*من\\s+([a-z0-9_.\\-]+@instapay)",
             Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE
         )
 
         private val ENGLISH_EXACT_RECEIVED_PATTERN = Pattern.compile(
-            "(?:you\\s+have\\s+received|received)\\s+([0-9٠-٩]+(?:[\\.,][0-9٠-٩]{1,2})?)\\s*(?:egp|le|l\\.e\\.|ج\\.م\\.?|جنيه)?\\s*(?:from)\\s+([a-z0-9_.\\-]+@instapay)",
+            "(?:you\\s+have\\s+received|received)\\s+([0-9٠-٩]+(?:[\\.,][0-9٠-٩]+)*)\\s*(?:egp|le|l\\.e\\.|ج\\.م\\.?|جنيه|جنيهًا)?\\s*(?:from)\\s+([a-z0-9_.\\-]+@instapay)",
             Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE
         )
 
@@ -427,8 +454,8 @@ class InstaPayNotificationListener : NotificationListenerService() {
         )
 
         private val AMOUNT_PATTERNS = listOf(
-            Pattern.compile("(?:EGP|ج\\.م\\.?|جنيه(?:\\s*مصري)?|LE|L\\.E\\.)?\\s*([0-9٠-٩]+(?:[\\.,][0-9٠-٩]{1,2})?)\\s*(?:EGP|ج\\.م\\.?|جنيه(?:\\s*مصري)?|LE|L\\.E\\.)?", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE),
-            Pattern.compile("(?:received|credited|استلمت|تم\\s+استلام|وصلتك|إيداع|deposit(?:ed)?|لقد\\s+استلمت)[^0-9٠-٩]{0,12}([0-9٠-٩]+(?:[\\.,][0-9٠-٩]{1,2})?)", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE)
+            Pattern.compile("(?:EGP|ج\\.م\\.?|جنيه(?:\\s*مصري)?|LE|L\\.E\\.)?\\s*([0-9٠-٩]+(?:[\\.,][0-9٠-٩]+)*)\\s*(?:EGP|ج\\.م\\.?|جنيه(?:\\s*مصري)?|LE|L\\.E\\.)?", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE),
+            Pattern.compile("(?:received|credited|استلمت|تم\\s+استلام|وصلتك|إيداع|deposit(?:ed)?|لقد\\s+استلمت)[^0-9٠-٩]{0,12}([0-9٠-٩]+(?:[\\.,][0-9٠-٩]+)*)", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE)
         )
 
         private val SENDER_PATTERNS = listOf(

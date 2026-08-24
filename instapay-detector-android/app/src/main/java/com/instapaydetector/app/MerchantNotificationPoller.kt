@@ -50,30 +50,61 @@ object MerchantNotificationPoller {
     }
 
     private suspend fun pollOnce(context: Context) {
-        val config = GatewayConfig.get(context)
-        if (!config.isLoggedIn) return
-        if (config.dashboardApiKey.isBlank() && config.authToken.isBlank()) return
+        try {
+            val config = GatewayConfig.get(context)
+            if (!config.isLoggedIn) return
 
-        val apiClient = DashboardApiClient(context)
-        val notifications = apiClient.fetchNotifications().getOrElse { error ->
-            Log.w(TAG, "Failed to fetch merchant notifications: ${error.message}")
-            return
-        }
-        if (notifications.isEmpty()) return
+            // 1. Flush offline transactions periodically
+            OfflineQueueManager.get(context).triggerFlush()
 
-        val postedIds = mutableListOf<String>()
-        notifications.forEach { item ->
-            if (postNotification(context, item)) {
-                postedIds.add(item.id)
+            // 2. Ensure notification listener is alive
+            if (InstaPayNotificationListener.isPermissionGranted(context)) {
+                if (!InstaPayNotificationListener.isConnected) {
+                    Log.w(TAG, "Notification listener is disconnected but has permission. Forcing rebind via component toggle...")
+                    try {
+                        val pm = context.packageManager
+                        val componentName = android.content.ComponentName(context, InstaPayNotificationListener::class.java)
+                        pm.setComponentEnabledSetting(
+                            componentName,
+                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                            PackageManager.DONT_KILL_APP
+                        )
+                        pm.setComponentEnabledSetting(
+                            componentName,
+                            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                            PackageManager.DONT_KILL_APP
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to toggle component state: ${e.message}")
+                    }
+                }
             }
-        }
 
-        if (postedIds.isNotEmpty()) {
-            try {
-                apiClient.markNotificationsRead(postedIds)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to mark merchant notifications read: ${e.message}")
+            if (config.dashboardApiKey.isBlank() && config.authToken.isBlank()) return
+
+            val apiClient = DashboardApiClient(context)
+            val notifications = apiClient.fetchNotifications().getOrElse { error ->
+                Log.w(TAG, "Failed to fetch merchant notifications: ${error.message}")
+                return
             }
+            if (notifications.isEmpty()) return
+
+            val postedIds = mutableListOf<String>()
+            notifications.forEach { item ->
+                if (postNotification(context, item)) {
+                    postedIds.add(item.id)
+                }
+            }
+
+            if (postedIds.isNotEmpty()) {
+                try {
+                    apiClient.markNotificationsRead(postedIds)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to mark merchant notifications read: ${e.message}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Unhandled exception in pollOnce: ${e.message}")
         }
     }
 
