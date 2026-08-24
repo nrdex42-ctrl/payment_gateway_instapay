@@ -11,6 +11,7 @@ import com.google.android.material.button.MaterialButton
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.Date
+import java.util.TimeZone
 
 /**
  * Bottom-sheet-style dialog showing full transaction details when a
@@ -69,12 +70,27 @@ class TransactionDetailDialog : DialogFragment() {
 
     private fun formatDate(iso: String): String {
         return try {
-            val input = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-            val output = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.US)
+            val input = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }
+            val output = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.US).apply {
+                timeZone = TimezoneManager.getTimeZone(requireContext())
+            }
             val date = input.parse(iso) ?: Date()
             output.format(date)
         } catch (_: Exception) {
-            iso
+            try {
+                val input = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+                val output = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.US).apply {
+                    timeZone = TimezoneManager.getTimeZone(requireContext())
+                }
+                val date = input.parse(iso) ?: Date()
+                output.format(date)
+            } catch (_: Exception) {
+                iso
+            }
         }
     }
 

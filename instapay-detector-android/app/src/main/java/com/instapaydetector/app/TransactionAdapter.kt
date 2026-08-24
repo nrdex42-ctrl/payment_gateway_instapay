@@ -10,6 +10,7 @@ import com.instapaydetector.app.databinding.ItemTransactionBinding
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.Date
+import java.util.TimeZone
 
 /**
  * RecyclerView adapter for transaction rows. Uses ListAdapter + DiffUtil
@@ -104,19 +105,49 @@ class TransactionAdapter :
 
         private fun formatRelative(iso: String): String {
             return try {
-                val then = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).parse(iso)
-                    ?: Date()
+                val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+                val then = parser.parse(iso) ?: Date()
                 val diffMs = Date().time - then.time
                 val diffSec = diffMs / 1000
                 when {
+                    diffSec < 0 -> "just now"
                     diffSec < 60 -> "just now"
                     diffSec < 3600 -> "${diffSec / 60}m ago"
                     diffSec < 86400 -> "${diffSec / 3600}h ago"
                     diffSec < 604800 -> "${diffSec / 86400}d ago"
-                    else -> SimpleDateFormat("MMM d", Locale.US).format(then)
+                    else -> {
+                        val output = SimpleDateFormat("MMM d", Locale.US).apply {
+                            timeZone = TimezoneManager.getTimeZone(binding.root.context)
+                        }
+                        output.format(then)
+                    }
                 }
             } catch (_: Exception) {
-                ""
+                try {
+                    val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                        timeZone = TimeZone.getTimeZone("UTC")
+                    }
+                    val then = parser.parse(iso) ?: Date()
+                    val diffMs = Date().time - then.time
+                    val diffSec = diffMs / 1000
+                    when {
+                        diffSec < 0 -> "just now"
+                        diffSec < 60 -> "just now"
+                        diffSec < 3600 -> "${diffSec / 60}m ago"
+                        diffSec < 86400 -> "${diffSec / 3600}h ago"
+                        diffSec < 604800 -> "${diffSec / 86400}d ago"
+                        else -> {
+                            val output = SimpleDateFormat("MMM d", Locale.US).apply {
+                                timeZone = TimezoneManager.getTimeZone(binding.root.context)
+                            }
+                            output.format(then)
+                        }
+                    }
+                } catch (_: Exception) {
+                    ""
+                }
             }
         }
     }
