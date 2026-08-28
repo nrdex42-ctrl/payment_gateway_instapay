@@ -130,6 +130,27 @@
     min-height: 100dvh;
     overscroll-behavior-x: none;
   }
+  html[dir="rtl"] body {
+    direction: rtl;
+  }
+  html[dir="rtl"] input,
+  html[dir="rtl"] textarea,
+  html[dir="rtl"] select {
+    text-align: right;
+  }
+  html[dir="rtl"] input[type="email"],
+  html[dir="rtl"] input[type="url"],
+  html[dir="rtl"] input[type="password"],
+  html[dir="rtl"] input[type="number"],
+  html[dir="rtl"] [data-ltr] {
+    direction: ltr;
+    text-align: left;
+  }
+  html[dir="rtl"] pre,
+  html[dir="rtl"] code {
+    direction: ltr;
+    text-align: left;
+  }
   main,
   section,
   article,
