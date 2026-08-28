@@ -4,15 +4,12 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   BookOpen,
-  Code,
   Copy,
   Check,
-  ExternalLink,
   Globe,
   Key,
   Layers,
   Lock,
-  RefreshCw,
   Terminal,
   Webhook
 } from 'lucide-react'
@@ -106,15 +103,21 @@ import crypto from 'crypto'
 import express from 'express'
 
 const app = express()
-app.use(express.json())
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.toString('utf8')
+  }
+}))
 
 const WEBHOOK_SECRET = 'your_merchant_webhook_secret'
+const processedEvents = new Set() // Replace with your database
 
 app.post('/api/webhooks/payment', (req, res) => {
   const signatureHeader = req.headers['x-instapay-signature'] // format: v1=<signature>
   const timestamp = req.headers['x-instapay-timestamp']
+  const eventId = req.headers['x-instapay-event-id']
   
-  if (!signatureHeader || !timestamp) {
+  if (!signatureHeader || !timestamp || !eventId) {
     return res.status(401).json({ error: 'Missing signature headers' })
   }
 
@@ -124,8 +127,7 @@ app.post('/api/webhooks/payment', (req, res) => {
     return res.status(400).json({ error: 'Timestamp expired' })
   }
 
-  const rawJson = JSON.stringify(req.body)
-  const baseString = \`\${timestamp}.\${rawJson}\`
+  const baseString = \`\${timestamp}.\${req.rawBody}\`
   
   const expectedSignature = crypto
     .createHmac('sha256', WEBHOOK_SECRET)
@@ -135,24 +137,105 @@ app.post('/api/webhooks/payment', (req, res) => {
   const providedSignature = signatureHeader.replace(/^v1=/, '').trim()
 
   // Time-safe equality check
-  const verified = crypto.timingSafeEqual(
-    Buffer.from(providedSignature),
-    Buffer.from(expectedSignature)
-  )
+  const verified =
+    providedSignature.length === expectedSignature.length &&
+    crypto.timingSafeEqual(Buffer.from(providedSignature), Buffer.from(expectedSignature))
 
   if (!verified) {
     return res.status(401).json({ error: 'Invalid webhook signature' })
+  }
+
+  if (processedEvents.has(eventId)) {
+    return res.status(200).json({ ok: true, duplicate: true })
   }
 
   const { event, transaction } = req.body
   if (event === 'payment.confirmed') {
     const { sessionId, amountEgp, senderHandle, detectedRef } = transaction
     console.log(\`Success: Received \${amountEgp} EGP from \${senderHandle} (Ref: \${detectedRef})\`)
-    // Fulfill the order or upgrade subscription here
+    // Fulfill the order here, idempotently by sessionId or eventId.
+  } else if (event === 'payment.underpaid') {
+    // Keep order pending/manual review. detectedAmountEgp is lower than amountEgp.
+  } else if (event === 'subscription.payment_confirmed') {
+    // Optional: update local merchant billing state if you mirror subscriptions.
   }
 
+  processedEvents.add(eventId)
   res.status(200).json({ ok: true })
 })`
+
+const createCheckoutResponse = `{
+  "ok": true,
+  "checkout": {
+    "sessionId": "cmt7qyzda000...",
+    "senderHandle": "customer@instapay",
+    "recipientHandle": "merchant@instapay",
+    "amountEgp": 50,
+    "currency": "EGP",
+    "status": "PENDING",
+    "note": "Order #1004",
+    "deepLinkUrl": "https://ipn.eg/S/merchant/instapay/1QduWC",
+    "deepLinkToken": "1QduWC",
+    "createdAt": "2026-08-29T10:00:00.000Z",
+    "expiresAt": "2026-08-29T10:10:00.000Z"
+  }
+}`
+
+const statusResponse = `{
+  "ok": true,
+  "checkout": {
+    "sessionId": "cmt7qyzda000...",
+    "businessName": "Merchant Store",
+    "senderHandle": "customer@instapay",
+    "recipientHandle": "merchant@instapay",
+    "amountEgp": 50,
+    "currency": "EGP",
+    "status": "CONFIRMED",
+    "detectedRef": "IPN notification/reference text",
+    "detectedAt": "2026-08-29T10:02:00.000Z",
+    "detectedAmountEgp": 50,
+    "createdAt": "2026-08-29T10:00:00.000Z",
+    "expiresAt": "2026-08-29T10:10:00.000Z",
+    "note": "Order #1004"
+  }
+}`
+
+const webhookPayload = `{
+  "id": "1b0b4ef3-6a5d-46c9-9a65-...",
+  "created": 1787997600,
+  "event": "payment.confirmed",
+  "clientId": "merchant_id",
+  "businessName": "Merchant Store",
+  "transaction": {
+    "sessionId": "cmt7qyzda000...",
+    "senderHandle": "customer@instapay",
+    "recipientHandle": "merchant@instapay",
+    "amountEgp": 50,
+    "detectedAmountEgp": 50,
+    "currency": "EGP",
+    "status": "CONFIRMED",
+    "detectedRef": "notification/reference text",
+    "detectedAt": "2026-08-29T10:02:00.000Z",
+    "note": "Order #1004",
+    "createdAt": "2026-08-29T10:00:00.000Z"
+  }
+}`
+
+const errorRows = [
+  ['400', 'Invalid request', 'Missing amountEgp, invalid senderHandle, missing sessionId, or invalid settings.'],
+  ['401', 'Unauthorized', 'Missing/invalid Bearer API key, or merchant is not approved/active.'],
+  ['402', 'Payment required', 'Subscription expired or transaction quota has been reached.'],
+  ['404', 'Not found', 'Checkout session does not exist.'],
+  ['429', 'Rate limited', 'Too many requests. Use the returned rate-limit headers and retry later.'],
+  ['500', 'Server error', 'Unexpected gateway failure. Log the response and retry safely.'],
+]
+
+const statusRows = [
+  ['PENDING', 'Checkout is waiting for the customer transfer.'],
+  ['CONFIRMED', 'Detector matched sender and amount. Fulfill the order.'],
+  ['UNDERPAID', 'A transfer was received from the expected sender, but amount was lower than requested. Do not fulfill automatically.'],
+  ['EXPIRED', 'Checkout passed its configured TTL before confirmation.'],
+]
 
 export default function DocsPage() {
   const [selectedSnippetTab, setSelectedSnippetTab] = useState<keyof CodeSnippets>('curl')
@@ -207,6 +290,9 @@ export default function DocsPage() {
                   <li>
                     <a href="#auth" className="hover:text-indigo-400 transition-colors">Authentication</a>
                   </li>
+                  <li>
+                    <a href="#production-checklist" className="hover:text-indigo-400 transition-colors">Production checklist</a>
+                  </li>
                 </ul>
               </div>
 
@@ -241,6 +327,9 @@ export default function DocsPage() {
                   </li>
                   <li>
                     <a href="#retry-policy" className="hover:text-indigo-400 transition-colors">Retry Policy</a>
+                  </li>
+                  <li>
+                    <a href="#errors" className="hover:text-indigo-400 transition-colors">Errors</a>
                   </li>
                 </ul>
               </div>
@@ -326,6 +415,30 @@ export default function DocsPage() {
                   {copiedId === 'auth' ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
                 </button>
               </div>
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs leading-6 text-amber-100">
+                Use the API key only from your backend server. Do not place it in browser JavaScript, mobile apps, public repositories, or customer-visible logs. Regenerate it from the dashboard if it is exposed.
+              </div>
+            </section>
+
+            <section id="production-checklist" className="scroll-mt-24 space-y-4">
+              <h2 className="text-2xl font-bold text-white">Production checklist</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  'Merchant account is approved and active.',
+                  'Receiving InstaPay handle is configured in the dashboard.',
+                  'Static InstaPay payment URL is pasted exactly from the InstaPay APK.',
+                  'Webhook URL is a public HTTPS endpoint.',
+                  'Webhook secret is generated and stored server-side.',
+                  'Detector APK is installed, logged in, and notification access is enabled.',
+                  'Your backend treats webhook events as idempotent.',
+                  'Your order system handles UNDERPAID and EXPIRED without auto-fulfillment.',
+                ].map((item) => (
+                  <div key={item} className="rounded-xl border border-slate-900 bg-slate-900/30 p-3 text-xs text-slate-300">
+                    <Check className="mr-2 inline h-3.5 w-3.5 text-emerald-400" />
+                    {item}
+                  </div>
+                ))}
+              </div>
             </section>
 
             {/* API References */}
@@ -374,32 +487,39 @@ export default function DocsPage() {
               {/* Params list */}
               <div className="space-y-4">
                 <h4 className="font-semibold text-white text-sm">Request Body parameters</h4>
-                <div className="border border-slate-900 rounded-xl overflow-hidden text-sm">
-                  <div className="grid grid-cols-4 bg-slate-900/40 p-3 border-b border-slate-900 text-xs font-semibold text-slate-400">
+                <div className="border border-slate-900 rounded-xl overflow-x-auto text-sm">
+                  <div className="min-w-[680px] grid grid-cols-4 bg-slate-900/40 p-3 border-b border-slate-900 text-xs font-semibold text-slate-400">
                     <div>Field</div>
                     <div>Type</div>
                     <div>Required</div>
                     <div>Description</div>
                   </div>
-                  <div className="grid grid-cols-4 p-3 border-b border-slate-900">
+                  <div className="min-w-[680px] grid grid-cols-4 p-3 border-b border-slate-900">
                     <div className="font-mono text-indigo-400">amountEgp</div>
                     <div className="text-slate-500 font-mono">number</div>
                     <div className="text-emerald-500">Yes</div>
-                    <div className="text-slate-400 text-xs">Amount in Egyptian Pounds. Minimum: 1.00 EGP.</div>
+                    <div className="text-slate-400 text-xs">Amount in Egyptian Pounds. Must be a positive number. Stored with EGP-cent precision.</div>
                   </div>
-                  <div className="grid grid-cols-4 p-3 border-b border-slate-900">
+                  <div className="min-w-[680px] grid grid-cols-4 p-3 border-b border-slate-900">
                     <div className="font-mono text-indigo-400">senderHandle</div>
                     <div className="text-slate-500 font-mono">string</div>
                     <div className="text-emerald-500">Yes</div>
-                    <div className="text-slate-400 text-xs">Customer handle (e.g. username@instapay).</div>
+                    <div className="text-slate-400 text-xs">Customer InstaPay sender handle. Matching depends on this value, so collect it carefully before creating checkout.</div>
                   </div>
-                  <div className="grid grid-cols-4 p-3">
+                  <div className="min-w-[680px] grid grid-cols-4 p-3">
                     <div className="font-mono text-indigo-400">note</div>
                     <div className="text-slate-500 font-mono">string</div>
                     <div className="text-slate-500">No</div>
                     <div className="text-slate-400 text-xs">Order details (max 200 chars).</div>
                   </div>
                 </div>
+              </div>
+              <div className="space-y-3">
+                <h4 className="font-semibold text-white text-sm">Success response</h4>
+                <pre className="overflow-x-auto rounded-xl border border-slate-900 bg-slate-950 p-4 text-xs leading-6 text-slate-300">{createCheckoutResponse}</pre>
+                <p className="text-xs leading-6 text-slate-400">
+                  `deepLinkUrl` is the merchant static InstaPay payment URL saved in the dashboard. The gateway does not rewrite this URL per checkout; the checkout is matched by expected sender handle, amount, merchant account, and active session window.
+                </p>
               </div>
             </section>
 
@@ -419,20 +539,33 @@ export default function DocsPage() {
               {/* Params list */}
               <div className="space-y-4">
                 <h4 className="font-semibold text-white text-sm">Query parameters</h4>
-                <div className="border border-slate-900 rounded-xl overflow-hidden text-sm">
-                  <div className="grid grid-cols-4 bg-slate-900/40 p-3 border-b border-slate-900 text-xs font-semibold text-slate-400">
+                <div className="border border-slate-900 rounded-xl overflow-x-auto text-sm">
+                  <div className="min-w-[680px] grid grid-cols-4 bg-slate-900/40 p-3 border-b border-slate-900 text-xs font-semibold text-slate-400">
                     <div>Parameter</div>
                     <div>Type</div>
                     <div>Required</div>
                     <div>Description</div>
                   </div>
-                  <div className="grid grid-cols-4 p-3">
+                  <div className="min-w-[680px] grid grid-cols-4 p-3">
                     <div className="font-mono text-indigo-400">sessionId</div>
                     <div className="text-slate-500 font-mono">string</div>
                     <div className="text-emerald-500">Yes</div>
                     <div className="text-slate-400 text-xs">The ID returned when creating checkout.</div>
                   </div>
                 </div>
+              </div>
+              <div className="space-y-3">
+                <h4 className="font-semibold text-white text-sm">Status values</h4>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {statusRows.map(([status, description]) => (
+                    <div key={status} className="rounded-xl border border-slate-900 bg-slate-900/30 p-3">
+                      <div className="font-mono text-xs font-bold text-indigo-300">{status}</div>
+                      <div className="mt-1 text-xs leading-5 text-slate-400">{description}</div>
+                    </div>
+                  ))}
+                </div>
+                <h4 className="font-semibold text-white text-sm">Success response</h4>
+                <pre className="overflow-x-auto rounded-xl border border-slate-900 bg-slate-950 p-4 text-xs leading-6 text-slate-300">{statusResponse}</pre>
               </div>
             </section>
 
@@ -445,8 +578,22 @@ export default function DocsPage() {
               <div className="p-5 bg-indigo-950/20 border border-indigo-900/30 rounded-xl space-y-2">
                 <h4 className="font-semibold text-indigo-400 text-sm">Webhook Callback Event Payload</h4>
                 <p className="text-slate-400 text-xs leading-relaxed">
-                  Webhooks are delivered as `POST` requests. The payload includes the original transaction data, the event action (`payment.confirmed` or `payment.underpaid`), and the detector reference ID.
+                  Webhooks are delivered as `POST` requests. Events currently include `payment.confirmed`, `payment.underpaid`, and `subscription.payment_confirmed`.
                 </p>
+              </div>
+              <pre className="overflow-x-auto rounded-xl border border-slate-900 bg-slate-950 p-4 text-xs leading-6 text-slate-300">{webhookPayload}</pre>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  ['X-Instapay-Event-Id', 'Unique event identifier. Store it to ignore duplicate deliveries.'],
+                  ['X-Instapay-Timestamp', 'Unix timestamp used in the signature base string.'],
+                  ['X-Instapay-Signature-Version', 'Current value: v1.'],
+                  ['X-Instapay-Signature', 'v1=HMAC_SHA256(timestamp.rawBody, webhookSecret).'],
+                ].map(([name, description]) => (
+                  <div key={name} className="rounded-xl border border-slate-900 bg-slate-900/30 p-3">
+                    <code className="text-xs text-indigo-300">{name}</code>
+                    <p className="mt-1 text-xs leading-5 text-slate-400">{description}</p>
+                  </div>
+                ))}
               </div>
             </section>
 
@@ -484,29 +631,50 @@ export default function DocsPage() {
             <section id="retry-policy" className="scroll-mt-24 space-y-4">
               <h2 className="text-2xl font-bold text-white">Retry policy</h2>
               <p className="text-slate-400 text-sm leading-relaxed">
-                If your endpoint fails to respond with a `200 OK` status, the gateway schedules retries with exponential backoff. Retries occur up to 5 times over several hours.
+                A webhook is successful when your endpoint returns any 2xx response within 10 seconds. Failed deliveries are logged and can be retried by the platform. The first failed delivery is scheduled for roughly 5 minutes later; later retry attempts use exponential backoff and stop after attempt 5.
               </p>
               <div className="grid gap-4 sm:grid-cols-5 text-center text-xs mt-4">
                 <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-lg">
-                  <div className="font-semibold text-white">Attempt 1</div>
-                  <div className="text-indigo-400 font-mono mt-1">3 mins</div>
+                  <div className="font-semibold text-white">Initial</div>
+                  <div className="text-indigo-400 font-mono mt-1">Immediate</div>
                 </div>
                 <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-lg">
-                  <div className="font-semibold text-white">Attempt 2</div>
-                  <div className="text-indigo-400 font-mono mt-1">9 mins</div>
+                  <div className="font-semibold text-white">Retry 1</div>
+                  <div className="text-indigo-400 font-mono mt-1">~5 mins</div>
                 </div>
                 <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-lg">
-                  <div className="font-semibold text-white">Attempt 3</div>
+                  <div className="font-semibold text-white">Retry 2</div>
                   <div className="text-indigo-400 font-mono mt-1">27 mins</div>
                 </div>
                 <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-lg">
-                  <div className="font-semibold text-white">Attempt 4</div>
+                  <div className="font-semibold text-white">Retry 3</div>
                   <div className="text-indigo-400 font-mono mt-1">81 mins</div>
                 </div>
                 <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-lg">
-                  <div className="font-semibold text-white">Attempt 5</div>
+                  <div className="font-semibold text-white">Retry 4</div>
                   <div className="text-rose-400 font-mono mt-1">243 mins</div>
                 </div>
+              </div>
+            </section>
+
+            <section id="errors" className="scroll-mt-24 space-y-4">
+              <h2 className="text-2xl font-bold text-white">Errors and rate limits</h2>
+              <p className="text-sm leading-6 text-slate-400">
+                API errors return JSON in the shape <code className="text-indigo-300">{'{"ok": false, "error": "message"}'}</code>. Checkout creation is rate-limited; when limited, use the response rate-limit headers before retrying.
+              </p>
+              <div className="overflow-x-auto rounded-xl border border-slate-900 text-sm">
+                <div className="min-w-[760px] grid grid-cols-3 border-b border-slate-900 bg-slate-900/40 p-3 text-xs font-semibold text-slate-400">
+                  <div>HTTP</div>
+                  <div>Meaning</div>
+                  <div>Merchant action</div>
+                </div>
+                {errorRows.map(([code, meaning, action]) => (
+                  <div key={code} className="min-w-[760px] grid grid-cols-3 border-b border-slate-900 p-3 last:border-b-0">
+                    <div className="font-mono text-indigo-300">{code}</div>
+                    <div className="text-slate-300">{meaning}</div>
+                    <div className="text-xs leading-5 text-slate-400">{action}</div>
+                  </div>
+                ))}
               </div>
             </section>
           </main>

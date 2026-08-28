@@ -74,19 +74,60 @@ $checkout = $response['checkout'];
 echo "Status: " . $checkout['status'] . "\n";
 ?>`,
 
-    nodeWebhook: `// Node.js Express Webhook Handler (on your own client server)
-// Gateway calls this endpoint with X-Instapay-Signature header for validation
+    nodeWebhook: `// Node.js Express Webhook Handler (on your own merchant server)
+const crypto = require('crypto')
+const express = require('express')
+const app = express()
+
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.toString('utf8')
+  }
+}))
+
+const WEBHOOK_SECRET = process.env.INSTAPAY_WEBHOOK_SECRET
+
 app.post('/webhook/instapay', (req, res) => {
-  const signature = req.headers['x-instapay-signature'];
+  const signatureHeader = req.headers['x-instapay-signature']; // v1=<hex>
+  const timestamp = req.headers['x-instapay-timestamp'];
+  const eventId = req.headers['x-instapay-event-id'];
   const { event, transaction } = req.body;
+
+  if (!signatureHeader || !timestamp || !eventId) {
+    return res.status(401).json({ error: 'Missing InstaPay signature headers' });
+  }
+
+  const ageSeconds = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp));
+  if (!Number.isFinite(ageSeconds) || ageSeconds > 300) {
+    return res.status(400).json({ error: 'Expired webhook timestamp' });
+  }
+
+  const expected = crypto
+    .createHmac('sha256', WEBHOOK_SECRET)
+    .update(\`\${timestamp}.\${req.rawBody}\`)
+    .digest('hex');
+
+  const provided = String(signatureHeader).replace(/^v1=/, '').trim();
+  const verified =
+    provided.length === expected.length &&
+    crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+
+  if (!verified) {
+    return res.status(401).json({ error: 'Invalid webhook signature' });
+  }
+
+  // Idempotency: store eventId or transaction.sessionId in your database.
   
   if (event === 'payment.confirmed') {
     const { sessionId, amountEgp, senderHandle, detectedRef } = transaction;
     console.log(\`Payment confirmed! \${amountEgp} EGP from \${senderHandle} (Ref: \${detectedRef})\`);
-    
-    // Validate signature with your webhookSecret to ensure the request is from the gateway.
-    // Fulfill order in your database
+    // Fulfill order in your database.
+  } else if (event === 'payment.underpaid') {
+    // Keep order pending/manual review. detectedAmountEgp is lower than amountEgp.
+  } else if (event === 'subscription.payment_confirmed') {
+    // Optional: mirror billing state in your own system.
   }
+
   res.status(200).json({ received: true });
 });`
   }

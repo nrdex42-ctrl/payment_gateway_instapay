@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -179,6 +179,7 @@ export default function MerchantDashboardPage() {
   const [txLoading, setTxLoading] = useState(false)
   const [webhookLoading, setWebhookLoading] = useState(false)
   const [selectedLogDetail, setSelectedLogDetail] = useState<WebhookLog | null>(null)
+  const integrationSectionRef = useRef<HTMLDivElement | null>(null)
 
   const loadTransactions = async () => {
     if (!client) return
@@ -402,6 +403,14 @@ export default function MerchantDashboardPage() {
     } catch (err) {
       console.error(err)
     }
+  }
+
+  const openIntegrationSetup = () => {
+    setActiveTab('integration')
+    window.setTimeout(() => {
+      integrationSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      integrationSectionRef.current?.focus({ preventScroll: true })
+    }, 80)
   }
 
   const copyToClipboard = (text: string, label: string) => {
@@ -634,7 +643,7 @@ export default function MerchantDashboardPage() {
               <Button
                 type="button"
                 size="sm"
-                onClick={() => setActiveTab('integration')}
+                onClick={openIntegrationSetup}
                 className="rounded-xl bg-indigo-500 text-white hover:bg-indigo-400"
               >
                 Open integration setup
@@ -743,7 +752,7 @@ export default function MerchantDashboardPage() {
           {/* Left Column: Navigable Tabs System */}
           <div className="lg:col-span-2 space-y-5">
             {/* Tabs Navigation */}
-            <div className="grid gap-2 border-b border-neutral-900 pb-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div ref={integrationSectionRef} tabIndex={-1} className="scroll-mt-28 grid gap-2 border-b border-neutral-900 pb-3 outline-none sm:grid-cols-2 xl:grid-cols-4">
               {tabItems.map((t) => (
                 <button
                   key={t.id}
