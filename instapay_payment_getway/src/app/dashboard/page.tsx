@@ -498,6 +498,7 @@ export default function MerchantDashboardPage() {
     ? 'near-limit'
     : 'healthy'
   const subscriptionLabel = client.subscriptionPlan.replaceAll('_', ' ')
+  const displaySlug = client.slug?.trim()
 
   return (
     <div className="min-h-screen bg-[#070a12] text-neutral-100 flex flex-col font-sans">
@@ -515,7 +516,15 @@ export default function MerchantDashboardPage() {
                   Approved
                 </span>
               </div>
-              <p className="truncate text-xs text-neutral-500">Merchant console · <span className="font-semibold text-neutral-400">/{client.slug}</span></p>
+              <p className="truncate text-xs text-neutral-500">
+                Merchant console
+                {displaySlug && (
+                  <>
+                    {' · '}
+                    <span className="font-semibold text-neutral-400">/{displaySlug}</span>
+                  </>
+                )}
+              </p>
             </div>
           </div>
 

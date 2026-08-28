@@ -13,8 +13,9 @@ import {
 } from '@/lib/i18n-runtime'
 
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'CODE', 'PRE', 'TEXTAREA', 'INPUT', 'SELECT'])
-const ORIGINAL_TEXT = 'data-i18n-original-text'
 const ORIGINAL_ATTR_PREFIX = 'data-i18n-original-'
+const originalTextNodes = new WeakMap<Text, string>()
+let isApplyingLocale = false
 
 function normalizeText(value: string) {
   return value.replace(/\s+/g, ' ').trim()
@@ -47,39 +48,43 @@ function translateAttribute(element: Element, attr: string, locale: Locale) {
 }
 
 function applyLocale(locale: Locale) {
-  document.documentElement.lang = locale
-  document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr'
-  document.body.classList.toggle('locale-ar', locale === 'ar')
-  document.body.classList.toggle('locale-en', locale === 'en')
+  if (isApplyingLocale) return
+  isApplyingLocale = true
+  try {
+    document.documentElement.lang = locale
+    document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr'
+    document.body.classList.toggle('locale-ar', locale === 'ar')
+    document.body.classList.toggle('locale-en', locale === 'en')
 
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-    acceptNode(node) {
-      const parent = node.parentElement
-      if (!parent || shouldSkipElement(parent)) return NodeFilter.FILTER_REJECT
-      if (!normalizeText(node.textContent || '')) return NodeFilter.FILTER_REJECT
-      return NodeFilter.FILTER_ACCEPT
-    },
-  })
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = node.parentElement
+        if (!parent || shouldSkipElement(parent)) return NodeFilter.FILTER_REJECT
+        if (!normalizeText(node.textContent || '')) return NodeFilter.FILTER_REJECT
+        return NodeFilter.FILTER_ACCEPT
+      },
+    })
 
-  const textNodes: Text[] = []
-  while (walker.nextNode()) {
-    textNodes.push(walker.currentNode as Text)
-  }
-
-  textNodes.forEach((node) => {
-    const parent = node.parentElement
-    if (!parent) return
-    if (!parent.hasAttribute(ORIGINAL_TEXT)) {
-      parent.setAttribute(ORIGINAL_TEXT, node.textContent || '')
+    const textNodes: Text[] = []
+    while (walker.nextNode()) {
+      textNodes.push(walker.currentNode as Text)
     }
-    const original = parent.getAttribute(ORIGINAL_TEXT) || node.textContent || ''
-    node.textContent = translateText(original, locale)
-  })
 
-  document.querySelectorAll('[placeholder], [aria-label], [title]').forEach((element) => {
-    if (shouldSkipElement(element)) return
-    ;['placeholder', 'aria-label', 'title'].forEach((attr) => translateAttribute(element, attr, locale))
-  })
+    textNodes.forEach((node) => {
+      if (!originalTextNodes.has(node)) {
+        originalTextNodes.set(node, node.textContent || '')
+      }
+      const original = originalTextNodes.get(node) || node.textContent || ''
+      node.textContent = translateText(original, locale)
+    })
+
+    document.querySelectorAll('[placeholder], [aria-label], [title]').forEach((element) => {
+      if (shouldSkipElement(element)) return
+      ;['placeholder', 'aria-label', 'title'].forEach((attr) => translateAttribute(element, attr, locale))
+    })
+  } finally {
+    isApplyingLocale = false
+  }
 }
 
 export function LanguageRuntime() {
@@ -93,6 +98,7 @@ export function LanguageRuntime() {
     setTarget(document.querySelector('[data-language-toggle-slot]'))
 
     const observer = new MutationObserver(() => {
+      if (isApplyingLocale) return
       applyLocale(getInitialLocale())
       setTarget(document.querySelector('[data-language-toggle-slot]'))
     })
