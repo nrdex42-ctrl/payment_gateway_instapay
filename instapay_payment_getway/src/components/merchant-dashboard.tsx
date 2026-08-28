@@ -10,6 +10,7 @@ import {
   RefreshCw,
   TrendingUp,
   Wallet,
+  Bell,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -40,10 +41,13 @@ interface DashboardData {
   }>
 }
 
+interface MerchantNotification { id: string; title: string; message: string; severity: string; createdAt: string }
+
 export function MerchantDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingDst, setUpdatingDst] = useState(false)
+  const [notifications, setNotifications] = useState<MerchantNotification[]>([])
 
   const load = async () => {
     setLoading(true)
@@ -53,6 +57,9 @@ export function MerchantDashboard() {
         const json = await res.json()
         if (json.ok) setData(json)
       }
+      const notificationRes = await fetch('/api/merchant/notifications', { cache: 'no-store' })
+      const notificationJson = await notificationRes.json()
+      if (notificationJson.ok) setNotifications(notificationJson.notifications || [])
     } catch {
       // ignore
     } finally {
@@ -125,6 +132,17 @@ export function MerchantDashboard() {
           Refresh
         </Button>
       </div>
+
+      {notifications.length > 0 && (
+        <div className="space-y-2">
+          {notifications.map((notification) => (
+            <div key={notification.id} className="flex gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 text-violet-950">
+              <Bell className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
+              <div><p className="font-semibold">{notification.title}</p><p className="mt-1 text-sm">{notification.message}</p></div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Egypt Time & Summer Time (DST) Owner Control Widget */}
       <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 shadow-sm">

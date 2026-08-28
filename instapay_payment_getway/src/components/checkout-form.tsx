@@ -24,7 +24,7 @@ interface Props {
 
 const QUICK_AMOUNTS = [25, 50, 100, 250, 500, 1000]
 
-export function CheckoutForm({ submitting, errorMessage, onSubmit, recipientHandle = 'mohammedshabana77@instapay' }: Props) {
+export function CheckoutForm({ submitting, errorMessage, onSubmit, recipientHandle = '' }: Props) {
   const [values, setValues] = useState<CheckoutFormValues>({
     senderHandle: '',
     amountEgp: '',

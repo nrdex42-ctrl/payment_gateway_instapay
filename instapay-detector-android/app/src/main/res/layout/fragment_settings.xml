@@ -12,81 +12,256 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Mode toggle card -->
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:strokeColor="@color/border_subtle"
+            app:strokeWidth="1dp"
+            app:cardCornerRadius="20dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="18dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Detector mode"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:text="@string/title_settings"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08" />
 
                 <TextView
+                    android:id="@+id/summaryMerchantName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:text="Merchant name" />
+
+                <TextView
+                    android:id="@+id/summaryMerchantHandle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Merchant: runs on the merchant's phone, listens for received payments.\nClient: runs on the payer's phone, listens for sent payments (optional backup)."
+                    android:fontFamily="monospace"
                     android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
+                    android:textSize="12sp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:text="merchant@instapay" />
 
-                <com.google.android.material.button.MaterialButtonToggleGroup
-                    android:id="@+id/modeToggleGroup"
+                <TextView
+                    android:id="@+id/summaryMerchantEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:text="merchant@example.com" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal"
+                    android:weightSum="2">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="12dp"
+                        android:background="@drawable/bg_live_status">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Gateway"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/summaryGatewayUrl"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp"
+                            android:maxLines="1"
+                            android:ellipsize="middle"
+                            android:text="https://instapay-ruddy.vercel.app" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="12dp"
+                        android:background="@drawable/bg_live_status">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Mode"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/summaryDetectorMode"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="@color/live_green"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:text="Merchant detector" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal"
+                    android:weightSum="2">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="12dp"
+                        android:background="@drawable/bg_live_status">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Plan"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/summaryPlanText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:text="FREE TRIAL" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="12dp"
+                        android:background="@drawable/bg_live_status">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Quota"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/summaryQuotaText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="@color/live_green"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:text="Loading…" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/summarySetupText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    app:singleSelection="true">
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:text="Setup status loading…" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/merchantModeButton"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Merchant" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/clientModeButton"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Client" />
-                </com.google.android.material.button.MaterialButtonToggleGroup>
+                <TextView
+                    android:id="@+id/summarySubscription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:text="FREE TRIAL · No expiry date" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Permission status card -->
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:strokeColor="@color/border_subtle"
+            app:strokeWidth="1dp"
+            app:cardCornerRadius="18dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/title_status"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08" />
 
                 <TextView
                     android:id="@+id/permissionStatusText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:text="@string/permission_status_unknown"
                     android:textColor="@color/text_primary"
-                    android:textSize="14sp"
+                    android:textSize="15sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -98,20 +273,11 @@
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/grantPermissionButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/grant_permission_button"
-                    android:textColor="@color/text_on_primary"
-                    app:backgroundTint="@color/brand_primary" />
-
                 <TextView
                     android:id="@+id/batteryStatusText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="14dp"
                     android:text="Battery Optimization: Checking…"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
@@ -122,27 +288,49 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="To prevent Android from suspending the app or blocking network requests while sleeping, allow unrestricted background running."
+                    android:text="Allow unrestricted background running so notification detection stays active."
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/grantBatteryPermissionButton"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Request Unrestricted Run"
-                    android:textColor="@color/text_on_primary"
-                    app:backgroundTint="@color/brand_primary" />
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal"
+                    android:weightSum="2">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/grantPermissionButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/grant_permission_button"
+                        android:textColor="@color/text_on_primary"
+                        app:backgroundTint="@color/brand_primary" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/grantBatteryPermissionButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="Request Unrestricted Run"
+                        android:textColor="@color/text_on_primary"
+                        app:backgroundTint="@color/brand_primary" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Gateway settings card -->
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:strokeColor="@color/border_subtle"
+            app:strokeWidth="1dp"
+            app:cardCornerRadius="18dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -153,18 +341,18 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/title_settings"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
+                    android:text="Gateway configuration"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="12dp" />
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08" />
 
-                <!-- Webhook URL Field -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.InstapayDetector.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
+                    android:layout_marginTop="14dp"
                     android:hint="@string/gateway_url_label">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -173,15 +361,17 @@
                         android:layout_height="wrap_content"
                         android:inputType="textUri"
                         android:textColor="@color/text_primary"
-                        android:textSize="14sp" />
+                        android:textSize="14sp"
+                        android:focusable="false"
+                        android:clickable="false"
+                        android:cursorVisible="false" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Auth Token Field -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.InstapayDetector.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
+                    android:layout_marginTop="10dp"
                     android:hint="@string/auth_token_label"
                     app:passwordToggleEnabled="true"
                     app:passwordToggleTint="@color/text_tertiary">
@@ -192,15 +382,17 @@
                         android:layout_height="wrap_content"
                         android:inputType="textPassword"
                         android:textColor="@color/text_primary"
-                        android:textSize="14sp" />
+                        android:textSize="14sp"
+                        android:focusable="false"
+                        android:clickable="false"
+                        android:cursorVisible="false" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Merchant Handle Field -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.InstapayDetector.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
+                    android:layout_marginTop="10dp"
                     android:hint="Merchant InstaPay handle">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -209,16 +401,18 @@
                         android:layout_height="wrap_content"
                         android:inputType="text"
                         android:textColor="@color/text_primary"
-                        android:textSize="14sp" />
+                        android:textSize="14sp"
+                        android:focusable="false"
+                        android:clickable="false"
+                        android:cursorVisible="false" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Hidden legacy handle field -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/myHandleInputLayout"
                     style="@style/Widget.InstapayDetector.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
+                    android:layout_marginTop="10dp"
                     android:hint="Your InstaPay handle (client mode only)"
                     android:visibility="gone">
 
@@ -231,56 +425,44 @@
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/saveButton"
+                <TextView
+                    android:id="@+id/monitoredHandleLabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/save_button"
-                    android:textColor="@color/text_on_primary"
-                    app:backgroundTint="@color/brand_primary" />
+                    android:layout_marginTop="12dp"
+                    android:text="@string/monitored_handle_label"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="Manage gateway settings from the web dashboard. This screen is read-only."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/openDashboardButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Open Web Dashboard"
+                    android:textColor="@color/brand_primary"
+                    app:strokeColor="@color/brand_primary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Monitored info card -->
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            app:strokeColor="@color/status_pending"
-            app:cardBackgroundColor="@color/status_pending_bg">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/monitored_package_label"
-                    android:textColor="@color/status_pending"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/monitoredHandleLabel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/monitored_handle_label"
-                    android:textColor="@color/status_pending"
-                    android:textSize="12sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Last detection card -->
-        <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.InstapayDetector.Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp">
+            app:cardBackgroundColor="@color/bg_card"
+            app:strokeColor="@color/border_subtle"
+            app:strokeWidth="1dp"
+            app:cardCornerRadius="18dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -292,9 +474,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/last_detection_label"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08" />
 
                 <TextView
                     android:id="@+id/lastDetectionText"
@@ -303,7 +487,7 @@
                     android:layout_marginTop="8dp"
                     android:fontFamily="monospace"
                     android:text="@string/last_detection_none"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/text_primary"
                     android:textSize="12sp" />
 
                 <com.google.android.material.button.MaterialButton
@@ -318,13 +502,15 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-
-
-        <!-- About card -->
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.InstapayDetector.Card"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:strokeColor="@color/border_subtle"
+            app:strokeWidth="1dp"
+            app:cardCornerRadius="18dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -336,38 +522,26 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_about_title"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="8dp"
                     android:text="@string/settings_about_body"
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Logout Card -->
-        <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.InstapayDetector.Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/logoutButton"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
                     android:text="Log Out"
                     android:textColor="@color/status_denied"
                     app:strokeColor="@color/status_denied" />

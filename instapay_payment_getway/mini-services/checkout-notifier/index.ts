@@ -1,4 +1,6 @@
-import { createServer, IncomingMessage, ServerResponse } from 'http'
+import express from 'express'
+import { createServer } from 'http'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { Server, Socket } from 'socket.io'
 
 /**
@@ -13,29 +15,62 @@ import { Server, Socket } from 'socket.io'
  *   - This service broadcasts an `checkout:update` event to all sockets in the
  *     matching room, and the waiting screen flips to "confirmed" instantly.
  *
- * Routing note: socket.io attaches its own request listener to the httpServer
- * when constructed with `path: '/'`. That listener intercepts ALL requests,
- * which would break our /health and /emit routes. We work around this by
- * capturing socket.io's listener after construction, removing it, and
- * installing our own dispatcher that calls our routes first and falls through
- * to socket.io's listener for everything else (engine.io handshakes).
+ * Security:
+ *   The /emit endpoint requires HMAC-SHA256 signature verification via the
+ *   X-Notifier-Signature header. The gateway signs the request body using
+ *   the shared DETECT_TOKEN secret. This prevents attackers from spoofing
+ *   payment confirmations.
  */
 
 // Render assigns a port via the PORT env var. For local dev, default to 3003
 // so it doesn't conflict with the Next.js dev server on 3000.
 const PORT = Number(process.env.PORT) || 3003
+const DETECT_TOKEN = process.env.DETECT_TOKEN || ''
 
-// Create the httpServer with a placeholder handler — we'll set the real one
-// after socket.io is attached and we've captured its listener.
-const httpServer = createServer((_req, res) => {
-  res.writeHead(404, { 'Content-Type': 'application/json' })
-  res.end(JSON.stringify({ ok: false, error: 'Not ready' }))
-})
+// ─── HMAC Signature Verification ───────────────────────────────────
+
+/**
+ * Verifies the HMAC-SHA256 signature of a request body.
+ * Expected header format: X-Notifier-Signature: sha256=<hex digest>
+ */
+function verifySignature(body: string, signatureHeader: string | undefined): boolean {
+  if (!DETECT_TOKEN) {
+    // If no token is configured, reject all requests in production.
+    // This forces the operator to configure DETECT_TOKEN.
+    console.error('[security] DETECT_TOKEN is not configured — all /emit requests will be rejected')
+    return false
+  }
+
+  if (!signatureHeader || !signatureHeader.startsWith('sha256=')) {
+    return false
+  }
+
+  const receivedSig = signatureHeader.slice('sha256='.length)
+  const expectedSig = createHmac('sha256', DETECT_TOKEN).update(body).digest('hex')
+
+  // Use timing-safe comparison to prevent timing attacks
+  try {
+    const a = Buffer.from(receivedSig, 'hex')
+    const b = Buffer.from(expectedSig, 'hex')
+    if (a.length !== b.length) return false
+    return timingSafeEqual(a, b)
+  } catch {
+    return false
+  }
+}
+
+// ─── Express App ───────────────────────────────────────────────────
+
+const app = express()
+const httpServer = createServer(app)
 
 const io = new Server(httpServer, {
-  // DO NOT change the path — Caddy forwards socket.io traffic on path "/"
-  // to this port based on the XTransformPort query parameter.
-  path: '/',
+  // Use the default socket.io path. The original code used path: '/' which
+  // made socket.io intercept ALL HTTP requests, requiring a fragile manual
+  // listener dispatch hack. With the default '/socket.io', Express routes
+  // (/health, /emit) work naturally and socket.io only handles its own
+  // engine.io handshake traffic on /socket.io/*.
+  // The client already uses the default path '/socket.io' (no path override).
   cors: {
     // In production (Render), set CORS_ORIGIN to the gateway's URL
     // (e.g. https://instapay-gateway.onrender.com) to restrict cross-origin
@@ -47,103 +82,85 @@ const io = new Server(httpServer, {
   pingInterval: 25000,
 })
 
-// Capture socket.io's request listener (the one it just attached) and replace
-// the server's request handler with our dispatcher.
-const socketIoListeners = httpServer.listeners('request').slice() as Array<
-  (req: IncomingMessage, res: ServerResponse) => void
->
-httpServer.removeAllListeners('request')
+// ─── HTTP Routes ───────────────────────────────────────────────────
 
-httpServer.addListener('request', (req: IncomingMessage, res: ServerResponse) => {
-  // Strip the query string for route matching — Caddy adds XTransformPort
-  // as a query param, which would break exact URL comparisons.
-  const urlPath = (req.url || '').split('?')[0]
+// Health check endpoint — no auth required (used by Render health checks)
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, service: 'checkout-notifier', port: PORT })
+})
 
-  // --- Our routes ---
-  if (req.method === 'GET' && urlPath === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' })
-    res.end(JSON.stringify({ ok: true, service: 'checkout-notifier', port: PORT }))
+// Parse raw body as text for HMAC verification, then parse as JSON
+app.post('/emit', express.text({ type: 'application/json' }), (req, res) => {
+  const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
+
+  // ── Signature verification ──
+  const signature = req.headers['x-notifier-signature'] as string | undefined
+  if (!verifySignature(rawBody, signature)) {
+    console.warn(`[security] Rejected /emit request — invalid or missing signature (IP: ${req.ip})`)
+    res.status(401).json({ ok: false, error: 'Unauthorized: invalid signature' })
     return
   }
 
-  if (req.method === 'POST' && urlPath === '/emit') {
-    let body = ''
-    req.on('data', (chunk) => {
-      body += chunk.toString()
+  // ── Parse and process ──
+  try {
+    const payload = JSON.parse(rawBody) as {
+      sessionId: string
+      status: 'CONFIRMED' | 'EXPIRED'
+      amountEgp?: number
+      senderHandle?: string
+      detectedRef?: string | null
+      detectedAt?: string | null
+      // Optional: broadcast to a global room (e.g. "dashboard") so the
+      // merchant dashboard app receives real-time updates.
+      broadcast?: string
+      event?: string
+      dashboardPayload?: Record<string, unknown>
+    }
+
+    if (!payload.sessionId) {
+      res.status(400).json({ ok: false, error: 'sessionId is required' })
+      return
+    }
+
+    // 1. Emit to the specific checkout room (for the waiting client)
+    const checkoutRoom = `checkout:${payload.sessionId}`
+    io.to(checkoutRoom).emit('checkout:update', {
+      sessionId: payload.sessionId,
+      status: payload.status,
+      amountEgp: payload.amountEgp,
+      senderHandle: payload.senderHandle,
+      detectedRef: payload.detectedRef,
+      detectedAt: payload.detectedAt,
     })
-    req.on('end', () => {
-      try {
-        const payload = JSON.parse(body) as {
-          sessionId: string
-          status: 'CONFIRMED' | 'EXPIRED'
-          amountEgp?: number
-          senderHandle?: string
-          detectedRef?: string | null
-          detectedAt?: string | null
-          // Optional: broadcast to a global room (e.g. "dashboard") so the
-          // merchant dashboard app receives real-time updates.
-          broadcast?: string
-          event?: string
-          dashboardPayload?: Record<string, unknown>
-        }
+    const checkoutRecipients = io.sockets.adapter.rooms.get(checkoutRoom)?.size ?? 0
 
-        if (!payload.sessionId) {
-          res.writeHead(400, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify({ ok: false, error: 'sessionId is required' }))
-          return
-        }
+    // 2. Optionally broadcast to the dashboard room (for the merchant app)
+    let dashboardRecipients = 0
+    if (payload.broadcast && payload.event && payload.dashboardPayload) {
+      io.to(payload.broadcast).emit(payload.event, payload.dashboardPayload)
+      dashboardRecipients =
+        io.sockets.adapter.rooms.get(payload.broadcast)?.size ?? 0
+    }
 
-        // 1. Emit to the specific checkout room (for the waiting client)
-        const checkoutRoom = `checkout:${payload.sessionId}`
-        io.to(checkoutRoom).emit('checkout:update', {
-          sessionId: payload.sessionId,
-          status: payload.status,
-          amountEgp: payload.amountEgp,
-          senderHandle: payload.senderHandle,
-          detectedRef: payload.detectedRef,
-          detectedAt: payload.detectedAt,
-        })
-        const checkoutRecipients = io.sockets.adapter.rooms.get(checkoutRoom)?.size ?? 0
+    console.log(
+      `[emit] checkout=${checkoutRoom} (${checkoutRecipients} recipients) | ` +
+        `broadcast=${payload.broadcast || 'none'} (${dashboardRecipients} recipients)`
+    )
 
-        // 2. Optionally broadcast to the dashboard room (for the merchant app)
-        let dashboardRecipients = 0
-        if (payload.broadcast && payload.event && payload.dashboardPayload) {
-          io.to(payload.broadcast).emit(payload.event, payload.dashboardPayload)
-          dashboardRecipients =
-            io.sockets.adapter.rooms.get(payload.broadcast)?.size ?? 0
-        }
-
-        console.log(
-          `[emit] checkout=${checkoutRoom} (${checkoutRecipients} recipients) | ` +
-            `broadcast=${payload.broadcast || 'none'} (${dashboardRecipients} recipients)`
-        )
-
-        res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(
-          JSON.stringify({
-            ok: true,
-            checkoutRecipients,
-            dashboardRecipients,
-          })
-        )
-      } catch (err) {
-        res.writeHead(400, { 'Content-Type': 'application/json' })
-        res.end(
-          JSON.stringify({
-            ok: false,
-            error: err instanceof Error ? err.message : 'Invalid JSON',
-          })
-        )
-      }
+    res.json({
+      ok: true,
+      checkoutRecipients,
+      dashboardRecipients,
     })
-    return
-  }
-
-  // --- Fall through to socket.io for everything else (engine.io handshakes) ---
-  for (const listener of socketIoListeners) {
-    listener.call(httpServer, req, res)
+  } catch (err) {
+    res.status(400).json({
+      ok: false,
+      error: err instanceof Error ? err.message : 'Invalid JSON',
+    })
   }
 })
+
+// ─── Socket.io Connection Handling ─────────────────────────────────
 
 io.on('connection', (socket: Socket) => {
   console.log(`[connect] ${socket.id}`)
@@ -185,10 +202,13 @@ io.on('connection', (socket: Socket) => {
   })
 })
 
+// ─── Start Server ──────────────────────────────────────────────────
+
 httpServer.listen(PORT, () => {
   console.log(`✓ checkout-notifier WebSocket service listening on port ${PORT}`)
   console.log(`  socket.io path: /`)
   console.log(`  internal emit endpoint: POST http://localhost:${PORT}/emit`)
+  console.log(`  DETECT_TOKEN configured: ${DETECT_TOKEN ? 'yes' : 'NO — /emit will reject all requests'}`)
 })
 
 // Graceful shutdown

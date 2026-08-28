@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
+import { authenticateByApiKey, authenticateByDetectToken, authenticateOwner } from '@/lib/auth'
 import { formatEgyptTime, getEgyptDstMode } from '@/lib/timezone'
+import { egpAmountFromRow } from '@/lib/money'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,31 +16,16 @@ export async function GET(request: NextRequest) {
     const endDateStr = searchParams.get('endDate')
 
     let clientId = ''
-    let isOwner = await authenticateOwner(request)
-
-    // Local dev sandbox fallback for admin check
-    const ownerSecret = process.env.OWNER_SECRET
-    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
-    const authHeader = request.headers.get('authorization') || ''
-    const provided = authHeader.replace(/^Bearer\s+/, '').trim()
-    if (provided === ownerSecret) {
-      isOwner = true
-    }
+    const isOwner = await authenticateOwner(request)
 
     if (isOwner) {
       if (targetClientId) {
         clientId = targetClientId
       }
     } else {
-      const client = await authenticateByApiKey(request)
+      const client = await authenticateByApiKey(request) ?? await authenticateByDetectToken(request)
       if (!client) {
-        // Fallback for sandbox dev
-        const allClients = await db.client.findMany()
-        if (allClients.length > 0) {
-          clientId = allClients[0].id
-        } else {
-          return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
-        }
+        return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
       } else {
         clientId = client.id
       }
@@ -54,7 +40,7 @@ export async function GET(request: NextRequest) {
       where.clientId = clientId
     }
 
-    if (status === 'PENDING' || status === 'CONFIRMED' || status === 'EXPIRED') {
+    if (['PENDING', 'CONFIRMED', 'EXPIRED', 'UNDERPAID'].includes(status || '')) {
       where.status = status
     }
 
@@ -121,7 +107,7 @@ export async function GET(request: NextRequest) {
         t.client.businessName.replace(/"/g, '""'),
         t.senderHandle,
         t.recipientHandle,
-        t.amountEgp.toFixed(2),
+        egpAmountFromRow(t).toFixed(2),
         t.status,
         t.detectedRef || 'N/A',
         `"${detectedAtStr}"`,

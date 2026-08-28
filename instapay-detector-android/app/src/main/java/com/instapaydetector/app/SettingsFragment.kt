@@ -42,57 +42,34 @@ class SettingsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         config = GatewayConfig.get(requireContext())
 
-        // Hide mode toggle card since APK is always client-specific received mode now
-        binding.modeToggleGroup.visibility = View.GONE
-        // Hide the description and label next to it
-        binding.modeToggleGroup.parent?.let { parentView ->
-            if (parentView is View) {
-                parentView.visibility = View.GONE
-            }
-        }
-
         // Load saved config
         binding.gatewayUrlInput.setText(config.gatewayUrl)
         binding.authTokenInput.setText(config.authToken)
         binding.merchantHandleInput.setText(config.merchantHandle)
+        binding.gatewayUrlInput.isEnabled = false
+        binding.authTokenInput.isEnabled = false
+        binding.merchantHandleInput.isEnabled = false
         
         // Always hide myHandle input since CLIENT mode is removed
         binding.myHandleInputLayout.visibility = View.GONE
-
-        binding.saveButton.setOnClickListener {
-            val url = binding.gatewayUrlInput.text.toString().trim()
-            val token = binding.authTokenInput.text.toString().trim()
-            val merchantHandle = binding.merchantHandleInput.text.toString().trim()
-            val currentLang = LocaleHelper.getLanguage(requireContext())
-
-            if (url.isEmpty()) {
-                val errText = if (currentLang == "ar") "يرجى إدخال رابط بوابة الدفع" else "Please enter the gateway URL"
-                Toast.makeText(requireContext(), errText, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (token.isEmpty()) {
-                val errText = if (currentLang == "ar") "يرجى إدخال رمز المصادقة" else "Please enter the auth token"
-                Toast.makeText(requireContext(), errText, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            config.gatewayUrl = url
-            config.authToken = token
-            config.merchantHandle = merchantHandle
-            
-            val confirmationText = if (currentLang == "ar") "تم حفظ الإعدادات بنجاح" else "Config Saved Successfully"
-            Toast.makeText(requireContext(), confirmationText, Toast.LENGTH_SHORT).show()
-
-            binding.monitoredHandleLabel.text = "Reporting payments received by: $merchantHandle"
+        updateSummaryHeader()
+        loadDashboardSnapshot()
+        binding.openDashboardButton.setOnClickListener {
+            val dashboardUrl = "https://instapay-ruddy.vercel.app/dashboard"
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(dashboardUrl)))
         }
-
-        binding.monitoredHandleLabel.text = "Reporting payments received by: ${config.merchantHandle}"
         binding.grantPermissionButton.setOnClickListener { openNotificationAccessSettings() }
         binding.testButton.setOnClickListener { sendTestNotification() }
         binding.logoutButton.setOnClickListener {
+            MerchantNotificationService.stop(requireContext())
             config.isLoggedIn = false
             // Reset to defaults
             config.authToken = "instapay-sandbox-detector-token-2026"
             config.merchantHandle = "mohammedshabana77@instapay"
+            config.dashboardApiKey = ""
+            config.merchantEmail = ""
+            config.subscriptionPlan = "FREE_TRIAL"
+            config.subscriptionEndsAt = null
             
             val intent = Intent(requireContext(), LoginActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -118,6 +95,37 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         refreshPermissionStatus()
+        updateSummaryHeader()
+        loadDashboardSnapshot()
+    }
+
+    private fun loadDashboardSnapshot() {
+        MainScope().launch {
+            val stats = try {
+                DashboardApiClient(requireContext()).fetchDashboard().getOrNull()
+            } catch (_: Exception) {
+                null
+            }
+            if (!isAdded || _binding == null) return@launch
+            if (stats != null) {
+                binding.summaryPlanText.text = stats.subscription?.plan?.replace("_", " ") ?: config.subscriptionPlan.replace("_", " ")
+                val sub = stats.subscription
+                val quotaText = if (sub != null) {
+                    "${sub.txCount}/${sub.txLimit} used"
+                } else {
+                    "Unavailable"
+                }
+                binding.summaryQuotaText.text = quotaText
+                binding.summarySetupText.text = buildString {
+                    append("Gateway settings are read-only here. ")
+                    append(if (config.gatewayUrl.isBlank() || config.authToken.isBlank() || config.merchantHandle.isBlank()) "Complete the dashboard setup." else "Configuration synced from the web dashboard.")
+                }
+            } else {
+                binding.summaryPlanText.text = config.subscriptionPlan.replace("_", " ")
+                binding.summaryQuotaText.text = "Unavailable"
+                binding.summarySetupText.text = "Open the web dashboard to manage profile, quota, and integration settings."
+            }
+        }
     }
 
     private fun refreshPermissionStatus() {
@@ -161,6 +169,38 @@ class SettingsFragment : Fragment() {
             .getSharedPreferences(DETECTIONS_PREFS, android.content.Context.MODE_PRIVATE)
             .getString(KEY_LAST_DETECTION, null)
         binding.lastDetectionText.text = lastDetection ?: getString(R.string.last_detection_none)
+    }
+
+    private fun updateSummaryHeader() {
+        binding.summaryMerchantName.text = config.merchantHandle.substringBefore('@').replaceFirstChar { it.uppercaseChar() }
+        binding.summaryMerchantHandle.text = config.merchantHandle
+        binding.summaryMerchantEmail.text = config.merchantEmail.ifBlank { "Email unavailable" }
+        binding.summaryGatewayUrl.text = config.gatewayUrl.removeSuffix("/api/webhooks/instapay").trimEnd('/')
+        binding.summaryDetectorMode.text = "Merchant detector"
+        binding.summarySubscription.text = "${config.subscriptionPlan.replace("_", " ")} · ${formatSubscriptionDuration(config.subscriptionEndsAt)}"
+        binding.summaryPlanText.text = config.subscriptionPlan.replace("_", " ")
+        binding.summarySetupText.text = "Open the web dashboard to manage profile, quota, and integration settings."
+        binding.summaryQuotaText.text = if (config.subscriptionEndsAt.isNullOrBlank()) "Unavailable" else "Subscription active"
+        binding.monitoredHandleLabel.text = getString(R.string.monitored_handle_label, config.merchantHandle)
+    }
+
+    private fun formatSubscriptionDuration(value: String?): String {
+        if (value.isNullOrBlank()) return "No expiry date"
+        return try {
+            val normalized = value.replace(Regex("\\.\\d{3}Z$"), "Z")
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            val endDate = sdf.parse(normalized) ?: return "No expiry date"
+            val remainMs = endDate.time - System.currentTimeMillis()
+            val remainDays = kotlin.math.ceil(remainMs / (1000.0 * 60 * 60 * 24)).toInt()
+            when {
+                remainDays > 1 -> "$remainDays days remaining"
+                remainDays == 1 -> "1 day remaining"
+                else -> "Expired"
+            }
+        } catch (_: Exception) {
+            "No expiry date"
+        }
     }
 
     private fun openNotificationAccessSettings() {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getEgyptDayKey, getEgyptDstMode } from '@/lib/timezone'
-import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
+import { authenticateByApiKey, authenticateByDetectToken, authenticateOwner } from '@/lib/auth'
 
 /**
  * Returns a daily revenue series for the merchant dashboard's chart in Egypt Local Time.
@@ -16,31 +16,16 @@ export async function GET(request: NextRequest) {
     const targetClientId = searchParams.get('clientId')
 
     let clientId = ''
-    let isOwner = await authenticateOwner(request)
-
-    // Local dev sandbox fallback for admin check
-    const ownerSecret = process.env.OWNER_SECRET
-    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
-    const authHeader = request.headers.get('authorization') || ''
-    const provided = authHeader.replace(/^Bearer\s+/, '').trim()
-    if (provided === ownerSecret) {
-      isOwner = true
-    }
+    const isOwner = await authenticateOwner(request)
 
     if (isOwner) {
       if (targetClientId) {
         clientId = targetClientId
       }
     } else {
-      const client = await authenticateByApiKey(request)
+      const client = await authenticateByApiKey(request) ?? await authenticateByDetectToken(request)
       if (!client) {
-        // Fallback for sandbox dev
-        const allClients = await db.client.findMany()
-        if (allClients.length > 0) {
-          clientId = allClients[0].id
-        } else {
-          return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
-        }
+        return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
       } else {
         clientId = client.id
       }

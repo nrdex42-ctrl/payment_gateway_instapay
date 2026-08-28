@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,35 +14,40 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "InstaPay Egypt · Sandbox Payment Gateway",
+  title: "InstaPay Gateway · Payment Infrastructure for Egypt",
   description:
-    "Sandbox payment gateway that simulates InstaPay Egypt instant transfers and renders the success push notification in your browser. Demo only — no real money moves.",
+    "Merchant payment gateway for InstaPay checkout sessions, automated payment confirmation, and secure webhook delivery.",
   keywords: [
     "InstaPay",
     "InstaPay Egypt",
     "Instant Payment Network",
     "payment gateway",
-    "sandbox",
-    "demo",
     "EGP",
   ],
-  authors: [{ name: "InstaPay Sandbox" }],
+  authors: [{ name: "InstaPay Gateway" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/IPN.svg",
   },
   openGraph: {
-    title: "InstaPay Egypt · Sandbox Payment Gateway",
+    title: "InstaPay Gateway · Payment Infrastructure for Egypt",
     description:
-      "Simulate InstaPay Egypt instant transfers and view the success notification. Demo only.",
-    siteName: "InstaPay Sandbox",
+      "Create checkout sessions, confirm InstaPay transfers, and receive secure merchant webhooks.",
+    siteName: "InstaPay Gateway",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "InstaPay Egypt · Sandbox Payment Gateway",
+    title: "InstaPay Gateway · Payment Infrastructure for Egypt",
     description:
-      "Simulate InstaPay Egypt instant transfers and view the success notification. Demo only.",
+      "Merchant payment gateway for InstaPay checkout sessions and automated payment confirmation.",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

@@ -1,6 +1,9 @@
 package com.instapaydetector.app
 
 import android.os.Bundle
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.instapaydetector.app.databinding.ActivityMainBinding
@@ -26,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
         // Redirect to Login if not logged in
         val config = GatewayConfig.get(this)
         if (!config.isLoggedIn) {
@@ -49,7 +54,13 @@ class MainActivity : AppCompatActivity() {
             androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(targetMode)
         }
 
-        super.onCreate(savedInstanceState)
+        if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 4101)
+        }
+        MerchantNotificationPoller.start(this)
+        MerchantNotificationPoller.pollNow(this)
+        MerchantNotificationService.start(this)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

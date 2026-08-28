@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateOwner } from '@/lib/auth'
-import { emitCheckoutUpdate, forwardToClientWebhook } from '@/app/api/webhooks/instapay/route'
+import { emitCheckoutUpdate } from '@/app/api/webhooks/instapay/route'
+import { forwardToClientWebhook } from '@/lib/webhook'
 
 export async function POST(
   request: NextRequest,
@@ -48,14 +49,30 @@ export async function POST(
 
     const now = new Date()
 
-    // 1. Update status to CONFIRMED
-    const updated = await db.transaction.update({
-      where: { sessionId },
+    // 1. Update status to CONFIRMED idempotently
+    const confirmed = await db.transaction.updateMany({
+      where: { sessionId, status: 'PENDING' },
       data: {
         status: 'CONFIRMED',
         detectedRef: 'MANUAL_BY_ADMIN',
         detectedAt: now,
       },
+    })
+
+    if (confirmed.count === 0) {
+      return NextResponse.json(
+        { ok: false, error: `Transaction is already in ${transaction.status} status.` },
+        { status: 400 }
+      )
+    }
+
+    const updated = await db.transaction.findUniqueOrThrow({ where: { sessionId } })
+
+    await db.client.update({
+      where: { id: transaction.client.id },
+      data: { txCount: { increment: 1 } },
+    }).catch((err) => {
+      console.error('[admin] Failed to increment client txCount:', err)
     })
 
     // 2. Create Audit Log entry
@@ -78,7 +95,7 @@ export async function POST(
 
     // 4. Forward webhook callback if configured
     if (transaction.client.webhookUrl) {
-      void forwardToClientWebhook(
+      await forwardToClientWebhook(
         transaction.client.id,
         transaction.client.webhookUrl,
         transaction.client.webhookSecret,

@@ -70,6 +70,7 @@ class SettingsFragment : Fragment() {
                 }
                 .show()
         }
+
     }
 
     private fun loadSettings() {

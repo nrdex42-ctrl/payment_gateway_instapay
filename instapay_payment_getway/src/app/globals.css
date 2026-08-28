@@ -116,7 +116,126 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    width: 100%;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground overflow-x-hidden;
+    width: 100%;
+    min-width: 0;
+    min-height: 100dvh;
+    overscroll-behavior-x: none;
+  }
+  main,
+  section,
+  article,
+  aside,
+  header,
+  footer,
+  div,
+  form {
+    min-width: 0;
+  }
+  img,
+  video,
+  canvas,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+    font-size: 16px;
+  }
+  pre,
+  code,
+  table {
+    max-width: 100%;
+  }
+  pre,
+  code {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  span,
+  a,
+  button,
+  li,
+  label {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 640px) {
+  .fixed.inset-0 {
+    align-items: flex-start;
+    overflow-y: auto;
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+@layer components {
+  .admin-portal {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .admin-portal .text-\[9px\] {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+  }
+
+  .admin-portal .text-\[10px\] {
+    font-size: 0.75rem;
+    line-height: 1.05rem;
+  }
+
+  .admin-portal .text-\[11px\] {
+    font-size: 0.8125rem;
+    line-height: 1.15rem;
+  }
+
+  .admin-portal .text-xs {
+    font-size: 0.875rem;
+    line-height: 1.35rem;
+  }
+
+  .admin-portal .text-sm {
+    font-size: 0.9375rem;
+    line-height: 1.5rem;
+  }
+
+  .admin-portal label,
+  .admin-portal select,
+  .admin-portal input,
+  .admin-portal textarea,
+  .admin-portal button {
+    letter-spacing: normal;
+  }
+
+  @media (max-width: 640px) {
+    .admin-portal {
+      font-size: 14px;
+    }
+
+    .admin-portal .text-\[10px\],
+    .admin-portal .text-\[11px\],
+    .admin-portal .text-xs {
+      font-size: 0.8125rem;
+      line-height: 1.25rem;
+    }
   }
 }

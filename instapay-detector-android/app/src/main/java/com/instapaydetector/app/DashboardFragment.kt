@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -24,6 +26,7 @@ class DashboardFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val apiClient by lazy { (activity as MainActivity).apiClient }
+    private val config by lazy { GatewayConfig.get(requireContext()) }
     private val paymentFeedback by lazy { (activity as MainActivity).paymentFeedback }
     private val wsClient by lazy { (activity as MainActivity).wsClient }
 
@@ -45,6 +48,7 @@ class DashboardFragment : Fragment() {
         recentAdapter = TransactionAdapter()
         binding.recentList.layoutManager = LinearLayoutManager(requireContext())
         binding.recentList.adapter = recentAdapter
+        renderLocalProfileFallback()
 
         // Configure swipe-to-refresh
         binding.swipeRefresh.setOnRefreshListener { loadAll() }
@@ -100,6 +104,8 @@ class DashboardFragment : Fragment() {
         }
     }
 
+
+
     private fun renderDashboard(dash: DashboardStats) {
         binding.errorText.visibility = View.GONE
         binding.merchantName.text = dash.merchant.name
@@ -121,6 +127,54 @@ class DashboardFragment : Fragment() {
         binding.cardAvg.statLabel.text = getString(R.string.dash_avg)
         binding.cardAvg.statValue.text = formatEgp(dash.stats.sevenDays.totalEgp / 7.0)
         binding.cardAvg.statSub.text = "7-day average"
+
+        // Subscription Info Card
+        val sub = dash.subscription
+        if (sub != null) {
+            binding.cardSubscription.visibility = View.VISIBLE
+            val planLabel = sub.plan.replace("_", " ")
+            binding.tvPlanName.text = if (sub.isFreeTrial) "FREE TRIAL" else planLabel
+            binding.tvTxUsage.text = "${sub.txCount} / ${sub.txLimit} confirmed transactions used"
+            config.subscriptionPlan = sub.plan
+            config.subscriptionEndsAt = sub.subscriptionEndsAt
+
+            // Progress bar
+            val pct = if (sub.txLimit > 0) (sub.txCount * 100) / sub.txLimit else 0
+            binding.progressTx.progress = Math.min(pct, 100)
+
+            // Remaining days
+            if (sub.subscriptionEndsAt != null) {
+                try {
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+                    val endDate = sdf.parse(sub.subscriptionEndsAt)
+                    if (endDate != null) {
+                        val remainMs = endDate.time - System.currentTimeMillis()
+                        val remainDays = (remainMs / (1000L * 60 * 60 * 24)).toInt()
+                        if (remainDays > 0) {
+                            binding.tvPlanExpiry.text = "Expires in $remainDays day${if (remainDays != 1) "s" else ""}"
+                            binding.tvPlanExpiry.setTextColor(resources.getColor(R.color.text_secondary, null))
+                        } else {
+                            binding.tvPlanExpiry.text = "EXPIRED"
+                            binding.tvPlanExpiry.setTextColor(resources.getColor(R.color.status_denied, null))
+                        }
+                    }
+                } catch (e: Exception) {
+                    binding.tvPlanExpiry.text = "No expiry"
+                }
+            } else {
+                binding.tvPlanExpiry.text = "No expiry"
+            }
+
+            // Limit warning
+            if (sub.txCount >= sub.txLimit) {
+                binding.tvLimitWarning.visibility = View.VISIBLE
+                binding.tvLimitWarning.text = "⚠ Limit reached. Contact your provider to upgrade."
+            } else {
+                binding.tvLimitWarning.visibility = View.GONE
+            }
+        } else {
+            binding.cardSubscription.visibility = View.GONE
+        }
 
         // Recent transactions (show up to 5)
         if (dash.recent.isEmpty()) {
@@ -222,6 +276,30 @@ class DashboardFragment : Fragment() {
 
     private fun formatEgp(amount: Double): String {
         return "EGP ${String.format(Locale.US, "%,.2f", amount)}"
+    }
+
+    private fun renderLocalProfileFallback() {
+        binding.merchantName.text = "Merchant account"
+        binding.merchantHandle.text = config.merchantHandle
+    }
+
+    private fun formatSubscriptionDuration(value: String?): String {
+        if (value.isNullOrBlank()) return "No expiry date"
+        return try {
+            val normalized = value.replace(Regex("\\.\\d{3}Z$"), "Z")
+            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            val endDate = sdf.parse(normalized) ?: return "No expiry date"
+            val remainMs = endDate.time - System.currentTimeMillis()
+            val remainDays = kotlin.math.ceil(remainMs / (1000.0 * 60 * 60 * 24)).toInt()
+            when {
+                remainDays > 1 -> "$remainDays days remaining"
+                remainDays == 1 -> "1 day remaining"
+                else -> "Expired"
+            }
+        } catch (_: Exception) {
+            "No expiry date"
+        }
     }
 
     private fun pluralPayments(count: Int): String =

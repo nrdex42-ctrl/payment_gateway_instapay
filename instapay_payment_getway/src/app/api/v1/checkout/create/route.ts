@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateByApiKey } from '@/lib/auth'
-import { buildInstaPayDeepLink, normalizeHandle } from '@/lib/merchant'
+import { resolveInstaPayPaymentLink, normalizeHandle } from '@/lib/merchant'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
+import { toEgpCents } from '@/lib/money'
 
 export async function POST(request: NextRequest) {
   // Enforce Rate Limit: max 60 checkout creations per 1 minute
@@ -23,17 +24,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (client.subscriptionEndsAt && new Date(client.subscriptionEndsAt).getTime() < Date.now()) {
+    const isExpired = client.subscriptionEndsAt && new Date(client.subscriptionEndsAt).getTime() < Date.now()
+    const isLimitReached = client.txLimit !== undefined && client.txCount >= client.txLimit
+    if (isExpired || isLimitReached) {
+      const errMsg = isLimitReached 
+        ? 'Payment Required. Your plan transaction limit has been reached.'
+        : 'Payment Required. Your subscription or free trial has expired.'
       return NextResponse.json(
-        { ok: false, error: 'Payment Required. Your subscription or free trial has ended.' },
+        { ok: false, error: errMsg },
         { status: 402 }
       )
     }
 
     const body = await request.json()
     const { amountEgp, senderHandle, note } = body || {}
+    const amountCents = typeof amountEgp === 'number' ? toEgpCents(amountEgp) : 0
 
-    if (!amountEgp || typeof amountEgp !== 'number' || amountEgp <= 0) {
+    if (!amountEgp || typeof amountEgp !== 'number' || amountCents <= 0) {
       return NextResponse.json(
         { ok: false, error: 'amountEgp is required and must be a positive number.' },
         { status: 400 }
@@ -55,8 +62,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Build the deep link to the client's InstaPay handle
-    const { deepLinkUrl, token } = buildInstaPayDeepLink(client.instapayHandle)
+    // Use the merchant's exact static InstaPay APK payment/share URL.
+    const { deepLinkUrl, token } = resolveInstaPayPaymentLink(
+      client.instapayHandle,
+      client.instapayPaymentUrl
+    )
     const expiresAt = new Date(Date.now() + client.checkoutTtlMin * 60 * 1000)
 
     const transaction = await db.transaction.create({
@@ -64,7 +74,8 @@ export async function POST(request: NextRequest) {
         clientId: client.id,
         senderHandle: normalizedSender,
         recipientHandle: client.instapayHandle,
-        amountEgp: Math.round(amountEgp * 100) / 100,
+        amountEgp: amountCents / 100,
+        amountCents,
         currency: 'EGP',
         status: 'PENDING',
         note: note ? String(note).slice(0, 200) : null,

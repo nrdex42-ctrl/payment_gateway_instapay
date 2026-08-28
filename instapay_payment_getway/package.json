@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "next build && mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "build": "if [ \"$VERCEL\" = \"1\" ]; then cp prisma/schema.production.prisma prisma/schema.prisma && prisma generate && prisma db push --accept-data-loss; fi && next build",
+    "build:standalone": "next build && mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "NODE_ENV=production node .next/standalone/server.js",
     "start:bun": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
@@ -12,6 +13,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
+    "db:seed:plans": "node scripts/seed-plans.mjs",
+    "db:backfill:hardening": "node scripts/backfill-hardening-phase1.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -64,6 +67,7 @@
     "next-auth": "^4.24.11",
     "next-intl": "^4.3.4",
     "next-themes": "^0.4.6",
+    "nodemailer": "^7.0.13",
     "prisma": "^6.11.1",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
@@ -88,6 +92,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "bun-types": "^1.3.4",

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { hashPassword } from '@/lib/auth'
 
 /**
  * GET: Check if admin setup is required.
@@ -42,13 +43,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For sandbox simplicity, we store a password hash or plain text verification
-    // because this is matching the OWNER_SECRET env-based auth fallback anyway.
+    if (typeof password !== 'string' || password.length < 12) {
+      return NextResponse.json(
+        { ok: false, error: 'Password must be at least 12 characters.' },
+        { status: 400 }
+      )
+    }
+
     const owner = await db.owner.create({
       data: {
         email: email.trim().toLowerCase(),
         name: name.trim(),
-        passwordHash: password, // In production, hash this with bcrypt/argon2
+        passwordHash: hashPassword(password),
       },
     })
 
@@ -61,10 +67,9 @@ export async function POST(request: NextRequest) {
         name: owner.name,
       },
     })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
+  } catch {
     return NextResponse.json(
-      { ok: false, error: `Setup failed: ${message}` },
+      { ok: false, error: 'Setup failed.' },
       { status: 500 }
     )
   }

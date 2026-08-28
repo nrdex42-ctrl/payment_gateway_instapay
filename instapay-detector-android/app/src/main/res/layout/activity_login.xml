@@ -27,8 +27,9 @@
                 android:id="@+id/img_logo"
                 android:layout_width="88dp"
                 android:layout_height="88dp"
-                android:src="@drawable/ic_brand_logo"
+                android:src="@mipmap/ic_launcher"
                 android:contentDescription="@string/app_name"
+                android:scaleType="fitCenter"
                 android:layout_marginBottom="8dp" />
 
             <!-- Title -->
@@ -39,6 +40,8 @@
                 android:textColor="@color/text_primary"
                 android:textSize="22sp"
                 android:textStyle="bold"
+                android:textAlignment="center"
+                android:maxLines="2"
                 android:layout_marginBottom="6dp" />
 
             <!-- Subtitle -->
@@ -49,6 +52,7 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 android:gravity="center"
+                android:textAlignment="center"
                 android:layout_marginBottom="28dp"
                 android:paddingHorizontal="16dp" />
 
@@ -66,23 +70,6 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="20dp">
-
-                    <!-- Server URL -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.InstapayDetector.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        android:hint="Server URL">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_server_url"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textUri"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
 
                     <!-- Email Address -->
                     <com.google.android.material.textfield.TextInputLayout
@@ -120,22 +107,59 @@
                             android:textSize="14sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- InstaPay Handle -->
+                    <!-- Email verification code -->
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.InstapayDetector.TextInputLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="20dp"
-                        android:hint="InstaPay Handle">
+                        android:hint="Email verification code">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_instapay_handle"
+                            android:id="@+id/et_otp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text"
+                            android:inputType="number"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp" />
                     </com.google.android.material.textfield.TextInputLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="-10dp"
+                        android:layout_marginBottom="20dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tv_otp_timer"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="OTP expires in 10:00"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_send_otp"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Send OTP"
+                            android:textAllCaps="false"
+                            android:textColor="@color/brand_accent"
+                            app:backgroundTint="@android:color/transparent" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Paste the 6-digit code here after the app sends it to your email."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:layout_marginTop="-12dp"
+                        android:layout_marginBottom="20dp" />
 
                     <!-- Error Text -->
                     <TextView
@@ -145,7 +169,7 @@
                         android:visibility="gone"
                         android:textColor="@color/status_denied"
                         android:textSize="12sp"
-                        android:background="#2E1616"
+                        android:background="@color/status_expired_bg"
                         android:padding="12dp"
                         android:layout_marginBottom="16dp" />
 
@@ -178,6 +202,14 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="11sp"
                 android:layout_marginTop="20dp" />
+
+            <TextView
+                android:id="@+id/tv_build_info"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_tertiary"
+                android:textSize="10sp"
+                android:layout_marginTop="6dp" />
 
         </LinearLayout>
     </ScrollView>

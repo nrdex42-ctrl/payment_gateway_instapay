@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { db } from '@/lib/db'
 import { verifyPassword, createSessionToken } from '@/lib/auth'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
+import { sendOtpEmail } from '@/lib/emailDelivery'
+import { normalizeEmail } from '@/lib/emailValidation'
+
+const OTP_TTL_MS = 10 * 60 * 1000
+const OTP_PURPOSE = 'MERCHANT_LOGIN'
+
+function hashOtp(email: string, otp: string): string {
+  const secret = process.env.OWNER_SECRET
+  if (!secret) throw new Error('OWNER_SECRET environment variable is missing.')
+  return crypto.createHmac('sha256', secret).update(`${normalizeEmail(email)}:${otp}`).digest('hex')
+}
+
+function generateOtp(): string {
+  return crypto.randomInt(100000, 1000000).toString()
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,13 +32,16 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { email, password } = body || {}
+    const verificationId = String(body?.verificationId || '').trim()
+    const otp = String(body?.otp || '').trim()
 
     if (!email?.trim() || !password?.trim()) {
       return NextResponse.json({ ok: false, error: 'Email and password are required.' }, { status: 400 })
     }
 
+    const normalizedEmail = normalizeEmail(email)
     const client = await db.client.findUnique({
-      where: { email: email.trim().toLowerCase() },
+      where: { email: normalizedEmail },
     })
 
     if (!client) {
@@ -56,6 +75,58 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
+
+    if (!verificationId || !otp) {
+      const loginOtp = generateOtp()
+      const verification = await db.emailVerification.create({
+        data: {
+          email: normalizedEmail,
+          otpHash: hashOtp(normalizedEmail, loginOtp),
+          purpose: OTP_PURPOSE,
+          expiresAt: new Date(Date.now() + OTP_TTL_MS),
+        },
+      })
+
+      await sendOtpEmail({ to: normalizedEmail, otp: loginOtp })
+
+      const response = NextResponse.json({
+        ok: true,
+        otpRequired: true,
+        verificationId: verification.id,
+        message: 'Login verification code sent.',
+        expiresInSeconds: OTP_TTL_MS / 1000,
+      })
+      Object.entries(getRateLimitHeaders(rl)).forEach(([k, v]) => response.headers.set(k, v))
+      return response
+    }
+
+    const verification = await db.emailVerification.findUnique({ where: { id: verificationId } })
+    const expectedOtpHash = hashOtp(normalizedEmail, otp)
+    const otpValid =
+      verification &&
+      verification.email === normalizedEmail &&
+      verification.purpose === OTP_PURPOSE &&
+      !verification.consumedAt &&
+      verification.expiresAt.getTime() > Date.now() &&
+      verification.attempts < 5 &&
+      verification.otpHash === expectedOtpHash
+
+    if (!verification || verification.email !== normalizedEmail) {
+      return NextResponse.json({ ok: false, error: 'Please request a new login verification code.' }, { status: 400 })
+    }
+
+    if (!otpValid) {
+      await db.emailVerification.update({
+        where: { id: verification.id },
+        data: { attempts: { increment: 1 } },
+      }).catch(() => {})
+      return NextResponse.json({ ok: false, error: 'Invalid or expired login verification code.' }, { status: 400 })
+    }
+
+    await db.emailVerification.update({
+      where: { id: verification.id },
+      data: { consumedAt: new Date() },
+    }).catch(() => {})
 
     // Create session
     const token = createSessionToken(client.id)

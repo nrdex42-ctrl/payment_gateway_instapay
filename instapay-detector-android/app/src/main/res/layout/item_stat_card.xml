@@ -9,20 +9,24 @@
     <com.google.android.material.card.MaterialCardView
         style="@style/Widget.InstapayDetector.Card"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="18dp"
+        app:strokeColor="@color/border_subtle"
+        app:strokeWidth="1dp"
+        app:cardBackgroundColor="@color/bg_card">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="15dp">
 
             <TextView
                 android:id="@+id/statLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/text_secondary"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:textStyle="bold"
                 android:textAllCaps="true"
                 android:letterSpacing="0.08"
@@ -34,8 +38,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:textColor="@color/text_primary"
-                android:textSize="20sp"
+                android:textSize="19sp"
                 android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
                 tools:text="EGP 1,234.56" />
 
             <TextView

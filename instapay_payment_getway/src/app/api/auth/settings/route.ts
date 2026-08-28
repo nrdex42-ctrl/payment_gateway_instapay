@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSessionClient, generateSecureToken } from '@/lib/auth'
+import { getSessionClient, generateSecureToken, hashSecret } from '@/lib/auth'
+import { isAllowedWebhookUrl } from '@/lib/webhook'
+import { normalizeInstaPayPaymentUrl } from '@/lib/merchant'
 
 /**
  * PATCH: Update merchant custom integration settings.
@@ -13,12 +15,44 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { webhookUrl, checkoutTtlMin, regenerateWebhookSecret, regenerateApiKey, regenerateDetectToken } = body || {}
+    const { instapayHandle, webhookUrl, instapayPaymentUrl, checkoutTtlMin, regenerateWebhookSecret, regenerateApiKey, regenerateDetectToken } = body || {}
 
     const data: Record<string, any> = {}
 
+    if (instapayHandle !== undefined) {
+      const rawHandle = String(instapayHandle || '').trim().toLowerCase().replace(/^@/, '')
+      if (!rawHandle) {
+        return NextResponse.json({ ok: false, error: 'InstaPay receiving handle is required.' }, { status: 400 })
+      }
+      const localPart = rawHandle.split('@')[0]
+      if (!/^[a-z0-9._-]{3,64}$/.test(localPart)) {
+        return NextResponse.json(
+          { ok: false, error: 'InstaPay handle must be 3-64 characters using letters, numbers, dots, underscores, or dashes.' },
+          { status: 400 }
+        )
+      }
+      data.instapayHandle = `${localPart}@instapay`
+    }
+
     if (webhookUrl !== undefined) {
-      data.webhookUrl = webhookUrl ? String(webhookUrl).trim() : null
+      const trimmedWebhookUrl = webhookUrl ? String(webhookUrl).trim() : ''
+      if (trimmedWebhookUrl && !isAllowedWebhookUrl(trimmedWebhookUrl)) {
+        return NextResponse.json(
+          { ok: false, error: 'Webhook URL must be a public HTTPS endpoint.' },
+          { status: 400 }
+        )
+      }
+      data.webhookUrl = trimmedWebhookUrl || null
+    }
+
+    if (instapayPaymentUrl !== undefined) {
+      const trimmedPaymentUrl = instapayPaymentUrl ? String(instapayPaymentUrl).trim() : ''
+      try {
+        data.instapayPaymentUrl = trimmedPaymentUrl ? normalizeInstaPayPaymentUrl(trimmedPaymentUrl) : null
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Invalid InstaPay payment URL.'
+        return NextResponse.json({ ok: false, error: message }, { status: 400 })
+      }
     }
 
     if (checkoutTtlMin !== undefined) {
@@ -29,15 +63,21 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (regenerateWebhookSecret) {
-      data.webhookSecret = generateSecureToken('sec')
+      const webhookSecret = generateSecureToken('sec')
+      data.webhookSecret = webhookSecret
+      data.webhookSecretHash = hashSecret(webhookSecret)
     }
 
     if (regenerateApiKey) {
-      data.apiKey = generateSecureToken('ipk')
+      const apiKey = generateSecureToken('ipk')
+      data.apiKey = apiKey
+      data.apiKeyHash = hashSecret(apiKey)
     }
 
     if (regenerateDetectToken) {
-      data.detectToken = generateSecureToken('det')
+      const detectToken = generateSecureToken('det')
+      data.detectToken = detectToken
+      data.detectTokenHash = hashSecret(detectToken)
     }
 
     const updated = await db.client.update({
@@ -50,14 +90,22 @@ export async function PATCH(request: NextRequest) {
       message: 'Integration settings updated successfully.',
       client: {
         id: updated.id,
+        slug: updated.slug,
         businessName: updated.businessName,
         instapayHandle: updated.instapayHandle,
+        instapayPaymentUrl: updated.instapayPaymentUrl,
         email: updated.email,
         apiKey: updated.apiKey,
         detectToken: updated.detectToken,
         webhookUrl: updated.webhookUrl,
         webhookSecret: updated.webhookSecret,
         checkoutTtlMin: updated.checkoutTtlMin,
+        createdAt: updated.createdAt.toISOString(),
+        subscriptionPlan: updated.subscriptionPlan,
+        subscriptionEndsAt: updated.subscriptionEndsAt ? updated.subscriptionEndsAt.toISOString() : null,
+        isFreeTrial: updated.isFreeTrial,
+        txLimit: updated.txLimit,
+        txCount: updated.txCount,
       },
     })
   } catch (err) {

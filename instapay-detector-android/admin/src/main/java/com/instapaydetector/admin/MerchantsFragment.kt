@@ -47,7 +47,7 @@ class MerchantsFragment : Fragment() {
             loadMerchants()
         }
 
-        binding.fabCreate.setOnClickListener {
+        binding.btnCreateTop.setOnClickListener {
             val bottomSheet = CreateMerchantBottomSheet {
                 binding.swipeRefresh.isRefreshing = true
                 loadMerchants()
@@ -185,62 +185,226 @@ class MerchantsFragment : Fragment() {
     }
 
     private fun showEditSubscriptionDialog(id: String) {
-        val options = arrayOf("+1 Day Free Trial", "+30 Days Pro", "Expire Immediately")
-        AlertDialog.Builder(requireContext())
-            .setTitle("Manage Subscription")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> updateSubscription(id, "FREE_TRIAL", true, 1)
-                    1 -> updateSubscription(id, "PRO", false, 30)
-                    2 -> updateSubscription(id, "EXPIRED", false, -9999)
+        val client = allMerchants.find { it.optString("id") == id } ?: return
+        val currentPlan = client.optString("subscriptionPlan", "FREE_TRIAL")
+        val currentIsTrial = client.optBoolean("isFreeTrial", true)
+        val currentEndsAt = client.optString("subscriptionEndsAt", "")
+
+        val context = requireContext()
+        val container = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            val padding = (20 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
+            setBackgroundColor(context.getColor(R.color.bg_card))
+        }
+
+        // Plan Spinner Label
+        val planLabel = android.widget.TextView(context).apply {
+            text = "Subscription Plan"
+            textSize = 14f
+            setTextColor(android.graphics.Color.GRAY)
+            setPadding(0, 0, 0, (6 * resources.displayMetrics.density).toInt())
+        }
+        container.addView(planLabel)
+
+        // Plan Spinner
+        val plans = arrayOf("FREE_TRIAL", "BASIC", "PRO", "ENTERPRISE")
+        val planSpinner = android.widget.Spinner(context).apply {
+            adapter = android.widget.ArrayAdapter(context, R.layout.item_spinner_selected, plans).apply {
+                setDropDownViewResource(R.layout.item_spinner_dropdown)
+            }
+            val index = plans.indexOf(currentPlan)
+            if (index >= 0) setSelection(index)
+        }
+        container.addView(planSpinner)
+
+        // Spacer
+        container.addView(View(context).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(1, (16 * resources.displayMetrics.density).toInt())
+        })
+
+        // Confirmed Tx Count Label
+        val txCountLabel = android.widget.TextView(context).apply {
+            text = "Confirmed Transaction Count"
+            textSize = 14f
+            setTextColor(android.graphics.Color.GRAY)
+            setPadding(0, 0, 0, (6 * resources.displayMetrics.density).toInt())
+        }
+        container.addView(txCountLabel)
+
+        // Confirmed Tx Count Input
+        val txCountInput = android.widget.EditText(context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText(client.optInt("txCount", 0).toString())
+            setTextColor(context.getColor(R.color.text_primary))
+            setHintTextColor(context.getColor(R.color.text_tertiary))
+            setBackgroundColor(context.getColor(R.color.bg_input))
+        }
+        container.addView(txCountInput)
+
+        // Spacer
+        container.addView(View(context).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(1, (16 * resources.displayMetrics.density).toInt())
+        })
+
+        // Tx Limit Label
+        val txLimitLabel = android.widget.TextView(context).apply {
+            text = "Plan Transaction Limit"
+            textSize = 14f
+            setTextColor(android.graphics.Color.GRAY)
+            setPadding(0, 0, 0, (6 * resources.displayMetrics.density).toInt())
+        }
+        container.addView(txLimitLabel)
+
+        // Tx Limit Input
+        val txLimitInput = android.widget.EditText(context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText(client.optInt("txLimit", 5).toString())
+            setTextColor(context.getColor(R.color.text_primary))
+            setHintTextColor(context.getColor(R.color.text_tertiary))
+            setBackgroundColor(context.getColor(R.color.bg_input))
+        }
+        container.addView(txLimitInput)
+
+        // Set Plan Spinner item selection listener to prefill defaults
+        planSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selected = plans[position]
+                val currentInput = txLimitInput.text.toString().trim()
+                // If it is empty or matches standard defaults, auto-update it
+                if (currentInput.isEmpty() || currentInput == "5" || currentInput == "1000" || currentInput == "3500" || currentInput == "10000") {
+                    val defaultLimit = when (selected) {
+                        "FREE_TRIAL" -> 5
+                        "BASIC" -> 1000
+                        "PRO" -> 3500
+                        "ENTERPRISE" -> 10000
+                        else -> 5
+                    }
+                    txLimitInput.setText(defaultLimit.toString())
+                }
+            }
+        }
+
+        // Spacer
+        container.addView(View(context).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(1, (16 * resources.displayMetrics.density).toInt())
+        })
+
+        // Is Free Trial Checkbox
+        val trialCheckBox = android.widget.CheckBox(context).apply {
+            text = "Mark as Free Trial"
+            isChecked = currentIsTrial
+            setTextColor(context.getColor(R.color.text_primary))
+            buttonTintList = android.content.res.ColorStateList.valueOf(context.getColor(R.color.brand_accent))
+        }
+        container.addView(trialCheckBox)
+
+        // Spacer
+        container.addView(View(context).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(1, (16 * resources.displayMetrics.density).toInt())
+        })
+
+        // Expiration Date Label
+        val dateLabel = android.widget.TextView(context).apply {
+            text = "Expiration Date (Tap below to edit)"
+            textSize = 14f
+            setTextColor(android.graphics.Color.GRAY)
+            setPadding(0, 0, 0, (6 * resources.displayMetrics.density).toInt())
+        }
+        container.addView(dateLabel)
+
+        // Expiration Date Calendar Picker Button
+        val calendar = java.util.Calendar.getInstance()
+        if (currentEndsAt.isNotEmpty() && currentEndsAt != "null") {
+            try {
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+                val date = sdf.parse(currentEndsAt)
+                if (date != null) {
+                    calendar.time = date
+                }
+            } catch (e: Exception) {}
+        } else {
+            // Default: 30 days from now
+            calendar.add(java.util.Calendar.DAY_OF_YEAR, 30)
+        }
+
+        val dateDisplayFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        val dateButton = android.widget.Button(context).apply {
+            text = dateDisplayFormat.format(calendar.time)
+            setTextColor(context.getColor(R.color.text_on_primary))
+            setBackgroundColor(context.getColor(R.color.brand_primary))
+            setOnClickListener {
+                android.app.DatePickerDialog(
+                    context,
+                    { _, year, month, dayOfMonth ->
+                        calendar.set(java.util.Calendar.YEAR, year)
+                        calendar.set(java.util.Calendar.MONTH, month)
+                        calendar.set(java.util.Calendar.DAY_OF_MONTH, dayOfMonth)
+                        text = dateDisplayFormat.format(calendar.time)
+                    },
+                    calendar.get(java.util.Calendar.YEAR),
+                    calendar.get(java.util.Calendar.MONTH),
+                    calendar.get(java.util.Calendar.DAY_OF_MONTH)
+                ).show()
+            }
+        }
+        container.addView(dateButton)
+
+        AlertDialog.Builder(context)
+            .setTitle("Edit Subscription: " + client.optString("businessName", "Merchant"))
+            .setView(container)
+            .setPositiveButton("Save Updates") { _, _ ->
+                val selectedPlan = planSpinner.selectedItem.toString()
+                val isTrial = trialCheckBox.isChecked
+                val endsAtTime = calendar.timeInMillis
+                val customLimit = txLimitInput.text.toString().toIntOrNull() ?: 5
+                val customCount = txCountInput.text.toString().toIntOrNull() ?: 0
+
+                lifecycleScope.launch {
+                    binding.swipeRefresh.isRefreshing = true
+                    val body = JSONObject().apply {
+                        put("subscriptionPlan", selectedPlan)
+                        put("isFreeTrial", isTrial)
+                        put("txLimit", customLimit)
+                        put("txCount", customCount)
+                        
+                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
+                        sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                        put("subscriptionEndsAt", sdf.format(java.util.Date(endsAtTime)))
+                    }
+                    val response = ApiClient.patch(context, "/api/admin/clients/$id", body)
+                    if (response.isSuccessful) {
+                        loadMerchants()
+                        Toast.makeText(context, "Subscription updated successfully!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        binding.swipeRefresh.isRefreshing = false
+                        Toast.makeText(context, response.errorMessage ?: "Failed to update subscription", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            .setNeutralButton("Expire Now") { _, _ ->
+                lifecycleScope.launch {
+                    binding.swipeRefresh.isRefreshing = true
+                    val body = JSONObject().apply {
+                        put("subscriptionPlan", "EXPIRED")
+                        put("isFreeTrial", false)
+                        val pastDate = System.currentTimeMillis() - 24L * 60L * 60L * 1000L // 1 day ago
+                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
+                        sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                        put("subscriptionEndsAt", sdf.format(java.util.Date(pastDate)))
+                    }
+                    val response = ApiClient.patch(context, "/api/admin/clients/$id", body)
+                    if (response.isSuccessful) {
+                        loadMerchants()
+                    } else {
+                        binding.swipeRefresh.isRefreshing = false
+                        Toast.makeText(context, response.errorMessage ?: "Failed to expire", Toast.LENGTH_LONG).show()
+                    }
                 }
             }
             .setNegativeButton(R.string.btn_cancel, null)
             .show()
-    }
-
-    private fun updateSubscription(id: String, plan: String, isTrial: Boolean, addDays: Int) {
-        val client = allMerchants.find { it.optString("id") == id } ?: return
-        
-        var newDate: Long? = null
-        if (addDays > 0) {
-            val endsStr = client.optString("subscriptionEndsAt", "")
-            var baseTime = System.currentTimeMillis()
-            if (endsStr.isNotEmpty() && endsStr != "null") {
-                try {
-                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
-                    val date = sdf.parse(endsStr)
-                    if (date != null && date.time > baseTime) {
-                        baseTime = date.time
-                    }
-                } catch (e: Exception) {}
-            }
-            newDate = baseTime + addDays * 24L * 60L * 60L * 1000L
-        } else if (addDays < 0) {
-            newDate = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
-        }
-
-        lifecycleScope.launch {
-            binding.swipeRefresh.isRefreshing = true
-            val body = JSONObject().apply {
-                put("subscriptionPlan", plan)
-                put("isFreeTrial", isTrial)
-                if (newDate != null) {
-                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
-                    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
-                    put("subscriptionEndsAt", sdf.format(java.util.Date(newDate)))
-                } else {
-                    put("subscriptionEndsAt", JSONObject.NULL)
-                }
-            }
-            val response = ApiClient.patch(requireContext(), "/api/admin/clients/$id", body)
-            if (response.isSuccessful) {
-                loadMerchants()
-            } else {
-                binding.swipeRefresh.isRefreshing = false
-                Toast.makeText(requireContext(), response.errorMessage ?: "Failed to update sub", Toast.LENGTH_LONG).show()
-            }
-        }
     }
 
     private fun handleUnauthorized() {

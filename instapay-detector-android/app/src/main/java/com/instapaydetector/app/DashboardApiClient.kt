@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -24,9 +26,10 @@ import java.util.concurrent.TimeUnit
  * endpoints — unauthenticated GET is also allowed, but we send the token
  * anyway so the merchant can see private data).
  */
-class DashboardApiClient(ctx: Context) {
+class DashboardApiClient(private val ctx: Context) {
 
     private val config = GatewayConfig.get(ctx)
+    private val cachePrefs = ctx.getSharedPreferences("dashboard_cache", Context.MODE_PRIVATE)
 
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -34,34 +37,59 @@ class DashboardApiClient(ctx: Context) {
         .build()
 
     /** Derives the gateway base URL from the configured webhook URL. */
-    private val baseUrl: String by lazy {
+    private fun baseUrl(): String {
         val url = config.gatewayUrl
         // Strip /api/webhooks/instapay if present
         if (url.contains("/api/webhooks/instapay")) {
-            url.substring(0, url.indexOf("/api/webhooks/instapay"))
+            return url.substring(0, url.indexOf("/api/webhooks/instapay"))
         } else {
             // Fallback: strip the last path segment
-            url.trimEnd('/').substringBeforeLast('/')
+            return url.trimEnd('/').substringBeforeLast('/')
         }
     }
 
     suspend fun fetchDashboard(): Result<DashboardStats> = withContext(Dispatchers.IO) {
         try {
-            val res = get("$baseUrl/api/dashboard")
+            val res = get("${baseUrl()}/api/dashboard")
             if (!res.isSuccessful) {
+                loadCachedDashboard()?.let { return@withContext Result.success(it) }
                 return@withContext Result.failure(Exception("HTTP ${res.code}"))
             }
             val json = JSONObject(res.body)
+            cachePrefs.edit()
+                .putString(KEY_DASHBOARD_JSON, res.body)
+                .putLong(KEY_DASHBOARD_CACHED_AT, System.currentTimeMillis())
+                .apply()
             Result.success(parseDashboard(json))
         } catch (e: Exception) {
             Log.e(TAG, "fetchDashboard failed: ${e.message}", e)
+            loadCachedDashboard()?.let { return@withContext Result.success(it) }
             Result.failure(e)
         }
     }
 
+    suspend fun fetchNotifications(): Result<List<MerchantNotification>> = withContext(Dispatchers.IO) {
+        try {
+            val res = get("${baseUrl()}/api/notifications")
+            if (!res.isSuccessful) return@withContext Result.failure(Exception("HTTP ${res.code}"))
+            val array = JSONObject(res.body).optJSONArray("notifications") ?: JSONArray()
+            Result.success((0 until array.length()).map { i ->
+                val item = array.getJSONObject(i)
+                MerchantNotification(item.getString("id"), item.getString("title"), item.getString("message"), item.optString("severity", "INFO"))
+            })
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun markNotificationsRead(ids: List<String>) = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext
+        val body = JSONObject().put("ids", JSONArray(ids)).toString().toRequestBody("application/json".toMediaType())
+        val request = Request.Builder().url("${baseUrl()}/api/notifications").addHeader("Authorization", "Bearer ${config.dashboardApiKey.ifBlank { config.authToken }}").patch(body).build()
+        httpClient.newCall(request).execute().close()
+    }
+
     suspend fun fetchChart(days: Int = 30): Result<ChartData> = withContext(Dispatchers.IO) {
         try {
-            val res = get("$baseUrl/api/stats/chart?days=$days")
+            val res = get("${baseUrl()}/api/stats/chart?days=$days")
             if (!res.isSuccessful) {
                 return@withContext Result.failure(Exception("HTTP ${res.code}"))
             }
@@ -85,7 +113,7 @@ class DashboardApiClient(ctx: Context) {
             if (!status.isNullOrBlank()) params.add("status=$status")
             params.add("limit=$limit")
             if (!cursor.isNullOrBlank()) params.add("cursor=${java.net.URLEncoder.encode(cursor, "UTF-8")}")
-            val url = "$baseUrl/api/transactions?" + params.joinToString("&")
+            val url = "${baseUrl()}/api/transactions?" + params.joinToString("&")
 
             val res = get(url)
             if (!res.isSuccessful) {
@@ -100,9 +128,10 @@ class DashboardApiClient(ctx: Context) {
     }
 
     private fun get(url: String): HttpResponse {
+        val bearer = config.dashboardApiKey.ifBlank { config.authToken }
         val request = Request.Builder()
             .url(url)
-            .addHeader("Authorization", "Bearer ${config.authToken}")
+            .addHeader("Authorization", "Bearer $bearer")
             .addHeader("Accept", "application/json")
             .get()
             .build()
@@ -114,15 +143,37 @@ class DashboardApiClient(ctx: Context) {
 
     // --- JSON parsers ---
 
+    private fun loadCachedDashboard(): DashboardStats? {
+        val cached = cachePrefs.getString(KEY_DASHBOARD_JSON, null) ?: return null
+        return try {
+            parseDashboard(JSONObject(cached))
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse cached dashboard: ${e.message}", e)
+            null
+        }
+    }
+
     private fun parseDashboard(json: JSONObject): DashboardStats {
         val merchant = json.getJSONObject("merchant")
         val stats = json.getJSONObject("stats")
         val recentArr = json.getJSONArray("recent")
 
+        val subscription = if (json.has("subscription") && !json.isNull("subscription")) {
+            val sub = json.getJSONObject("subscription")
+            SubscriptionInfo(
+                plan = sub.optString("plan", "FREE_TRIAL"),
+                txCount = sub.optInt("txCount", 0),
+                txLimit = sub.optInt("txLimit", 5),
+                subscriptionEndsAt = if (sub.isNull("subscriptionEndsAt")) null else sub.optString("subscriptionEndsAt"),
+                isFreeTrial = sub.optBoolean("isFreeTrial", true),
+            )
+        } else null
+
         return DashboardStats(
             merchant = MerchantInfo(
                 handle = merchant.getString("handle"),
                 name = merchant.getString("name"),
+                email = merchant.optString("email", config.merchantEmail),
             ),
             stats = StatsBreakdown(
                 today = parseBucket(stats.getJSONObject("today")),
@@ -130,6 +181,7 @@ class DashboardApiClient(ctx: Context) {
                 pending = parseBucket(stats.getJSONObject("pending")),
             ),
             recent = parseTransactions(recentArr),
+            subscription = subscription,
         )
     }
 
@@ -219,5 +271,7 @@ class DashboardApiClient(ctx: Context) {
 
     companion object {
         private const val TAG = "DashboardApi"
+        private const val KEY_DASHBOARD_JSON = "dashboard_json"
+        private const val KEY_DASHBOARD_CACHED_AT = "dashboard_cached_at"
     }
 }

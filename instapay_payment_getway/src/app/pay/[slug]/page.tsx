@@ -35,11 +35,6 @@ export default function HostedCheckoutPage({ params }: { params: Promise<{ slug:
   useEffect(() => {
     async function loadClient() {
       try {
-        const res = await fetch(`/api/checkout?clientSlug=${slug}`)
-        // Let's create a GET handler on /api/checkout to return client info if clientSlug is passed as query!
-        // We'll write this inside /api/checkout/route.ts in a bit or let's look up /api/checkout.
-        // Wait, instead of creating a new API, we can fetch from a generic status or check client details.
-        // Let's verify if /api/checkout GET is defined. It is not currently defined. Let's make /api/checkout GET return the client info if requested.
         const response = await fetch(`/api/checkout?slug=${slug}`)
         if (response.ok) {
           const data = await response.json()
@@ -126,13 +121,13 @@ export default function HostedCheckoutPage({ params }: { params: Promise<{ slug:
       {/* Header */}
       <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-emerald-400 shadow-md">
-              <span className="text-xs font-black tracking-tight text-white">IPN</span>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-md ring-1 ring-neutral-100">
+              <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-neutral-900">{client.businessName}</h1>
+                <h1 className="truncate text-base font-bold text-neutral-900">{client.businessName}</h1>
                 <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">
                   Secured
                 </span>

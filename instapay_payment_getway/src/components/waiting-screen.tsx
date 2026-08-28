@@ -253,8 +253,8 @@ export function WaitingScreen({ checkout, onReset }: Props) {
           />
         </ol>
 
-        <div className="mt-4 flex items-center justify-between rounded-lg bg-neutral-50 px-3 py-2">
-          <div>
+        <div className="mt-4 flex flex-col gap-3 rounded-lg bg-neutral-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <span className="text-[10px] font-medium uppercase tracking-wide text-neutral-400">
               Send to
             </span>
@@ -274,7 +274,7 @@ export function WaitingScreen({ checkout, onReset }: Props) {
       </div>
 
       {/* Timer + connection status */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-50 px-4 py-3 text-sm text-violet-800">
           <Clock className="h-4 w-4" />
           <span>
@@ -373,11 +373,25 @@ function ConfirmedView({
       <div className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-left">
         <Row label="From" value={checkout.senderHandle} mono />
         <Row label="To" value={checkout.recipientHandle} mono />
-        <Row
-          label="Amount"
-          value={`${checkout.amountEgp.toFixed(2)} ${checkout.currency}`}
-          bold
-        />
+        {checkout.detectedAmountEgp && checkout.detectedAmountEgp > checkout.amountEgp ? (
+          <>
+            <Row
+              label="Requested Amount"
+              value={`${checkout.amountEgp.toFixed(2)} ${checkout.currency}`}
+            />
+            <Row
+              label="Amount Paid (Overpayment)"
+              value={`${checkout.detectedAmountEgp.toFixed(2)} ${checkout.currency} (Extra Paid)`}
+              bold
+            />
+          </>
+        ) : (
+          <Row
+            label="Amount"
+            value={`${checkout.amountEgp.toFixed(2)} ${checkout.currency}`}
+            bold
+          />
+        )}
         {checkout.detectedRef && (
           <Row label="Reference" value={checkout.detectedRef} mono />
         )}

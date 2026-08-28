@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
+import { egpAmountFromRow } from '@/lib/money'
 
 /**
  * Returns the most recent confirmed checkouts for the authenticated client.
@@ -11,16 +12,7 @@ export async function GET(request: NextRequest) {
     const targetClientId = searchParams.get('clientId')
 
     let clientId = ''
-    let isOwner = await authenticateOwner(request)
-
-    // Local dev sandbox fallback for admin check
-    const ownerSecret = process.env.OWNER_SECRET
-    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
-    const authHeader = request.headers.get('authorization') || ''
-    const provided = authHeader.replace(/^Bearer\s+/, '').trim()
-    if (provided === ownerSecret) {
-      isOwner = true
-    }
+    const isOwner = await authenticateOwner(request)
 
     if (isOwner) {
       if (targetClientId) {
@@ -29,13 +21,7 @@ export async function GET(request: NextRequest) {
     } else {
       const client = await authenticateByApiKey(request)
       if (!client) {
-        // Fallback for sandbox dev: use first client if exists
-        const allClients = await db.client.findMany()
-        if (allClients.length > 0) {
-          clientId = allClients[0].id
-        } else {
-          return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
-        }
+        return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
       } else {
         clientId = client.id
       }
@@ -58,7 +44,7 @@ export async function GET(request: NextRequest) {
         sessionId: t.sessionId,
         senderHandle: t.senderHandle,
         recipientHandle: t.recipientHandle,
-        amountEgp: t.amountEgp,
+        amountEgp: egpAmountFromRow(t),
         currency: t.currency,
         status: t.status,
         note: t.note,

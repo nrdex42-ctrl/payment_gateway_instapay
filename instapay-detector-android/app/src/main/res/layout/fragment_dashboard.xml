@@ -19,95 +19,195 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Header with merchant info + live status -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingBottom="16dp">
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    app:cardCornerRadius="22dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/border_subtle"
-                    app:cardBackgroundColor="@color/bg_card">
-                    <ImageView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:src="@drawable/ic_brand_logo"
-                        android:scaleType="centerCrop" />
-                </com.google.android.material.card.MaterialCardView>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/merchantName"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary"
-                        android:textSize="17sp"
-                        android:textStyle="bold"
-                        tools:text="Mohammed Shabana" />
-
-                    <TextView
-                        android:id="@+id/merchantHandle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
-                        android:fontFamily="monospace"
-                        tools:text="mohammedshabana77@instapay" />
-                </LinearLayout>
-
-                <!-- Live status indicator -->
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:background="@drawable/bg_live_status"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="6dp">
-
-                    <View
-                        android:id="@+id/liveDot"
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
-                        android:layout_marginEnd="6dp"
-                        android:background="@drawable/bg_live_dot" />
-
-                    <TextView
-                        android:id="@+id/liveStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/dash_offline"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- Error banner (hidden by default) -->
-            <TextView
-                android:id="@+id/errorText"
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.InstapayDetector.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:background="@drawable/bg_error"
-                android:padding="12dp"
-                android:textColor="@color/status_denied"
-                android:textSize="13sp"
+                app:cardBackgroundColor="@color/bg_card"
+                app:strokeColor="@color/border_subtle"
+                app:strokeWidth="1dp"
+                app:cardCornerRadius="22dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            app:cardCornerRadius="24dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/border_subtle"
+                            app:cardBackgroundColor="@color/bg_card">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:src="@mipmap/ic_launcher"
+                                android:scaleType="centerCrop" />
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/merchantName"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/text_primary"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                tools:text="Mohammed Shabana" />
+
+                            <TextView
+                                android:id="@+id/merchantHandle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="monospace"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp"
+                                tools:text="mohammedshabana77@instapay" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="Live merchant console"
+                                android:textColor="@color/text_tertiary"
+                                android:textSize="10sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:background="@drawable/bg_live_status"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="6dp">
+
+                            <View
+                                android:id="@+id/liveDot"
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:layout_marginEnd="6dp"
+                                android:background="@drawable/bg_live_dot" />
+
+                            <TextView
+                                android:id="@+id/liveStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/dash_offline"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/errorText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:background="@drawable/bg_error"
+                        android:padding="12dp"
+                        android:textColor="@color/status_denied"
+                        android:textSize="13sp"
+                        android:visibility="gone"
+                        tools:text="Failed to load: ..." />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Subscription Plan Info Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardSubscription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/border_subtle"
+                app:cardBackgroundColor="@color/bg_card"
                 android:visibility="gone"
-                tools:text="Failed to load: ..." />
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tvPlanName"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            tools:text="FREE TRIAL" />
+
+                        <TextView
+                            android:id="@+id/tvPlanExpiry"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            tools:text="Expires in 14 days" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvTxUsage"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        tools:text="2 / 5 confirmed transactions used" />
+
+                    <ProgressBar
+                        android:id="@+id/progressTx"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="6dp"
+                        android:max="100"
+                        android:progress="40"
+                        android:progressDrawable="@drawable/bg_progress_bar" />
+
+                    <TextView
+                        android:id="@+id/tvLimitWarning"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="@color/status_denied"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        tools:text="⚠ Limit reached. Contact your provider to upgrade." />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Stat cards: 2x2 grid -->
             <LinearLayout
@@ -165,17 +265,17 @@
                 android:layout_marginTop="12dp">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/dash_revenue_trend"
                         android:textColor="@color/text_primary"
-                        android:textSize="14sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <!-- Native LineChart -->

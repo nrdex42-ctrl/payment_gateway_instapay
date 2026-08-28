@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { db } from '@/lib/db'
-import { authenticateByDetectToken, signPayload } from '@/lib/auth'
+import { authenticateByDetectToken } from '@/lib/auth'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
+import { forwardToClientWebhook } from '@/lib/webhook'
+import { toEgpCents, fromEgpCents, egpAmountFromRow } from '@/lib/money'
 
 interface WebhookBody {
   amountEgp?: number
   senderHandle?: string
   reference?: string
   notificationTimestamp?: string
+  deviceId?: string
+  appVersion?: string
+  androidVersion?: string
 }
 
 function normalizeHandle(raw: string): string {
@@ -37,89 +43,49 @@ function extractAmountFromText(text: string): number | null {
 
 /**
  * Notify the waiting client screen via real-time WebSocket connection.
+ * Signs the request body with HMAC-SHA256 using DETECT_TOKEN to authenticate
+ * with the notifier service's /emit endpoint.
  */
 export async function emitCheckoutUpdate(payload: {
   sessionId: string,
   status: 'CONFIRMED' | 'EXPIRED',
   amountEgp?: number,
+  detectedAmountEgp?: number | null,
   senderHandle?: string,
   detectedRef?: string | null,
   detectedAt?: string | null,
 }) {
   const notifierUrl = process.env.NOTIFIER_URL || 'http://localhost:3003'
+  const detectToken = process.env.DETECT_TOKEN || ''
+
   try {
-    await fetch(`${notifierUrl}/emit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...payload,
-        broadcast: 'dashboard',
-        event: 'payment:confirmed',
-        dashboardPayload: payload,
-      }),
+    const bodyStr = JSON.stringify({
+      ...payload,
+      broadcast: 'dashboard',
+      event: 'payment:confirmed',
+      dashboardPayload: payload,
     })
-  } catch (err) {
-    console.warn('[webhook] failed to emit WebSocket update:', err)
-  }
-}
 
-/**
- * Optional Callback to Client's Server Webhook Endpoint.
- */
-export async function forwardToClientWebhook(
-  clientId: string,
-  url: string,
-  secret: string | null,
-  payload: Record<string, unknown>
-) {
-  let statusCode: number | null = null
-  let responseText = ''
-  let isSuccess = false
-
-  try {
-    const bodyStr = JSON.stringify(payload)
+    // Compute HMAC-SHA256 signature of the request body
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'User-Agent': 'Instapay-Detector-Gateway/2.0',
     }
 
-    if (secret) {
-      const signature = await signPayload(bodyStr, secret)
-      headers['X-Instapay-Signature'] = signature
+    if (detectToken) {
+      const signature = crypto
+        .createHmac('sha256', detectToken)
+        .update(bodyStr)
+        .digest('hex')
+      headers['X-Notifier-Signature'] = `sha256=${signature}`
     }
 
-    const res = await fetch(url, {
+    await fetch(`${notifierUrl}/emit`, {
       method: 'POST',
       headers,
       body: bodyStr,
     })
-
-    statusCode = res.status
-    isSuccess = res.ok
-    responseText = (await res.text()).slice(0, 1000)
-
-    if (!res.ok) {
-      console.warn(`[webhook] client endpoint returned non-OK status: ${res.status}`)
-    }
   } catch (err) {
-    responseText = err instanceof Error ? err.message : 'Connection failed'
-    console.error('[webhook] failed to forward to client webhook:', err)
-  } finally {
-    try {
-      await db.webhookLog.create({
-        data: {
-          clientId,
-          url,
-          event: (payload.event as string) || 'payment.confirmed',
-          payload: JSON.stringify(payload),
-          statusCode,
-          response: responseText,
-          isSuccess,
-        }
-      })
-    } catch (dbErr) {
-      console.error('[webhook] failed to save WebhookLog to DB:', dbErr)
-    }
+    console.warn('[webhook] failed to emit WebSocket update:', err)
   }
 }
 
@@ -152,6 +118,33 @@ export async function POST(request: NextRequest) {
 
     // --- Parse incoming payload ---
     const body = (await request.json()) as WebhookBody
+    const requestIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
+
+    if (body.deviceId?.trim()) {
+      await db.detectorDevice.upsert({
+        where: {
+          clientId_deviceId: {
+            clientId: client.id,
+            deviceId: body.deviceId.trim().slice(0, 128),
+          },
+        },
+        create: {
+          clientId: client.id,
+          deviceId: body.deviceId.trim().slice(0, 128),
+          appVersion: body.appVersion?.trim().slice(0, 64) || null,
+          androidVersion: body.androidVersion?.trim().slice(0, 64) || null,
+          lastIp: requestIp,
+        },
+        update: {
+          appVersion: body.appVersion?.trim().slice(0, 64) || undefined,
+          androidVersion: body.androidVersion?.trim().slice(0, 64) || undefined,
+          lastIp: requestIp,
+          lastSeenAt: new Date(),
+        },
+      }).catch((err) => {
+        console.error('[webhook] failed to upsert detector device heartbeat:', err)
+      })
+    }
 
     let amountEgp: number | null = body.amountEgp != null ? Number(body.amountEgp) : null
     let senderHandle: string | null = body.senderHandle
@@ -176,6 +169,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    const receivedAmountCents = toEgpCents(amountEgp)
+    const receivedAmountRounded = fromEgpCents(receivedAmountCents) ?? 0
     if (!senderHandle) {
       return NextResponse.json(
         { ok: false, error: 'senderHandle is required (e.g. "ahmed@instapay").' },
@@ -197,7 +192,8 @@ export async function POST(request: NextRequest) {
       where: {
         clientId: client.id,
         senderHandle,
-        amountEgp: Math.round(amountEgp * 100) / 100,
+        amountCents: receivedAmountCents,
+        amountEgp: receivedAmountRounded,
         status: 'PENDING',
         expiresAt: { gt: now },
       },
@@ -213,7 +209,8 @@ export async function POST(request: NextRequest) {
         where: {
           clientId: client.id,
           senderHandle,
-          amountEgp: Math.round(amountEgp * 100) / 100,
+          amountCents: receivedAmountCents,
+          amountEgp: receivedAmountRounded,
           status: { in: ['PENDING', 'EXPIRED'] },
           expiresAt: { gte: graceCutoff },
         },
@@ -222,8 +219,6 @@ export async function POST(request: NextRequest) {
     }
 
     let isMismatchedAmount = false
-    const receivedAmountRounded = Math.round(amountEgp * 100) / 100
-
     // Fallback 2: Hybrid search for checkouts for the same sender handle, ignoring amount
     if (!match) {
       const GRACE_PERIOD_MS = 30 * 60 * 1000
@@ -244,6 +239,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fallback 3: If still no match by handle, check if there is EXACTLY ONE pending/expired checkout
+    // for this client with the exact received amount. If so, match it! (Avoids handle spelling/mapping issues).
+    if (!match) {
+      const graceCutoff = new Date(now.getTime() - (30 * 60 * 1000))
+      const potentialMatches = await db.transaction.findMany({
+        where: {
+          clientId: client.id,
+          amountCents: receivedAmountCents,
+          amountEgp: receivedAmountRounded,
+          status: { in: ['PENDING', 'EXPIRED'] },
+          expiresAt: { gte: graceCutoff },
+        },
+      })
+      if (potentialMatches.length === 1) {
+        match = potentialMatches[0]
+        console.log(`[webhook] Fallback 3 matched! Exactly one pending checkout for ${receivedAmountRounded} EGP. Session: ${match.sessionId}`)
+      }
+    }
+
     // If still no match is found, this is an entirely unmatched (orphaned) payment
     if (!match) {
       try {
@@ -252,6 +266,7 @@ export async function POST(request: NextRequest) {
             clientId: client.id,
             senderHandle,
             amountEgp: receivedAmountRounded,
+            amountCents: receivedAmountCents,
             reference,
           }
         })
@@ -279,7 +294,8 @@ export async function POST(request: NextRequest) {
 
     // Handle Mismatched Amount logic
     if (isMismatchedAmount) {
-      if (receivedAmountRounded < match.amountEgp) {
+      const requestedAmountCents = match.amountCents ?? toEgpCents(match.amountEgp)
+      if (receivedAmountCents < requestedAmountCents) {
         // Underpayment: mark transaction as UNDERPAID and save
         const updated = await db.transaction.update({
           where: { id: match.id },
@@ -288,12 +304,13 @@ export async function POST(request: NextRequest) {
             detectedRef: reference,
             detectedAt: now,
             detectedAmountEgp: receivedAmountRounded,
+            detectedAmountCents: receivedAmountCents,
           },
         })
 
         // Trigger callback webhook for underpayment
         if (client.webhookUrl) {
-          void forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
+          await forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
             event: 'payment.underpaid',
             clientId: client.id,
             businessName: client.businessName,
@@ -301,7 +318,7 @@ export async function POST(request: NextRequest) {
               sessionId: updated.sessionId,
               senderHandle: updated.senderHandle,
               recipientHandle: updated.recipientHandle,
-              amountEgp: match.amountEgp, // requested amount
+              amountEgp: egpAmountFromRow(match), // requested amount
               detectedAmountEgp: updated.detectedAmountEgp, // received amount
               currency: updated.currency,
               status: updated.status,
@@ -335,22 +352,77 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update transaction to CONFIRMED (for exact match or overpayment)
-    const updated = await db.transaction.update({
-      where: { id: match.id },
+    // Update transaction to CONFIRMED (for exact match or overpayment). The status
+    // predicate makes duplicate detector notifications idempotent.
+    const confirmed = await db.transaction.updateMany({
+      where: { id: match.id, status: { in: ['PENDING', 'EXPIRED'] } },
       data: {
         status: 'CONFIRMED',
         detectedRef: reference,
         detectedAt: now,
         detectedAmountEgp: receivedAmountRounded,
+        detectedAmountCents: receivedAmountCents,
       },
     })
+
+    if (confirmed.count === 0) {
+      return NextResponse.json({
+        ok: true,
+        matched: true,
+        duplicate: true,
+        checkout: {
+          sessionId: match.sessionId,
+          status: match.status,
+        },
+      })
+    }
+
+    const updated = await db.transaction.findUniqueOrThrow({
+      where: { id: match.id },
+    })
+
+    if (updated.purpose === 'SUBSCRIPTION' && updated.subscriptionPlanName) {
+      const plan = await db.plan.findUnique({ where: { name: updated.subscriptionPlanName } })
+      if (plan) {
+        await db.client.update({
+          where: { id: client.id },
+          data: {
+            subscriptionPlan: plan.name,
+            subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            isFreeTrial: false,
+            txLimit: plan.maxTransactions,
+            txCount: 0,
+          },
+        })
+        await db.auditLog.create({
+          data: {
+            action: 'SUBSCRIPTION_ACTIVATED',
+            details: `Activated ${plan.name} for merchant ${client.businessName} via checkout ${updated.sessionId}`,
+          },
+        }).catch(() => {})
+      }
+    }
+
+    // Increment client's confirmed transaction count atomically
+    if (updated.purpose !== 'SUBSCRIPTION') {
+      await db.client.update({
+        where: { id: client.id },
+        data: {
+          txCount: {
+            increment: 1,
+          },
+        },
+      }).catch((err) => {
+        console.error('[webhook] Failed to increment client txCount:', err)
+      })
+    }
 
     // Push WebSocket real-time update to checkout waiting screen
     void emitCheckoutUpdate({
       sessionId: updated.sessionId,
       status: 'CONFIRMED',
       amountEgp: updated.amountEgp,
+      detectedAmountEgp: updated.detectedAmountEgp,
       senderHandle: updated.senderHandle,
       detectedRef: updated.detectedRef,
       detectedAt: updated.detectedAt?.toISOString() ?? null,
@@ -358,8 +430,8 @@ export async function POST(request: NextRequest) {
 
     // If client has custom callback webhook, trigger it
     if (client.webhookUrl) {
-      void forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
-        event: 'payment.confirmed',
+      await forwardToClientWebhook(client.id, client.webhookUrl, client.webhookSecret, {
+        event: updated.purpose === 'SUBSCRIPTION' ? 'subscription.payment_confirmed' : 'payment.confirmed',
         clientId: client.id,
         businessName: client.businessName,
         transaction: {
@@ -367,6 +439,7 @@ export async function POST(request: NextRequest) {
           senderHandle: updated.senderHandle,
           recipientHandle: updated.recipientHandle,
           amountEgp: updated.amountEgp,
+          detectedAmountEgp: updated.detectedAmountEgp,
           currency: updated.currency,
           status: updated.status,
           detectedRef: updated.detectedRef,
@@ -385,6 +458,7 @@ export async function POST(request: NextRequest) {
         senderHandle: updated.senderHandle,
         recipientHandle: updated.recipientHandle,
         amountEgp: updated.amountEgp,
+        detectedAmountEgp: updated.detectedAmountEgp,
         status: updated.status,
         detectedRef: updated.detectedRef,
         detectedAt: updated.detectedAt?.toISOString() ?? null,

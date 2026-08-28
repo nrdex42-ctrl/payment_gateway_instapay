@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { authenticateByApiKey, authenticateOwner } from '@/lib/auth'
+import { authenticateByApiKey, authenticateByDetectToken, authenticateOwner } from '@/lib/auth'
 import { getStartOfTodayEgypt, formatEgyptTime, getEgyptDstMode, getEgyptOffsetMinutes } from '@/lib/timezone'
+import type { Client } from '@prisma/client'
+import { egpAmountFromRow } from '@/lib/money'
 
 /**
  * Multi-tenant Dashboard stats:
@@ -13,18 +15,9 @@ export async function GET(request: NextRequest) {
     const targetClientId = searchParams.get('clientId')
 
     let clientId = ''
-    let isOwner = await authenticateOwner(request)
-    
-    // Sandbox local development fallback for admin check
-    const ownerSecret = process.env.OWNER_SECRET
-    if (!ownerSecret) return NextResponse.json({ error: 'OWNER_SECRET not configured' }, { status: 500 })
-    const authHeader = request.headers.get('authorization') || ''
-    const provided = authHeader.replace(/^Bearer\s+/, '').trim()
-    if (provided === ownerSecret) {
-      isOwner = true
-    }
+    const isOwner = await authenticateOwner(request)
 
-    let client = null
+    let client: Client | null = null
 
     if (isOwner) {
       if (targetClientId) {
@@ -37,15 +30,9 @@ export async function GET(request: NextRequest) {
       // If owner but no targetClientId is specified, we'll aggregate platform stats in administrative routes.
     } else {
       // Authenticate as client
-      client = await authenticateByApiKey(request)
+      client = await authenticateByApiKey(request) ?? await authenticateByDetectToken(request)
       if (!client) {
-        // Fallback for easy frontend sandbox preview: if there is only 1 client in the database, use it.
-        const allClients = await db.client.findMany()
-        if (allClients.length > 0) {
-          client = allClients[0]
-        } else {
-          return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
-        }
+        return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
       }
       clientId = client.id
     }
@@ -120,6 +107,7 @@ export async function GET(request: NextRequest) {
       merchant: {
         handle: client ? client.instapayHandle : 'All Clients',
         name: client ? client.businessName : 'Platform Overview',
+        email: client ? client.email : '',
       },
       stats: {
         today: {
@@ -139,7 +127,7 @@ export async function GET(request: NextRequest) {
         sessionId: t.sessionId,
         senderHandle: t.senderHandle,
         recipientHandle: t.recipientHandle,
-        amountEgp: t.amountEgp,
+        amountEgp: egpAmountFromRow(t),
         currency: t.currency,
         status: t.status,
         note: t.note,
@@ -148,7 +136,16 @@ export async function GET(request: NextRequest) {
         detectedAtEgypt: t.detectedAt ? formatEgyptTime(t.detectedAt, dstMode) : null,
         createdAt: t.createdAt.toISOString(),
         createdAtEgypt: formatEgyptTime(t.createdAt, dstMode),
+        expiresAt: t.expiresAt.toISOString(),
+        expiresAtEgypt: formatEgyptTime(t.expiresAt, dstMode),
       })),
+      subscription: client ? {
+        plan: client.subscriptionPlan,
+        txCount: client.txCount,
+        txLimit: client.txLimit,
+        subscriptionEndsAt: client.subscriptionEndsAt ? client.subscriptionEndsAt.toISOString() : null,
+        isFreeTrial: client.isFreeTrial,
+      } : null,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
