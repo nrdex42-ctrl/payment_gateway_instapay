@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { db } from '@/lib/db'
 import { authenticateByDetectToken } from '@/lib/auth'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
@@ -42,6 +43,8 @@ function extractAmountFromText(text: string): number | null {
 
 /**
  * Notify the waiting client screen via real-time WebSocket connection.
+ * Signs the request body with HMAC-SHA256 using DETECT_TOKEN to authenticate
+ * with the notifier service's /emit endpoint.
  */
 export async function emitCheckoutUpdate(payload: {
   sessionId: string,
@@ -53,16 +56,33 @@ export async function emitCheckoutUpdate(payload: {
   detectedAt?: string | null,
 }) {
   const notifierUrl = process.env.NOTIFIER_URL || 'http://localhost:3003'
+  const detectToken = process.env.DETECT_TOKEN || ''
+
   try {
+    const bodyStr = JSON.stringify({
+      ...payload,
+      broadcast: 'dashboard',
+      event: 'payment:confirmed',
+      dashboardPayload: payload,
+    })
+
+    // Compute HMAC-SHA256 signature of the request body
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (detectToken) {
+      const signature = crypto
+        .createHmac('sha256', detectToken)
+        .update(bodyStr)
+        .digest('hex')
+      headers['X-Notifier-Signature'] = `sha256=${signature}`
+    }
+
     await fetch(`${notifierUrl}/emit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...payload,
-        broadcast: 'dashboard',
-        event: 'payment:confirmed',
-        dashboardPayload: payload,
-      }),
+      headers,
+      body: bodyStr,
     })
   } catch (err) {
     console.warn('[webhook] failed to emit WebSocket update:', err)
