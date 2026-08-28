@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   LOCALE_COOKIE,
   LOCALE_STORAGE_KEY,
@@ -83,14 +84,17 @@ function applyLocale(locale: Locale) {
 
 export function LanguageRuntime() {
   const [locale, setLocale] = useState<Locale>('en')
+  const [target, setTarget] = useState<Element | null>(null)
 
   useEffect(() => {
     const initial = getInitialLocale()
     setLocale(initial)
     applyLocale(initial)
+    setTarget(document.querySelector('[data-language-toggle-slot]'))
 
     const observer = new MutationObserver(() => {
       applyLocale(getInitialLocale())
+      setTarget(document.querySelector('[data-language-toggle-slot]'))
     })
     observer.observe(document.body, { childList: true, subtree: true })
 
@@ -104,11 +108,11 @@ export function LanguageRuntime() {
     applyLocale(nextLocale)
   }
 
-  return (
+  const button = (
     <button
       type="button"
       onClick={toggleLocale}
-      className="fixed end-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[1000] inline-flex h-9 items-center gap-1.5 rounded-full border border-white/15 bg-slate-950/90 px-2.5 text-[11px] font-bold text-white shadow-2xl shadow-black/30 backdrop-blur transition hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:end-4 sm:h-10 sm:gap-2 sm:px-3 sm:text-xs"
+      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-2.5 text-[11px] font-bold text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:gap-2 sm:px-3 sm:text-xs"
       aria-label={locale === 'ar' ? 'Switch language to English' : 'تغيير اللغة إلى العربية'}
       data-i18n-skip
     >
@@ -118,5 +122,13 @@ export function LanguageRuntime() {
       <span className="hidden sm:inline">{locale === 'ar' ? localeLabels.en : localeLabels.ar}</span>
       <span className="sm:hidden">{locale === 'ar' ? 'EN' : 'AR'}</span>
     </button>
+  )
+
+  if (target) return createPortal(button, target)
+
+  return (
+    <div className="fixed end-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[1000] sm:end-4" data-i18n-skip>
+      {button}
+    </div>
   )
 }

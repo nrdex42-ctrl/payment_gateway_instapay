@@ -163,6 +163,7 @@ export default function RegisterPage() {
           </a>
 
           <div className="flex shrink-0 items-center gap-3">
+            <div data-language-toggle-slot data-i18n-skip />
             <a href={`mailto:${SYSTEM_EMAIL}`} className="hidden text-xs font-semibold text-slate-400 hover:text-slate-200 sm:inline">
               {SYSTEM_EMAIL}
             </a>

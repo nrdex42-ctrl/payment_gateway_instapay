@@ -131,6 +131,7 @@ export function MerchantDashboard() {
           <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
+        <div data-language-toggle-slot data-i18n-skip />
       </div>
 
       {notifications.length > 0 && (

@@ -530,6 +530,7 @@ export default function MerchantDashboardPage() {
               <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Refresh</span>
             </Button>
+            <div data-language-toggle-slot data-i18n-skip />
             <Button
               variant="ghost"
               size="sm"

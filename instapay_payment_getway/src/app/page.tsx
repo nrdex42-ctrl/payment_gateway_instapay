@@ -141,6 +141,7 @@ export default async function LandingPage() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
+            <div data-language-toggle-slot data-i18n-skip />
             <Button asChild variant="ghost" size="sm" className="hidden text-slate-200 hover:bg-white/10 hover:text-white sm:inline-flex">
               <a href="/login">Sign in</a>
             </Button>
