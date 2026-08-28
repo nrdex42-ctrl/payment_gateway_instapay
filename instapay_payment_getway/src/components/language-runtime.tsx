@@ -108,14 +108,15 @@ export function LanguageRuntime() {
     <button
       type="button"
       onClick={toggleLocale}
-      className="fixed bottom-4 end-4 z-[1000] inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-950/90 px-3 py-2 text-xs font-bold text-white shadow-2xl shadow-black/30 backdrop-blur transition hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      className="fixed end-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[1000] inline-flex h-9 items-center gap-1.5 rounded-full border border-white/15 bg-slate-950/90 px-2.5 text-[11px] font-bold text-white shadow-2xl shadow-black/30 backdrop-blur transition hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:end-4 sm:h-10 sm:gap-2 sm:px-3 sm:text-xs"
       aria-label={locale === 'ar' ? 'Switch language to English' : 'تغيير اللغة إلى العربية'}
       data-i18n-skip
     >
-      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-slate-950">
+      <span className="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-black text-slate-950 sm:px-2 sm:text-[10px]">
         {locale === 'ar' ? 'AR' : 'EN'}
       </span>
-      <span>{locale === 'ar' ? localeLabels.en : localeLabels.ar}</span>
+      <span className="hidden sm:inline">{locale === 'ar' ? localeLabels.en : localeLabels.ar}</span>
+      <span className="sm:hidden">{locale === 'ar' ? 'EN' : 'AR'}</span>
     </button>
   )
 }
