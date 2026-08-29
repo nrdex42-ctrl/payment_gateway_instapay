@@ -11,7 +11,7 @@ services:
     name: instapay-gateway
     runtime: node
     plan: starter     # $7/month — required (free tier spins down after 15min)
-    rootDir: instapay_payment_getway
+    rootDir: instapay_payment_gateway
     buildCommand: |
       cp prisma/schema.production.prisma prisma/schema.prisma &&
       npm install &&
@@ -46,7 +46,7 @@ services:
     name: instapay-notifier
     runtime: node
     plan: starter     # $7/month — required (always-on for WebSocket connections)
-    rootDir: instapay_payment_getway/mini-services/checkout-notifier
+    rootDir: instapay_payment_gateway/mini-services/checkout-notifier
     buildCommand: npm install
     startCommand: npx tsx index.ts
     envVars:

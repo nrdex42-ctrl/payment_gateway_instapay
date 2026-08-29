@@ -26,4 +26,4 @@ cd ..
 npx vercel deploy --prod --yes
 ```
 
-Vercel root directory is configured as `instapay_payment_getway`.
+Vercel root directory is configured as `instapay_payment_gateway`.

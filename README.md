@@ -8,12 +8,12 @@ The system does not integrate with the official InstaPay backend. Customers stil
 
 | Path | Purpose |
 | --- | --- |
-| `instapay_payment_getway/` | Next.js web app, API routes, Prisma schema, merchant dashboard, admin portal, checkout pages |
+| `instapay_payment_gateway/` | Next.js web app, API routes, Prisma schema, merchant dashboard, admin portal, checkout pages |
 | `instapay-detector-android/app/` | Merchant Detector APK for Android notification detection and merchant-side app notifications |
 | `instapay-detector-android/admin/` | Admin APK for owner operations from Android |
 | `apks/` | Built release APKs copied for distribution/install testing |
-| `instapay_payment_getway/docs/OPERATIONS.md` | Operational notes for migrations, plans, webhook requirements, and hardening rollout |
-| `instapay_payment_getway/mini-services/checkout-notifier/` | Optional Socket.IO notifier service for real-time checkout updates |
+| `instapay_payment_gateway/docs/OPERATIONS.md` | Operational notes for migrations, plans, webhook requirements, and hardening rollout |
+| `instapay_payment_gateway/mini-services/checkout-notifier/` | Optional Socket.IO notifier service for real-time checkout updates |
 
 ## Current production URLs
 
@@ -99,8 +99,8 @@ Merchant webhook
 
 The Prisma schemas are:
 
-- Local: `instapay_payment_getway/prisma/schema.prisma`
-- Production: `instapay_payment_getway/prisma/schema.production.prisma`
+- Local: `instapay_payment_gateway/prisma/schema.prisma`
+- Production: `instapay_payment_gateway/prisma/schema.production.prisma`
 
 Important models:
 
@@ -126,7 +126,7 @@ Typical transaction states:
 Copy the example file and fill real values locally:
 
 ```bash
-cd instapay_payment_getway
+cd instapay_payment_gateway
 cp .env.example .env
 ```
 
@@ -169,7 +169,7 @@ Prerequisites:
 Commands:
 
 ```bash
-cd instapay_payment_getway
+cd instapay_payment_gateway
 npm install
 npm run db:generate
 npm run db:push
@@ -191,7 +191,7 @@ npm run build
 
 ## Production deployment on Vercel
 
-The Vercel project is linked through `.vercel/project.json`. Deploy from the repository root because the Vercel project root directory is configured as `instapay_payment_getway`.
+The Vercel project is linked through `.vercel/project.json`. Deploy from the repository root because the Vercel project root directory is configured as `instapay_payment_gateway`.
 
 ```bash
 cd /home/shabana/Downloads/instapay
@@ -200,7 +200,7 @@ npx vercel deploy --prod --yes
 
 Important deployment notes:
 
-- Do not run deploy from inside `instapay_payment_getway/` unless the Vercel root directory setting is changed.
+- Do not run deploy from inside `instapay_payment_gateway/` unless the Vercel root directory setting is changed.
 - Production uses `prisma/schema.production.prisma`.
 - The current build script copies the production schema and runs Prisma generation/build steps.
 - The build currently calls `prisma db push --accept-data-loss` when `VERCEL=1`; for stricter production operations, prefer explicit migrations as described in `docs/OPERATIONS.md`.
@@ -211,7 +211,7 @@ Important deployment notes:
 Local schema push:
 
 ```bash
-cd instapay_payment_getway
+cd instapay_payment_gateway
 npm run db:push
 ```
 
@@ -230,7 +230,7 @@ npm run db:seed:plans
 npm run build
 ```
 
-See `instapay_payment_getway/docs/OPERATIONS.md` for the hardening rollout and migration notes.
+See `instapay_payment_gateway/docs/OPERATIONS.md` for the hardening rollout and migration notes.
 
 ## Merchant onboarding flow
 
@@ -469,7 +469,7 @@ Implementation:
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| Vercel says root directory does not exist | Deploy command was run from inside `instapay_payment_getway` while Vercel root is also configured to that directory | Run `npx vercel deploy --prod --yes` from repository root |
+| Vercel says root directory does not exist | Deploy command was run from inside `instapay_payment_gateway` while Vercel root is also configured to that directory | Run `npx vercel deploy --prod --yes` from repository root |
 | Vercel TypeScript fails on `mini-services/checkout-notifier` | Separate service files are included in Next.js typecheck | Keep `mini-services` excluded in `tsconfig.json` |
 | Merchant dashboard shows duplicated text | Runtime translation loop or parent-level text replacement | Use per-text-node translation storage in `LanguageRuntime` |
 | Detector does not see payments | Notification access not granted, InstaPay notifications disabled, or Android battery restrictions | Grant notification access, enable InstaPay notification category, allow unrestricted background usage |
@@ -482,7 +482,7 @@ Implementation:
 
 ```bash
 # Web app
-cd instapay_payment_getway
+cd instapay_payment_gateway
 npm run dev
 npm run build
 npm run db:push
