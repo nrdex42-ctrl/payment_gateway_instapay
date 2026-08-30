@@ -50,6 +50,13 @@ class DashboardFragment : Fragment() {
 
         // Set up recent transactions RecyclerView
         recentAdapter = TransactionAdapter()
+        recentAdapter.onItemClick = { tx ->
+            val dialog = TransactionDetailDialog.newInstance(tx)
+            dialog.onStatusChanged = {
+                loadAll()
+            }
+            dialog.show(parentFragmentManager, "tx_detail_dashboard")
+        }
         binding.recentList.layoutManager = LinearLayoutManager(requireContext())
         binding.recentList.adapter = recentAdapter
         renderLocalProfileFallback()

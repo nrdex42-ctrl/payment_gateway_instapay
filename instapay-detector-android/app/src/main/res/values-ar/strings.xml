@@ -100,9 +100,10 @@
     <string name="perm_remind_later">تذكيري لاحقاً</string>
 
     <!-- Transaction Status Actions (Arabic) -->
-    <string name="tx_action_confirm">تأكيد العملية (تعديل الحالة)</string>
+    <string name="tx_action_confirm">⚡ تأكيد العملية يدوياً (Fix)</string>
     <string name="tx_action_expire">تعليم كمنتهية الصلاحية</string>
     <string name="tx_action_cancel">إلغاء العملية</string>
+    <string name="tx_status_confirmed_badge">✓ العملية مؤكدة ومحدثة مع المتجر</string>
     <string name="tx_status_updated">تم تحديث حالة العملية بنجاح</string>
     <string name="tx_status_update_failed">فشل تحديث حالة العملية</string>
 </resources>

@@ -20,6 +20,8 @@ import java.util.TimeZone
  */
 class TransactionDetailDialog : DialogFragment() {
 
+    var onStatusChanged: ((Transaction) -> Unit)? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NO_TITLE, android.R.style.Theme_Material_Light_Dialog_MinWidth)
@@ -55,43 +57,75 @@ class TransactionDetailDialog : DialogFragment() {
             return view
         }
 
+        var currentTx = tx
+
         val detailTitle = view.findViewById<TextView>(R.id.detailTitle)
         val detailStatus = view.findViewById<TextView>(R.id.detailStatus)
+        val txtConfirmedBadge = view.findViewById<TextView>(R.id.txtConfirmedBadge)
         val btnConfirmTx = view.findViewById<MaterialButton>(R.id.btnConfirmTx)
         val btnExpireTx = view.findViewById<MaterialButton>(R.id.btnExpireTx)
+        val btnCancelTx = view.findViewById<MaterialButton>(R.id.btnCancelTx)
 
-        detailTitle.text = "${tx.status.lowercase().replaceFirstChar { it.uppercase() }} payment"
-        view.findViewById<TextView>(R.id.detailFrom).text = tx.senderHandle
-        view.findViewById<TextView>(R.id.detailTo).text = tx.recipientHandle
+        fun updateUIStatus(newStatus: String) {
+            currentTx = currentTx.copy(status = newStatus)
+            detailStatus.text = newStatus
+            detailTitle.text = "${newStatus.lowercase().replaceFirstChar { it.uppercase() }} payment"
+
+            when (newStatus) {
+                "CONFIRMED" -> {
+                    txtConfirmedBadge.visibility = View.VISIBLE
+                    btnConfirmTx.visibility = View.GONE
+                    btnExpireTx.visibility = View.GONE
+                    btnCancelTx.visibility = View.GONE
+                }
+                "EXPIRED" -> {
+                    txtConfirmedBadge.visibility = View.GONE
+                    btnConfirmTx.visibility = View.VISIBLE
+                    btnExpireTx.visibility = View.GONE
+                    btnCancelTx.visibility = View.GONE
+                }
+                "CANCELLED" -> {
+                    txtConfirmedBadge.visibility = View.GONE
+                    btnConfirmTx.visibility = View.VISIBLE
+                    btnExpireTx.visibility = View.GONE
+                    btnCancelTx.visibility = View.GONE
+                }
+                else -> { // PENDING or UNDERPAID
+                    txtConfirmedBadge.visibility = View.GONE
+                    btnConfirmTx.visibility = View.VISIBLE
+                    btnExpireTx.visibility = View.VISIBLE
+                    btnCancelTx.visibility = View.VISIBLE
+                }
+            }
+        }
+
+        view.findViewById<TextView>(R.id.detailFrom).text = currentTx.senderHandle
+        view.findViewById<TextView>(R.id.detailTo).text = currentTx.recipientHandle
         
-        val amountStr = if (tx.detectedAmountEgp != null && tx.detectedAmountEgp > tx.amountEgp) {
-            "${String.format(Locale.US, "%,.2f", tx.detectedAmountEgp)} ${tx.currency} (Overpaid • Req: ${String.format(Locale.US, "%,.2f", tx.amountEgp)})"
+        val amountStr = if (currentTx.detectedAmountEgp != null && currentTx.detectedAmountEgp!! > currentTx.amountEgp) {
+            "${String.format(Locale.US, "%,.2f", currentTx.detectedAmountEgp)} ${currentTx.currency} (Overpaid • Req: ${String.format(Locale.US, "%,.2f", currentTx.amountEgp)})"
         } else {
-            "${String.format(Locale.US, "%,.2f", tx.amountEgp)} ${tx.currency}"
+            "${String.format(Locale.US, "%,.2f", currentTx.amountEgp)} ${currentTx.currency}"
         }
         view.findViewById<TextView>(R.id.detailAmount).text = amountStr
-        detailStatus.text = tx.status
-        view.findViewById<TextView>(R.id.detailReference).text = tx.detectedRef ?: "—"
-        view.findViewById<TextView>(R.id.detailDate).text = formatDate(tx.detectedAt ?: tx.createdAt)
-        view.findViewById<TextView>(R.id.detailNote).text = tx.note ?: "—"
-        view.findViewById<TextView>(R.id.detailSession).text = tx.sessionId
+        view.findViewById<TextView>(R.id.detailReference).text = currentTx.detectedRef ?: "—"
+        view.findViewById<TextView>(R.id.detailDate).text = formatDate(currentTx.detectedAt ?: currentTx.createdAt)
+        view.findViewById<TextView>(R.id.detailNote).text = currentTx.note ?: "—"
+        view.findViewById<TextView>(R.id.detailSession).text = currentTx.sessionId
 
-        if (tx.status == "CONFIRMED") {
-            btnConfirmTx.visibility = View.GONE
-        }
+        updateUIStatus(currentTx.status)
 
         btnConfirmTx.setOnClickListener {
             btnConfirmTx.isEnabled = false
             kotlinx.coroutines.MainScope().launch {
                 val client = DashboardApiClient(requireContext())
-                val res = client.updateTransactionStatus(tx.sessionId, "CONFIRMED", "APK_MANUAL_FIX")
+                val res = client.updateTransactionStatus(currentTx.sessionId, "CONFIRMED", "APK_MANUAL_FIX")
+                btnConfirmTx.isEnabled = true
                 if (res.isSuccess) {
-                    detailStatus.text = "CONFIRMED"
-                    detailTitle.text = "Confirmed payment"
-                    btnConfirmTx.visibility = View.GONE
+                    updateUIStatus("CONFIRMED")
+                    onStatusChanged?.invoke(currentTx)
                     android.widget.Toast.makeText(requireContext(), R.string.tx_status_updated, android.widget.Toast.LENGTH_SHORT).show()
                 } else {
-                    btnConfirmTx.isEnabled = true
                     android.widget.Toast.makeText(requireContext(), R.string.tx_status_update_failed, android.widget.Toast.LENGTH_LONG).show()
                 }
             }
@@ -101,14 +135,29 @@ class TransactionDetailDialog : DialogFragment() {
             btnExpireTx.isEnabled = false
             kotlinx.coroutines.MainScope().launch {
                 val client = DashboardApiClient(requireContext())
-                val res = client.updateTransactionStatus(tx.sessionId, "EXPIRED")
+                val res = client.updateTransactionStatus(currentTx.sessionId, "EXPIRED")
+                btnExpireTx.isEnabled = true
                 if (res.isSuccess) {
-                    detailStatus.text = "EXPIRED"
-                    detailTitle.text = "Expired payment"
-                    btnExpireTx.visibility = View.GONE
+                    updateUIStatus("EXPIRED")
+                    onStatusChanged?.invoke(currentTx)
                     android.widget.Toast.makeText(requireContext(), R.string.tx_status_updated, android.widget.Toast.LENGTH_SHORT).show()
                 } else {
-                    btnExpireTx.isEnabled = true
+                    android.widget.Toast.makeText(requireContext(), R.string.tx_status_update_failed, android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        btnCancelTx.setOnClickListener {
+            btnCancelTx.isEnabled = false
+            kotlinx.coroutines.MainScope().launch {
+                val client = DashboardApiClient(requireContext())
+                val res = client.updateTransactionStatus(currentTx.sessionId, "CANCELLED")
+                btnCancelTx.isEnabled = true
+                if (res.isSuccess) {
+                    updateUIStatus("CANCELLED")
+                    onStatusChanged?.invoke(currentTx)
+                    android.widget.Toast.makeText(requireContext(), R.string.tx_status_updated, android.widget.Toast.LENGTH_SHORT).show()
+                } else {
                     android.widget.Toast.makeText(requireContext(), R.string.tx_status_update_failed, android.widget.Toast.LENGTH_LONG).show()
                 }
             }

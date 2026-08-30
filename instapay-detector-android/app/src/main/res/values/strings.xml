@@ -100,9 +100,10 @@
     <string name="perm_remind_later">Remind me later</string>
 
     <!-- Transaction Status Actions -->
-    <string name="tx_action_confirm">Mark as Confirmed (Fix)</string>
+    <string name="tx_action_confirm">⚡ Mark as Confirmed (Fix)</string>
     <string name="tx_action_expire">Mark as Expired</string>
     <string name="tx_action_cancel">Mark as Cancelled</string>
+    <string name="tx_status_confirmed_badge">✓ Payment Confirmed &amp; Webhook Dispatched</string>
     <string name="tx_status_updated">Transaction status updated successfully</string>
     <string name="tx_status_update_failed">Failed to update transaction status</string>
 </resources>

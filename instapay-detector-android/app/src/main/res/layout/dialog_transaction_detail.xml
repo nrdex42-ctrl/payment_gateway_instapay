@@ -238,6 +238,20 @@
         android:orientation="vertical"
         android:layout_marginBottom="12dp">
 
+        <TextView
+            android:id="@+id/txtConfirmedBadge"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/tx_status_confirmed_badge"
+            android:textColor="@color/status_confirmed"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:padding="8dp"
+            android:background="@drawable/bg_badge"
+            android:layout_marginBottom="6dp"
+            android:visibility="gone" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnConfirmTx"
             android:layout_width="match_parent"
@@ -249,14 +263,33 @@
             app:cornerRadius="8dp"
             app:backgroundTint="@color/status_confirmed" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnExpireTx"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="42dp"
-            android:text="@string/tx_action_expire"
-            android:textSize="12sp"
-            app:cornerRadius="8dp"
-            app:backgroundTint="@color/border_medium" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnExpireTx"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="@string/tx_action_expire"
+                android:textSize="11sp"
+                android:layout_marginEnd="4dp"
+                app:cornerRadius="8dp"
+                app:backgroundTint="@color/border_medium" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCancelTx"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="@string/tx_action_cancel"
+                android:textSize="11sp"
+                android:layout_marginStart="4dp"
+                app:cornerRadius="8dp"
+                app:backgroundTint="@color/status_denied" />
+        </LinearLayout>
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton

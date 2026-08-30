@@ -170,6 +170,13 @@ class TransactionsFragment : Fragment() {
 
     private fun showDetail(tx: Transaction) {
         val dialog = TransactionDetailDialog.newInstance(tx)
+        dialog.onStatusChanged = { updatedTx ->
+            val idx = allTransactions.indexOfFirst { it.sessionId == updatedTx.sessionId }
+            if (idx >= 0) {
+                allTransactions[idx] = updatedTx
+                adapter.submitList(allTransactions.toList())
+            }
+        }
         dialog.show(parentFragmentManager, "tx_detail")
     }
 
