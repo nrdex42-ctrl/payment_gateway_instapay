@@ -237,9 +237,230 @@ const statusRows = [
   ['EXPIRED', 'Checkout passed its configured TTL before confirmation.'],
 ]
 
+interface DocTranslations {
+  navTitle: string
+  merchantConsole: string
+  gettingStarted: string
+  overview: string
+  howItWorks: string
+  auth: string
+  productionChecklist: string
+  apiReference: string
+  createCheckout: string
+  checkStatus: string
+  webhookIntegration: string
+  webhookCallbacks: string
+  signatureValidation: string
+  retryPolicy: string
+  errorsAndLimits: string
+  heroTitle: string
+  heroDesc: string
+  simpleApiTitle: string
+  simpleApiDesc: string
+  webhookDeliveryTitle: string
+  webhookDeliveryDesc: string
+  hmacTitle: string
+  hmacDesc: string
+  step1Title: string
+  step1Desc: string
+  step2Title: string
+  step2Desc: string
+  step3Title: string
+  step3Desc: string
+  authDesc: string
+  authWarning: string
+  checklistItems: string[]
+  createCheckoutDesc: string
+  reqBodyParams: string
+  fieldCol: string
+  typeCol: string
+  reqCol: string
+  descCol: string
+  amountDesc: string
+  senderDesc: string
+  noteDesc: string
+  successResponse: string
+  deepLinkNote: string
+  checkStatusDesc: string
+  queryParams: string
+  sessionParamDesc: string
+  statusValues: string
+  statusDescriptions: Record<string, string>
+  webhooksDesc: string
+  webhookEventPayload: string
+  webhookDeliveryNote: string
+  signatureValidationDesc: string
+  retryPolicyDesc: string
+  errorsDesc: string
+  httpCol: string
+  meaningCol: string
+  actionCol: string
+  footerCopyright: string
+  footerSupport: string
+}
+
+const translations: Record<'en' | 'ar', DocTranslations> = {
+  en: {
+    navTitle: 'Merchant Documentation v2.0',
+    merchantConsole: 'Merchant Console',
+    gettingStarted: 'Getting Started',
+    overview: 'Overview',
+    howItWorks: 'How it works',
+    auth: 'Authentication',
+    productionChecklist: 'Production checklist',
+    apiReference: 'API Reference',
+    createCheckout: 'Create Checkout',
+    checkStatus: 'Check Status',
+    webhookIntegration: 'Webhook Integration',
+    webhookCallbacks: 'Webhook callbacks',
+    signatureValidation: 'Signature validation',
+    retryPolicy: 'Retry policy',
+    errorsAndLimits: 'Errors & Rate Limits',
+    heroTitle: 'InstaPay Gateway API Documentation',
+    heroDesc: 'Integrate automated Egyptian Instant Payment Network (InstaPay) transfers into your eCommerce store, SaaS platform, or mobile application.',
+    simpleApiTitle: 'Simple REST API',
+    simpleApiDesc: 'Generate inline payments and dynamic checkout sessions with a single server-to-server POST request.',
+    webhookDeliveryTitle: 'Instant Webhooks',
+    webhookDeliveryDesc: 'Receive instantaneous notifications at your backend server the moment bank transfers are detected.',
+    hmacTitle: 'HMAC SHA256 Signed',
+    hmacDesc: 'Every webhook payload carries a timestamped SHA256 signature for complete request authenticity and security.',
+    step1Title: 'Create Checkout Session',
+    step1Desc: 'Your backend calls the Checkout API. The gateway returns a session ID, deep link URL, and transaction timestamps.',
+    step2Title: 'Customer Pays via InstaPay',
+    step2Desc: 'The customer scans the QR code or opens the InstaPay link on their phone and transfers the amount from their bank account.',
+    step3Title: 'Automatic Detection & Webhook',
+    step3Desc: 'The merchant Android Detector APK reads the bank notification, matches the session, and triggers an HMAC-signed webhook to your server.',
+    authDesc: 'Authenticate server-side API requests by providing your merchant API Key inside the standard HTTP Authorization header. API Keys are generated in your dashboard under the Developers tab.',
+    authWarning: 'Keep your API key secret on your backend server. Never expose it in browser JavaScript, frontend apps, or public repositories.',
+    checklistItems: [
+      'Merchant account is approved and active.',
+      'Receiving InstaPay handle is configured in the dashboard.',
+      'Static InstaPay payment URL is pasted exactly from the InstaPay app.',
+      'Webhook URL is a public HTTPS endpoint.',
+      'Webhook secret is generated and stored server-side.',
+      'Detector APK is installed, logged in, and notification access is granted.',
+      'Your backend handles webhook events idempotently.',
+      'Your order system handles UNDERPAID and EXPIRED without auto-fulfillment.',
+    ],
+    createCheckoutDesc: 'Creates a new checkout session. It returns the session parameters, deep link URL, and expiration timestamps.',
+    reqBodyParams: 'Request Body Parameters',
+    fieldCol: 'Field',
+    typeCol: 'Type',
+    reqCol: 'Required',
+    descCol: 'Description',
+    amountDesc: 'Amount in Egyptian Pounds (EGP). Must be positive. Precision stored in EGP cents.',
+    senderDesc: 'Customer InstaPay sender handle (e.g. user@instapay or phone). Used for exact matching.',
+    noteDesc: 'Optional reference or order ID (max 200 characters).',
+    successResponse: 'Success Response',
+    deepLinkNote: 'deepLinkUrl is the merchant static InstaPay payment link. The gateway matches incoming transfers by expected sender, amount, and active session window.',
+    checkStatusDesc: 'Get the live status of an existing checkout session. Safe for frontend and mobile polling.',
+    queryParams: 'Query Parameters',
+    sessionParamDesc: 'The unique session ID returned during checkout creation.',
+    statusValues: 'Status Values',
+    statusDescriptions: {
+      PENDING: 'Checkout is waiting for customer transfer.',
+      CONFIRMED: 'Detector matched transfer amount and sender. Fulfill order.',
+      UNDERPAID: 'Transfer was detected but received amount was lower than requested.',
+      EXPIRED: 'Checkout exceeded time-to-live before payment confirmation.',
+      CANCELLED: 'Checkout was cancelled by merchant or customer.',
+    },
+    webhooksDesc: 'Configure your public webhook URL in the merchant console. The gateway sends real-time POST events when checkouts are completed.',
+    webhookEventPayload: 'Webhook Event Payload',
+    webhookDeliveryNote: 'Webhooks are delivered as HTTP POST requests with HMAC-SHA256 signature headers.',
+    signatureValidationDesc: 'Verify incoming signatures to ensure payloads are authentic and untampered.',
+    retryPolicyDesc: 'A webhook is considered successful when your server responds with any 2xx status within 10 seconds. Failed deliveries are automatically retried with exponential backoff up to 5 times.',
+    errorsDesc: 'API errors return standard JSON responses with error descriptions. Respect HTTP rate-limit headers.',
+    httpCol: 'HTTP Status',
+    meaningCol: 'Meaning',
+    actionCol: 'Action',
+    footerCopyright: 'InstaPay Gateway. All rights reserved.',
+    footerSupport: 'For technical inquiries, contact support via WhatsApp: +201114671033 or instapay.payment.gateway@gmail.com',
+  },
+  ar: {
+    navTitle: 'دليل مطوري بوابة إنستاباي v2.0',
+    merchantConsole: 'لوحة التحكم',
+    gettingStarted: 'البدء السريع',
+    overview: 'نظرة عامة',
+    howItWorks: 'كيف تعمل البوابة',
+    auth: 'المصادقة وتأمين الربط',
+    productionChecklist: 'قائمة جاهزية التشغيل',
+    apiReference: 'دليل الـ API',
+    createCheckout: 'إنشاء جلسة دفع',
+    checkStatus: 'الاستعلام عن الحالة',
+    webhookIntegration: 'ربط الويب هوك (Webhooks)',
+    webhookCallbacks: 'إشعارات الويب هوك',
+    signatureValidation: 'التحقق من التوقيع الرقمي',
+    retryPolicy: 'سياسة إعادة المحاولة',
+    errorsAndLimits: 'الأخطاء ومعدل الطلبات',
+    heroTitle: 'التوثيق البرمجي ودليل الربط لبوابة إنستاباي',
+    heroDesc: 'قم بربط واستقبال مدفوعات شبكة المدفوعات اللحظية المصرية (InstaPay) تلقائياً في متجرك الإلكتروني أو تطبيقك.',
+    simpleApiTitle: 'واجهة برمجية REST بسيطة',
+    simpleApiDesc: 'أنشئ جلسات دفع وروابط تحويل سريعة بطلب POST مباشر من خادمك.',
+    webhookDeliveryTitle: 'إشعارات ويب هوك فورية',
+    webhookDeliveryDesc: 'استقبل إشعارات فورية على خادمك بمجرد استلام وتأكيد التحويل البنكي.',
+    hmacTitle: 'توقيع مشفر HMAC SHA256',
+    hmacDesc: 'كل إشعار يحمل توقيعاً رقمياً مشفراً ومؤقتاً للتحقق من أمان ومصدر الطلب.',
+    step1Title: '١. إنشاء جلسة الدفع',
+    step1Desc: 'يرسل خادمك طلباً لإنشاء الجلسة، فترد البوابة بمعرف الجلسة ورابط إنستاباي للدفع.',
+    step2Title: '٢. قيام العميل بالتحويل',
+    step2Desc: 'يقوم العميل بمسح رمز QR أو فتح رابط إنستاباي لإتمام التحويل من حسابه البنكي.',
+    step3Title: '٣. الكشف التلقائي وإرسال الويب هوك',
+    step3Desc: 'يقوم تطبيق الكاشف Android بقراءة إشعار البنك ومطابقته فورياً، ثم إرسال الويب هوك لخادمك.',
+    authDesc: 'تتم المصادقة عبر إرسال مفتاح API Key داخل ترويسة Authorization. يمكنك إنشاء المفاتيح من لوحة التحكم تحت تبويب المطورين.',
+    authWarning: 'احتفظ بمفتاح API سراً في خادمك الخلفي فقط، ولا تضعه أبداً في تطبيقات الجوال أو كود الواجهة الأمامية.',
+    checklistItems: [
+      'حساب التاجر مفعل ومعتمد.',
+      'عنوان إنستاباي لاستلام الأموال محدد بدقة في لوحة التحكم.',
+      'رابط إنستاباي المباشر منسوخ بدقة من تطبيق إنستاباي الرسمي.',
+      'رابط الويب هوك هو عنوان HTTPS عام ومفعل.',
+      'تم إنشاء مفتاح سر الويب هوك وحفظه بخادمك.',
+      'تم تثبيت تطبيق الكاشف على هاتف التاجر ومنحه إذن الإشعارات.',
+      'خادمك يتعامل مع إشعارات الويب هوك بشكل آمن بدون تكرار.',
+      'نظامك يتعامل مع حالات نقص المبلغ (UNDERPAID) وانتهاء الوقت (EXPIRED).',
+    ],
+    createCheckoutDesc: 'إنشاء جلسة دفع جديدة. يرجع الـ API معطيات الجلسة ورابط التحويل ووقت الصلاحية.',
+    reqBodyParams: 'معاملات جسم الطلب (Request Body)',
+    fieldCol: 'الحقل',
+    typeCol: 'النوع',
+    reqCol: 'مطلوب',
+    descCol: 'الوصف',
+    amountDesc: 'المبلغ بالجنيه المصري (EGP). يجب أن يكون رقماً موجباً بدقة القروش.',
+    senderDesc: 'عنوان إنستاباي أو رقم هاتف العميل المحول. يعتمد الربط والمطابقة التلقائية عليه.',
+    noteDesc: 'وصف أو رقم الطلب اختياري (حد أقصى ٢٠٠ حرف).',
+    successResponse: 'استجابة النجاح (Success Response)',
+    deepLinkNote: 'deepLinkUrl هو رابط الدفع المحفوظ في لوحة التاجر. تتم المطابقة بمطابقة الحساب والمبلغ ونافذة الجلسة.',
+    checkStatusDesc: 'الاستعلام المباشر عن حالة جلسة دفع. آمن للاستخدام من الواجهة الأمامية وتطبيقات الهاتف.',
+    queryParams: 'معاملات الرابط (Query Parameters)',
+    sessionParamDesc: 'معرف الجلسة الفريد الناتج عند إنشاء الدفع.',
+    statusValues: 'قيم الحالات المتاحة',
+    statusDescriptions: {
+      PENDING: 'الجلسة في انتظار تحويل العميل.',
+      CONFIRMED: 'تم استلام وتأكيد التحويل ومطابقة المبلغ. يمكنك تسليم الطلب.',
+      UNDERPAID: 'تم تحويل مبلغ أقل من المطلوب. لا تقم بتسليم الطلب تلقائياً.',
+      EXPIRED: 'انتهت صلاحية الجلسة قبل إتمام التحويل.',
+      CANCELLED: 'تم إلغاء الجلسة من التاجر أو العميل.',
+    },
+    webhooksDesc: 'حدد رابط الويب هوك في لوحة التحكم لاستلام إشعارات فورية عند تأكيد أي عملية.',
+    webhookEventPayload: 'هيكل بيانات الويب هوك (Payload)',
+    webhookDeliveryNote: 'تصل الإشعارات كطلبات POST مع ترويسات التوقيع المشفر HMAC-SHA256.',
+    signatureValidationDesc: 'تحقق من التوقيع الرقمي لضمان مصداقية الإشعارات القادمة من البوابة.',
+    retryPolicyDesc: 'تعتبر المحاولة ناجحة عند استجابة خادمك بكود 2xx خلال ١٠ ثوان. في حال الفشل يتم إعادة الإرسال تلقائياً حتى ٥ محاولات.',
+    errorsDesc: 'ترجع الأخطاء بصيغة JSON واضحة. يرجى مراعاة حدود تكرار الطلبات (Rate Limits).',
+    httpCol: 'كود HTTP',
+    meaningCol: 'المعنى',
+    actionCol: 'الإجراء المقترح',
+    footerCopyright: 'بوابة إنستاباي للمدفوعات. جميع الحقوق محفوظة.',
+    footerSupport: 'للدعم الفني والاستفسارات: واتساب: 201114671033+ أو البريد: instapay.payment.gateway@gmail.com',
+  },
+}
+
 export default function DocsPage() {
   const [selectedSnippetTab, setSelectedSnippetTab] = useState<keyof CodeSnippets>('curl')
+  const [lang, setLang] = useState<'en' | 'ar'>('en')
   const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const t = translations[lang]
+  const isRtl = lang === 'ar'
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
@@ -247,23 +468,63 @@ export default function DocsPage() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
+  const snippetTabs: { id: keyof CodeSnippets; label: string; badge: string; icon: string }[] = [
+    { id: 'curl', label: 'cURL', badge: 'BASH', icon: '⚡' },
+    { id: 'js', label: 'Node.js', badge: 'FETCH', icon: '🟡' },
+    { id: 'python', label: 'Python', badge: 'REQUESTS', icon: '🐍' },
+    { id: 'php', label: 'PHP', badge: 'CURL', icon: '🐘' },
+  ]
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30">
+    <div dir={isRtl ? 'rtl' : 'ltr'} className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-900 bg-slate-950/80 backdrop-blur-md">
+      <header className="sticky top-0 z-40 w-full border-b border-slate-900 bg-slate-950/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 font-semibold text-lg text-indigo-400">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">IPN</span>
-              InstaPay Gateway
+            <Link href="/" className="flex items-center gap-2.5 font-bold text-lg text-indigo-400">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white p-1">
+                <img src="/IPN.svg" alt="InstaPay" className="h-full w-full object-contain" />
+              </div>
+              <span className="text-white tracking-tight font-black">InstaPay <span className="text-indigo-400">Docs</span></span>
             </Link>
             <span className="hidden h-5 w-px bg-slate-800 sm:inline-block"></span>
-            <span className="hidden text-xs text-slate-500 sm:inline-block">Merchant Documentation v2.0</span>
+            <span className="hidden text-xs text-slate-400 font-medium sm:inline-block">{t.navTitle}</span>
           </div>
-          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-3">
+            {/* Enhanced Language Switcher Button */}
+            <div className="flex items-center rounded-xl border border-slate-800 bg-slate-900/90 p-1 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                  lang === 'en'
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Switch documentation to English"
+              >
+                <Globe className="h-3.5 w-3.5" />
+                <span>English</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('ar')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                  lang === 'ar'
+                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="التحويل للغة العربية"
+              >
+                <span>العربية</span>
+                <span className="text-[10px] opacity-80">🇪🇬</span>
+              </button>
+            </div>
+
             <Link href="/dashboard">
-              <Button variant="outline" className="h-9 border-slate-800 hover:bg-slate-900 text-slate-300">
-                Merchant Console
+              <Button variant="outline" className="h-9 border-slate-800 bg-slate-900/50 hover:bg-slate-800 text-slate-200 font-semibold rounded-xl text-xs">
+                {t.merchantConsole}
               </Button>
             </Link>
           </div>
@@ -278,37 +539,37 @@ export default function DocsPage() {
             <nav className="sticky top-24 space-y-6">
               <div>
                 <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  <BookOpen className="h-3.5 w-3.5 text-indigo-400" /> Getting Started
+                  <BookOpen className="h-3.5 w-3.5 text-indigo-400" /> {t.gettingStarted}
                 </h4>
-                <ul className="mt-3 space-y-2.5 pl-6 text-sm text-slate-400">
+                <ul className={`mt-3 space-y-2.5 ${isRtl ? 'pr-6' : 'pl-6'} text-sm text-slate-400`}>
                   <li>
-                    <a href="#overview" className="hover:text-indigo-400 transition-colors">Overview</a>
+                    <a href="#overview" className="hover:text-indigo-400 transition-colors">{t.overview}</a>
                   </li>
                   <li>
-                    <a href="#how-it-works" className="hover:text-indigo-400 transition-colors">How it works</a>
+                    <a href="#how-it-works" className="hover:text-indigo-400 transition-colors">{t.howItWorks}</a>
                   </li>
                   <li>
-                    <a href="#auth" className="hover:text-indigo-400 transition-colors">Authentication</a>
+                    <a href="#auth" className="hover:text-indigo-400 transition-colors">{t.auth}</a>
                   </li>
                   <li>
-                    <a href="#production-checklist" className="hover:text-indigo-400 transition-colors">Production checklist</a>
+                    <a href="#production-checklist" className="hover:text-indigo-400 transition-colors">{t.productionChecklist}</a>
                   </li>
                 </ul>
               </div>
 
               <div>
                 <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  <Terminal className="h-3.5 w-3.5 text-indigo-400" /> API Reference
+                  <Terminal className="h-3.5 w-3.5 text-indigo-400" /> {t.apiReference}
                 </h4>
-                <ul className="mt-3 space-y-2.5 pl-6 text-sm text-slate-400">
+                <ul className={`mt-3 space-y-2.5 ${isRtl ? 'pr-6' : 'pl-6'} text-sm text-slate-400`}>
                   <li>
                     <a href="#create-checkout" className="flex items-center gap-2 hover:text-indigo-400 transition-colors">
-                      <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1 py-0.5 rounded">POST</span> Create Checkout
+                      <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">POST</span> {t.createCheckout}
                     </a>
                   </li>
                   <li>
                     <a href="#check-status" className="flex items-center gap-2 hover:text-indigo-400 transition-colors">
-                      <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-1 py-0.5 rounded">GET</span> Check Status
+                      <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded">GET</span> {t.checkStatus}
                     </a>
                   </li>
                 </ul>
@@ -316,20 +577,20 @@ export default function DocsPage() {
 
               <div>
                 <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  <Webhook className="h-3.5 w-3.5 text-indigo-400" /> Webhook Integration
+                  <Webhook className="h-3.5 w-3.5 text-indigo-400" /> {t.webhookIntegration}
                 </h4>
-                <ul className="mt-3 space-y-2.5 pl-6 text-sm text-slate-400">
+                <ul className={`mt-3 space-y-2.5 ${isRtl ? 'pr-6' : 'pl-6'} text-sm text-slate-400`}>
                   <li>
-                    <a href="#webhooks" className="hover:text-indigo-400 transition-colors">Webhooks Overview</a>
+                    <a href="#webhooks" className="hover:text-indigo-400 transition-colors">{t.webhookCallbacks}</a>
                   </li>
                   <li>
-                    <a href="#signature" className="hover:text-indigo-400 transition-colors">Signature Validation</a>
+                    <a href="#signature" className="hover:text-indigo-400 transition-colors">{t.signatureValidation}</a>
                   </li>
                   <li>
-                    <a href="#retry-policy" className="hover:text-indigo-400 transition-colors">Retry Policy</a>
+                    <a href="#retry-policy" className="hover:text-indigo-400 transition-colors">{t.retryPolicy}</a>
                   </li>
                   <li>
-                    <a href="#errors" className="hover:text-indigo-400 transition-colors">Errors</a>
+                    <a href="#errors" className="hover:text-indigo-400 transition-colors">{t.errorsAndLimits}</a>
                   </li>
                 </ul>
               </div>
@@ -341,10 +602,10 @@ export default function DocsPage() {
             {/* Overview Section */}
             <section id="overview" className="scroll-mt-24 space-y-4">
               <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                InstaPay Gateway API
+                {t.heroTitle}
               </h1>
               <p className="text-lg text-slate-400 leading-relaxed">
-                Connect your website or mobile application to the Instant Payment Network (IPN) of Egypt. Create checkouts, poll payment status, and receive real-time webhook callback notifications instantly.
+                {t.heroDesc}
               </p>
 
               <div className="grid gap-6 sm:grid-cols-3 mt-8">
@@ -352,49 +613,49 @@ export default function DocsPage() {
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
                     <Layers className="h-5 w-5" />
                   </span>
-                  <h3 className="font-semibold text-white">Simple API</h3>
-                  <p className="text-xs text-slate-400">Generate inline payments and QR codes with a single server-to-server POST request.</p>
+                  <h3 className="font-semibold text-white">{t.simpleApiTitle}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">{t.simpleApiDesc}</p>
                 </div>
                 <div className="p-5 bg-slate-900/50 border border-slate-900 rounded-xl space-y-2">
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
                     <Globe className="h-5 w-5" />
                   </span>
-                  <h3 className="font-semibold text-white">Webhook Delivery</h3>
-                  <p className="text-xs text-slate-400">Receive instantaneous notifications at your backend server when transfers are detected.</p>
+                  <h3 className="font-semibold text-white">{t.webhookDeliveryTitle}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">{t.webhookDeliveryDesc}</p>
                 </div>
                 <div className="p-5 bg-slate-900/50 border border-slate-900 rounded-xl space-y-2">
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
                     <Lock className="h-5 w-5" />
                   </span>
-                  <h3 className="font-semibold text-white">HMAC Signed</h3>
-                  <p className="text-xs text-slate-400">Every webhook payload carries a timestamped SHA256 signature for complete request security.</p>
+                  <h3 className="font-semibold text-white">{t.hmacTitle}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">{t.hmacDesc}</p>
                 </div>
               </div>
             </section>
 
             {/* How It Works Section */}
             <section id="how-it-works" className="scroll-mt-24 space-y-4">
-              <h2 className="text-2xl font-bold text-white">How it works</h2>
+              <h2 className="text-2xl font-bold text-white">{t.howItWorks}</h2>
               <div className="p-6 bg-slate-900/20 border border-slate-900 rounded-xl space-y-6">
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-start">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-xs font-semibold text-indigo-400">1</span>
                   <div>
-                    <h4 className="font-semibold text-white text-sm">Create Checkout Session</h4>
-                    <p className="text-slate-400 text-xs mt-1">Your server triggers the Checkout API. The gateway responds with a session ID, transaction details, and a dynamic InstaPay payment URL.</p>
+                    <h4 className="font-semibold text-white text-sm">{t.step1Title}</h4>
+                    <p className="text-slate-400 text-xs mt-1 leading-relaxed">{t.step1Desc}</p>
                   </div>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-start">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-xs font-semibold text-indigo-400">2</span>
                   <div>
-                    <h4 className="font-semibold text-white text-sm">Customer Pays on App</h4>
-                    <p className="text-slate-400 text-xs mt-1">The customer scans the QR code or opens the InstaPay link on their mobile device and initiates the transfer from their local bank account.</p>
+                    <h4 className="font-semibold text-white text-sm">{t.step2Title}</h4>
+                    <p className="text-slate-400 text-xs mt-1 leading-relaxed">{t.step2Desc}</p>
                   </div>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-start">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-xs font-semibold text-indigo-400">3</span>
                   <div>
-                    <h4 className="font-semibold text-white text-sm">Automatic Detection & Webhook Callback</h4>
-                    <p className="text-slate-400 text-xs mt-1">The merchant's Android Detector APK parses the incoming bank notification on their device, matches it, reports it to the gateway, and triggers the webhook callback to your server.</p>
+                    <h4 className="font-semibold text-white text-sm">{t.step3Title}</h4>
+                    <p className="text-slate-400 text-xs mt-1 leading-relaxed">{t.step3Desc}</p>
                   </div>
                 </div>
               </div>
@@ -402,12 +663,12 @@ export default function DocsPage() {
 
             {/* Authentication Section */}
             <section id="auth" className="scroll-mt-24 space-y-4">
-              <h2 className="text-2xl font-bold text-white">Authentication</h2>
-              <p className="text-slate-400 text-sm">
-                Authenticate server-side API requests by providing your merchant API Key inside the standard HTTP `Authorization` header. API Keys are generated in your dashboard Developer settings under the **Developers** tab.
+              <h2 className="text-2xl font-bold text-white">{t.auth}</h2>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                {t.authDesc}
               </p>
-              <div className="p-4 bg-slate-950 border border-slate-900 rounded-lg flex items-center justify-between">
-                <code className="text-xs text-indigo-400">Authorization: Bearer ipk_live_xxxxxxxxxxxxxxxxxxxxxxxx</code>
+              <div dir="ltr" className="p-4 bg-slate-950 border border-slate-900 rounded-lg flex items-center justify-between">
+                <code className="text-xs text-indigo-400 font-mono">Authorization: Bearer ipk_live_xxxxxxxxxxxxxxxxxxxxxxxx</code>
                 <button
                   onClick={() => handleCopy('Authorization: Bearer ipk_live_xxxxxxxxxxxxxxxxxxxxxxxx', 'auth')}
                   className="p-1.5 hover:bg-slate-900 text-slate-400 hover:text-white rounded"
@@ -416,26 +677,18 @@ export default function DocsPage() {
                 </button>
               </div>
               <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs leading-6 text-amber-100">
-                Use the API key only from your backend server. Do not place it in browser JavaScript, mobile apps, public repositories, or customer-visible logs. Regenerate it from the dashboard if it is exposed.
+                {t.authWarning}
               </div>
             </section>
 
+            {/* Production Checklist */}
             <section id="production-checklist" className="scroll-mt-24 space-y-4">
-              <h2 className="text-2xl font-bold text-white">Production checklist</h2>
+              <h2 className="text-2xl font-bold text-white">{t.productionChecklist}</h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                {[
-                  'Merchant account is approved and active.',
-                  'Receiving InstaPay handle is configured in the dashboard.',
-                  'Static InstaPay payment URL is pasted exactly from the InstaPay APK.',
-                  'Webhook URL is a public HTTPS endpoint.',
-                  'Webhook secret is generated and stored server-side.',
-                  'Detector APK is installed, logged in, and notification access is enabled.',
-                  'Your backend treats webhook events as idempotent.',
-                  'Your order system handles UNDERPAID and EXPIRED without auto-fulfillment.',
-                ].map((item) => (
-                  <div key={item} className="rounded-xl border border-slate-900 bg-slate-900/30 p-3 text-xs text-slate-300">
-                    <Check className="mr-2 inline h-3.5 w-3.5 text-emerald-400" />
-                    {item}
+                {t.checklistItems.map((item, idx) => (
+                  <div key={idx} className="rounded-xl border border-slate-900 bg-slate-900/30 p-3 text-xs text-slate-300 flex items-start gap-2">
+                    <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>{item}</span>
                   </div>
                 ))}
               </div>
@@ -445,80 +698,100 @@ export default function DocsPage() {
             <section id="create-checkout" className="scroll-mt-24 space-y-6">
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold uppercase text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-md">POST</span>
-                <h2 className="text-2xl font-bold text-white">Create Checkout</h2>
+                <h2 className="text-2xl font-bold text-white">{t.createCheckout}</h2>
               </div>
               <p className="text-slate-400 text-sm">
-                Creates a new checkout session. It returns the session parameters, the deep link URL, and transaction timestamps.
+                {t.createCheckoutDesc}
               </p>
-              <div className="p-3 bg-slate-950 border border-slate-900 rounded-md">
-                <code className="text-xs text-slate-300">POST /api/v1/checkout/create</code>
+              <div dir="ltr" className="p-3 bg-slate-950 border border-slate-900 rounded-md">
+                <code className="text-xs text-slate-300 font-mono">POST /api/v1/checkout/create</code>
               </div>
 
-              {/* Snippets with Tabs */}
-              <div className="border border-slate-900 rounded-xl bg-slate-950 overflow-hidden">
-                <div className="flex border-b border-slate-900 bg-slate-900/30 px-2 overflow-x-auto">
-                  {(Object.keys(snippets) as Array<keyof CodeSnippets>).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setSelectedSnippetTab(tab)}
-                      className={`px-4 py-3 text-xs font-semibold transition-colors border-b-2 uppercase ${
-                        selectedSnippetTab === tab
-                          ? 'border-indigo-500 text-indigo-400'
-                          : 'border-transparent text-slate-500 hover:text-slate-300'
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-                <div className="relative p-5">
-                  <pre className="text-xs text-slate-300 overflow-x-auto font-mono leading-relaxed">
-                    {snippets[selectedSnippetTab]}
-                  </pre>
+              {/* Enhanced Snippets with Language Selector Tabs */}
+              <div className="border border-slate-900 rounded-2xl bg-slate-950 overflow-hidden shadow-2xl">
+                <div dir="ltr" className="flex items-center justify-between border-b border-slate-900 bg-slate-900/50 p-2 overflow-x-auto gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {snippetTabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setSelectedSnippetTab(tab.id)}
+                        className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all ${
+                          selectedSnippetTab === tab.id
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-[1.02]'
+                            : 'bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-slate-800/60'
+                        }`}
+                      >
+                        <span>{tab.icon}</span>
+                        <span>{tab.label}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${
+                          selectedSnippetTab === tab.id ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          {tab.badge}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
                   <button
                     onClick={() => handleCopy(snippets[selectedSnippetTab], 'snippet')}
-                    className="absolute right-4 top-4 p-1.5 bg-slate-900/80 hover:bg-slate-900 text-slate-400 hover:text-white rounded border border-slate-800"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 text-xs font-semibold shrink-0 transition-colors"
                   >
-                    {copiedId === 'snippet' ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                    {copiedId === 'snippet' ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-400" />
+                        <span className="text-emerald-400 text-xs">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>Copy snippet</span>
+                      </>
+                    )}
                   </button>
+                </div>
+                <div dir="ltr" className="relative p-5">
+                  <pre className="text-xs text-slate-200 overflow-x-auto font-mono leading-relaxed">
+                    {snippets[selectedSnippetTab]}
+                  </pre>
                 </div>
               </div>
 
               {/* Params list */}
               <div className="space-y-4">
-                <h4 className="font-semibold text-white text-sm">Request Body parameters</h4>
+                <h4 className="font-semibold text-white text-sm">{t.reqBodyParams}</h4>
                 <div className="border border-slate-900 rounded-xl overflow-x-auto text-sm">
                   <div className="min-w-[680px] grid grid-cols-4 bg-slate-900/40 p-3 border-b border-slate-900 text-xs font-semibold text-slate-400">
-                    <div>Field</div>
-                    <div>Type</div>
-                    <div>Required</div>
-                    <div>Description</div>
+                    <div>{t.fieldCol}</div>
+                    <div>{t.typeCol}</div>
+                    <div>{t.reqCol}</div>
+                    <div>{t.descCol}</div>
                   </div>
                   <div className="min-w-[680px] grid grid-cols-4 p-3 border-b border-slate-900">
-                    <div className="font-mono text-indigo-400">amountEgp</div>
-                    <div className="text-slate-500 font-mono">number</div>
-                    <div className="text-emerald-500">Yes</div>
-                    <div className="text-slate-400 text-xs">Amount in Egyptian Pounds. Must be a positive number. Stored with EGP-cent precision.</div>
+                    <div className="font-mono text-indigo-400" dir="ltr">amountEgp</div>
+                    <div className="text-slate-500 font-mono" dir="ltr">number</div>
+                    <div className="text-emerald-500 font-bold">{lang === 'ar' ? 'نعم' : 'Yes'}</div>
+                    <div className="text-slate-400 text-xs">{t.amountDesc}</div>
                   </div>
                   <div className="min-w-[680px] grid grid-cols-4 p-3 border-b border-slate-900">
-                    <div className="font-mono text-indigo-400">senderHandle</div>
-                    <div className="text-slate-500 font-mono">string</div>
-                    <div className="text-emerald-500">Yes</div>
-                    <div className="text-slate-400 text-xs">Customer InstaPay sender handle. Matching depends on this value, so collect it carefully before creating checkout.</div>
+                    <div className="font-mono text-indigo-400" dir="ltr">senderHandle</div>
+                    <div className="text-slate-500 font-mono" dir="ltr">string</div>
+                    <div className="text-emerald-500 font-bold">{lang === 'ar' ? 'نعم' : 'Yes'}</div>
+                    <div className="text-slate-400 text-xs">{t.senderDesc}</div>
                   </div>
                   <div className="min-w-[680px] grid grid-cols-4 p-3">
-                    <div className="font-mono text-indigo-400">note</div>
-                    <div className="text-slate-500 font-mono">string</div>
-                    <div className="text-slate-500">No</div>
-                    <div className="text-slate-400 text-xs">Order details (max 200 chars).</div>
+                    <div className="font-mono text-indigo-400" dir="ltr">note</div>
+                    <div className="text-slate-500 font-mono" dir="ltr">string</div>
+                    <div className="text-slate-500">{lang === 'ar' ? 'اختياري' : 'No'}</div>
+                    <div className="text-slate-400 text-xs">{t.noteDesc}</div>
                   </div>
                 </div>
               </div>
               <div className="space-y-3">
-                <h4 className="font-semibold text-white text-sm">Success response</h4>
-                <pre className="overflow-x-auto rounded-xl border border-slate-900 bg-slate-950 p-4 text-xs leading-6 text-slate-300">{createCheckoutResponse}</pre>
+                <h4 className="font-semibold text-white text-sm">{t.successResponse}</h4>
+                <pre dir="ltr" className="overflow-x-auto rounded-xl border border-slate-900 bg-slate-950 p-4 text-xs leading-6 text-slate-300 font-mono">{createCheckoutResponse}</pre>
                 <p className="text-xs leading-6 text-slate-400">
-                  `deepLinkUrl` is the merchant static InstaPay payment URL saved in the dashboard. The gateway does not rewrite this URL per checkout; the checkout is matched by expected sender handle, amount, merchant account, and active session window.
+                  {t.deepLinkNote}
                 </p>
               </div>
             </section>
@@ -527,70 +800,72 @@ export default function DocsPage() {
             <section id="check-status" className="scroll-mt-24 space-y-6">
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold uppercase text-blue-400 bg-blue-400/10 px-2.5 py-1 rounded-md">GET</span>
-                <h2 className="text-2xl font-bold text-white">Check Status</h2>
+                <h2 className="text-2xl font-bold text-white">{t.checkStatus}</h2>
               </div>
               <p className="text-slate-400 text-sm">
-                Get the status of an existing checkout session. This endpoint is public and does not require credentials, making it safe for browser polling.
+                {t.checkStatusDesc}
               </p>
-              <div className="p-3 bg-slate-950 border border-slate-900 rounded-md">
-                <code className="text-xs text-slate-300">GET /api/v1/checkout/status?sessionId=YOUR_SESSION_ID</code>
+              <div dir="ltr" className="p-3 bg-slate-950 border border-slate-900 rounded-md">
+                <code className="text-xs text-slate-300 font-mono">GET /api/v1/checkout/status?sessionId=YOUR_SESSION_ID</code>
               </div>
 
               {/* Params list */}
               <div className="space-y-4">
-                <h4 className="font-semibold text-white text-sm">Query parameters</h4>
+                <h4 className="font-semibold text-white text-sm">{t.queryParams}</h4>
                 <div className="border border-slate-900 rounded-xl overflow-x-auto text-sm">
                   <div className="min-w-[680px] grid grid-cols-4 bg-slate-900/40 p-3 border-b border-slate-900 text-xs font-semibold text-slate-400">
-                    <div>Parameter</div>
-                    <div>Type</div>
-                    <div>Required</div>
-                    <div>Description</div>
+                    <div>{t.fieldCol}</div>
+                    <div>{t.typeCol}</div>
+                    <div>{t.reqCol}</div>
+                    <div>{t.descCol}</div>
                   </div>
                   <div className="min-w-[680px] grid grid-cols-4 p-3">
-                    <div className="font-mono text-indigo-400">sessionId</div>
-                    <div className="text-slate-500 font-mono">string</div>
-                    <div className="text-emerald-500">Yes</div>
-                    <div className="text-slate-400 text-xs">The ID returned when creating checkout.</div>
+                    <div className="font-mono text-indigo-400" dir="ltr">sessionId</div>
+                    <div className="text-slate-500 font-mono" dir="ltr">string</div>
+                    <div className="text-emerald-500 font-bold">{lang === 'ar' ? 'نعم' : 'Yes'}</div>
+                    <div className="text-slate-400 text-xs">{t.sessionParamDesc}</div>
                   </div>
                 </div>
               </div>
               <div className="space-y-3">
-                <h4 className="font-semibold text-white text-sm">Status values</h4>
+                <h4 className="font-semibold text-white text-sm">{t.statusValues}</h4>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {statusRows.map(([status, description]) => (
+                  {statusRows.map(([status, _]) => (
                     <div key={status} className="rounded-xl border border-slate-900 bg-slate-900/30 p-3">
-                      <div className="font-mono text-xs font-bold text-indigo-300">{status}</div>
-                      <div className="mt-1 text-xs leading-5 text-slate-400">{description}</div>
+                      <div className="font-mono text-xs font-bold text-indigo-300" dir="ltr">{status}</div>
+                      <div className="mt-1 text-xs leading-5 text-slate-400">
+                        {t.statusDescriptions[status] || status}
+                      </div>
                     </div>
                   ))}
                 </div>
-                <h4 className="font-semibold text-white text-sm">Success response</h4>
-                <pre className="overflow-x-auto rounded-xl border border-slate-900 bg-slate-950 p-4 text-xs leading-6 text-slate-300">{statusResponse}</pre>
+                <h4 className="font-semibold text-white text-sm">{t.successResponse}</h4>
+                <pre dir="ltr" className="overflow-x-auto rounded-xl border border-slate-900 bg-slate-950 p-4 text-xs leading-6 text-slate-300 font-mono">{statusResponse}</pre>
               </div>
             </section>
 
             {/* Webhooks Section */}
             <section id="webhooks" className="scroll-mt-24 space-y-4">
-              <h2 className="text-2xl font-bold text-white">Webhook callbacks</h2>
+              <h2 className="text-2xl font-bold text-white">{t.webhookCallbacks}</h2>
               <p className="text-slate-400 text-sm">
-                Configure your public webhook URL in the merchant console. The gateway will post payload updates when checkouts are completed or underpaid.
+                {t.webhooksDesc}
               </p>
               <div className="p-5 bg-indigo-950/20 border border-indigo-900/30 rounded-xl space-y-2">
-                <h4 className="font-semibold text-indigo-400 text-sm">Webhook Callback Event Payload</h4>
+                <h4 className="font-semibold text-indigo-400 text-sm">{t.webhookEventPayload}</h4>
                 <p className="text-slate-400 text-xs leading-relaxed">
-                  Webhooks are delivered as `POST` requests. Events currently include `payment.confirmed`, `payment.underpaid`, and `subscription.payment_confirmed`.
+                  {t.webhookDeliveryNote}
                 </p>
               </div>
-              <pre className="overflow-x-auto rounded-xl border border-slate-900 bg-slate-950 p-4 text-xs leading-6 text-slate-300">{webhookPayload}</pre>
+              <pre dir="ltr" className="overflow-x-auto rounded-xl border border-slate-900 bg-slate-950 p-4 text-xs leading-6 text-slate-300 font-mono">{webhookPayload}</pre>
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
-                  ['X-Instapay-Event-Id', 'Unique event identifier. Store it to ignore duplicate deliveries.'],
-                  ['X-Instapay-Timestamp', 'Unix timestamp used in the signature base string.'],
-                  ['X-Instapay-Signature-Version', 'Current value: v1.'],
-                  ['X-Instapay-Signature', 'v1=HMAC_SHA256(timestamp.rawBody, webhookSecret).'],
+                  ['X-Instapay-Event-Id', lang === 'ar' ? 'معرف فريد للحدث، احفظه لتفادي التكرار.' : 'Unique event identifier. Store it to ignore duplicate deliveries.'],
+                  ['X-Instapay-Timestamp', lang === 'ar' ? 'طابع زمني رقمي مستخدم في بناء التوقيع.' : 'Unix timestamp used in the signature base string.'],
+                  ['X-Instapay-Signature-Version', lang === 'ar' ? 'إصدار التوقيع الحالي: v1.' : 'Current value: v1.'],
+                  ['X-Instapay-Signature', 'v1=HMAC_SHA256(timestamp.rawBody, webhookSecret)'],
                 ].map(([name, description]) => (
                   <div key={name} className="rounded-xl border border-slate-900 bg-slate-900/30 p-3">
-                    <code className="text-xs text-indigo-300">{name}</code>
+                    <code className="text-xs text-indigo-300 font-mono" dir="ltr">{name}</code>
                     <p className="mt-1 text-xs leading-5 text-slate-400">{description}</p>
                   </div>
                 ))}
@@ -599,27 +874,27 @@ export default function DocsPage() {
 
             {/* Webhook Signature Validation */}
             <section id="signature" className="scroll-mt-24 space-y-6">
-              <h2 className="text-2xl font-bold text-white">Signature validation</h2>
+              <h2 className="text-2xl font-bold text-white">{t.signatureValidation}</h2>
               <p className="text-slate-400 text-sm">
-                Verify webhook signatures to ensure that payloads are genuine. Each request contains headers to construct and verify the HMAC-SHA256 signature.
+                {t.signatureValidationDesc}
               </p>
-              <div className="space-y-3 text-sm pl-4 border-l-2 border-indigo-500">
-                <div className="text-slate-300"><code className="text-indigo-400 font-mono">X-Instapay-Timestamp</code>: {"Request timestamp. Reject requests older than 5 minutes to prevent replay attacks."}</div>
-                <div className="text-slate-300"><code className="text-indigo-400 font-mono">X-Instapay-Signature</code>: {"Formatted as v1=<signature>. Computes as HMAC-SHA256(timestamp + \".\" + rawBody, webhookSecret)."}</div>
+              <div className={`space-y-3 text-sm ${isRtl ? 'pr-4 border-r-2' : 'pl-4 border-l-2'} border-indigo-500`}>
+                <div className="text-slate-300"><code className="text-indigo-400 font-mono" dir="ltr">X-Instapay-Timestamp</code>: {lang === 'ar' ? 'طابع الطلب الزمني. ارفض الطلبات الأقدم من ٥ دقائق لتفادي هجمات إعادة الإرسال.' : 'Request timestamp. Reject requests older than 5 minutes to prevent replay attacks.'}</div>
+                <div className="text-slate-300"><code className="text-indigo-400 font-mono" dir="ltr">X-Instapay-Signature</code>: {lang === 'ar' ? 'صيغته v1=<signature> ويحسب عبر HMAC-SHA256(timestamp + "." + rawBody, secret).' : 'Formatted as v1=<signature>. Computes as HMAC-SHA256(timestamp + "." + rawBody, webhookSecret).'}</div>
               </div>
 
               {/* Express JS Signature Verification Snippet */}
-              <div className="border border-slate-900 rounded-xl bg-slate-950 overflow-hidden">
-                <div className="flex items-center justify-between border-b border-slate-900 bg-slate-900/30 px-4 py-3 text-xs font-semibold text-indigo-400 font-mono">
-                  EXPRESS WEBHOOK HANDLER
+              <div className="border border-slate-900 rounded-2xl bg-slate-950 overflow-hidden shadow-xl">
+                <div dir="ltr" className="flex items-center justify-between border-b border-slate-900 bg-slate-900/50 px-4 py-3 text-xs font-semibold text-indigo-400 font-mono">
+                  <span>EXPRESS WEBHOOK HANDLER</span>
                   <button
                     onClick={() => handleCopy(expressSnippet, 'express')}
-                    className="p-1 bg-slate-900/80 hover:bg-slate-900 text-slate-400 hover:text-white rounded border border-slate-800"
+                    className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg border border-slate-800"
                   >
                     {copiedId === 'express' ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
                   </button>
                 </div>
-                <div className="p-5">
+                <div dir="ltr" className="p-5">
                   <pre className="text-xs text-slate-300 overflow-x-auto font-mono leading-relaxed max-h-[450px]">
                     {expressSnippet}
                   </pre>
@@ -629,48 +904,48 @@ export default function DocsPage() {
 
             {/* Webhook Retry Policy */}
             <section id="retry-policy" className="scroll-mt-24 space-y-4">
-              <h2 className="text-2xl font-bold text-white">Retry policy</h2>
+              <h2 className="text-2xl font-bold text-white">{t.retryPolicy}</h2>
               <p className="text-slate-400 text-sm leading-relaxed">
-                A webhook is successful when your endpoint returns any 2xx response within 10 seconds. Failed deliveries are logged and can be retried by the platform. The first failed delivery is scheduled for roughly 5 minutes later; later retry attempts use exponential backoff and stop after attempt 5.
+                {t.retryPolicyDesc}
               </p>
               <div className="grid gap-4 sm:grid-cols-5 text-center text-xs mt-4">
-                <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-lg">
-                  <div className="font-semibold text-white">Initial</div>
-                  <div className="text-indigo-400 font-mono mt-1">Immediate</div>
+                <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-xl">
+                  <div className="font-semibold text-white">{lang === 'ar' ? 'فوري' : 'Initial'}</div>
+                  <div className="text-indigo-400 font-mono mt-1">{lang === 'ar' ? 'مباشرة' : 'Immediate'}</div>
                 </div>
-                <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-lg">
-                  <div className="font-semibold text-white">Retry 1</div>
+                <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-xl">
+                  <div className="font-semibold text-white">{lang === 'ar' ? 'محاولة ١' : 'Retry 1'}</div>
                   <div className="text-indigo-400 font-mono mt-1">~5 mins</div>
                 </div>
-                <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-lg">
-                  <div className="font-semibold text-white">Retry 2</div>
+                <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-xl">
+                  <div className="font-semibold text-white">{lang === 'ar' ? 'محاولة ٢' : 'Retry 2'}</div>
                   <div className="text-indigo-400 font-mono mt-1">27 mins</div>
                 </div>
-                <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-lg">
-                  <div className="font-semibold text-white">Retry 3</div>
+                <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-xl">
+                  <div className="font-semibold text-white">{lang === 'ar' ? 'محاولة ٣' : 'Retry 3'}</div>
                   <div className="text-indigo-400 font-mono mt-1">81 mins</div>
                 </div>
-                <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-lg">
-                  <div className="font-semibold text-white">Retry 4</div>
+                <div className="p-3 bg-slate-900/50 border border-slate-900 rounded-xl">
+                  <div className="font-semibold text-white">{lang === 'ar' ? 'محاولة ٤' : 'Retry 4'}</div>
                   <div className="text-rose-400 font-mono mt-1">243 mins</div>
                 </div>
               </div>
             </section>
 
             <section id="errors" className="scroll-mt-24 space-y-4">
-              <h2 className="text-2xl font-bold text-white">Errors and rate limits</h2>
+              <h2 className="text-2xl font-bold text-white">{t.errorsAndLimits}</h2>
               <p className="text-sm leading-6 text-slate-400">
-                API errors return JSON in the shape <code className="text-indigo-300">{'{"ok": false, "error": "message"}'}</code>. Checkout creation is rate-limited; when limited, use the response rate-limit headers before retrying.
+                {t.errorsDesc}
               </p>
               <div className="overflow-x-auto rounded-xl border border-slate-900 text-sm">
                 <div className="min-w-[760px] grid grid-cols-3 border-b border-slate-900 bg-slate-900/40 p-3 text-xs font-semibold text-slate-400">
-                  <div>HTTP</div>
-                  <div>Meaning</div>
-                  <div>Merchant action</div>
+                  <div>{t.httpCol}</div>
+                  <div>{t.meaningCol}</div>
+                  <div>{t.actionCol}</div>
                 </div>
                 {errorRows.map(([code, meaning, action]) => (
                   <div key={code} className="min-w-[760px] grid grid-cols-3 border-b border-slate-900 p-3 last:border-b-0">
-                    <div className="font-mono text-indigo-300">{code}</div>
+                    <div className="font-mono text-indigo-300" dir="ltr">{code}</div>
                     <div className="text-slate-300">{meaning}</div>
                     <div className="text-xs leading-5 text-slate-400">{action}</div>
                   </div>
@@ -682,9 +957,19 @@ export default function DocsPage() {
       </div>
 
       {/* Footer */}
-      <footer className="mt-24 border-t border-slate-900 bg-slate-950 py-8 text-center text-xs text-slate-500">
-        <p>&copy; {new Date().getFullYear()} InstaPay Gateway. All rights reserved.</p>
-        <p className="mt-1">For merchant support, please consult the dashboard operations panel.</p>
+      <footer className="mt-24 border-t border-slate-900 bg-slate-950 py-10 text-center text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 space-y-3">
+          <p>&copy; {new Date().getFullYear()} {t.footerCopyright}</p>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+            <a href="https://wa.me/201114671033" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-semibold">
+              💬 WhatsApp: +201114671033
+            </a>
+            <span>•</span>
+            <a href="mailto:instapay.payment.gateway@gmail.com" className="text-indigo-400 hover:text-indigo-300 font-semibold">
+              ✉️ instapay.payment.gateway@gmail.com
+            </a>
+          </div>
+        </div>
       </footer>
     </div>
   )
