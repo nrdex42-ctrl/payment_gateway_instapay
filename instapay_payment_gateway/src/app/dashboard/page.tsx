@@ -30,6 +30,7 @@ import {
   Layers,
   ShieldCheck,
   Check,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -183,6 +184,7 @@ interface MerchantNotification {
   message: string
   severity: string
   createdAt: string
+  readAt?: string | null
 }
 
 function formatEgp(value: number) {
@@ -218,7 +220,6 @@ export default function MerchantDashboardPage() {
   // Sidebar & Layout state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
-  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false)
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
 
   // Dashboard state
@@ -234,6 +235,35 @@ export default function MerchantDashboardPage() {
     dstActive: boolean
     currentEgyptTime: string
   } | null>(null)
+
+  const handleMarkNotificationRead = async (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n))
+    )
+    try {
+      await fetch('/api/merchant/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+    } catch {}
+  }
+
+  const handleMarkAllNotificationsRead = async () => {
+    const unread = notifications.filter((n) => !n.readAt)
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, readAt: new Date().toISOString() }))
+    )
+    for (const item of unread) {
+      try {
+        await fetch('/api/merchant/notifications', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item.id }),
+        })
+      } catch {}
+    }
+  }
 
   // Integration settings form state
   const [businessNameInput, setBusinessNameInput] = useState('')
@@ -777,14 +807,52 @@ export default function MerchantDashboardPage() {
           onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
           egyptTime={dashboardTimezone?.currentEgyptTime || null}
           dstActive={dashboardTimezone?.dstActive}
-          unreadNotifications={notifications.length}
-          onOpenNotifications={() => setIsNotificationsModalOpen(true)}
+          notifications={notifications}
+          onMarkNotificationRead={handleMarkNotificationRead}
+          onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
           onQuickSimulate={() => setActiveTab('tools')}
           isCollapsed={isSidebarCollapsed}
         />
 
         {/* Main Content Area */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-6">
+          {/* Inline Unread Announcement / Notification Banner (Non-intrusive) */}
+          {notifications.filter((n) => !n.readAt).slice(0, 1).map((n) => (
+            <div
+              key={n.id}
+              className={`flex items-start justify-between gap-3 rounded-2xl border p-4 shadow-lg transition ${
+                n.severity === 'URGENT'
+                  ? 'border-rose-500/30 bg-rose-500/10 text-rose-200'
+                  : n.severity === 'WARNING'
+                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
+                  : n.severity === 'SUCCESS'
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+                  : 'border-violet-500/30 bg-violet-600/10 text-violet-200'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/10 text-base">
+                  {n.severity === 'URGENT' ? '🚨' : n.severity === 'WARNING' ? '⚠️' : n.severity === 'SUCCESS' ? '✅' : '📢'}
+                </span>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white">{n.title}</span>
+                    <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.2 text-[9px] font-extrabold uppercase">
+                      {n.severity}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-5">{n.message}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleMarkNotificationRead(n.id)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-white/10 hover:text-white transition"
+                title="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
         <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,.28),transparent_34%),linear-gradient(135deg,rgba(15,23,42,.98),rgba(2,6,23,.92))] p-4 shadow-2xl shadow-black/20 sm:rounded-[2rem] sm:p-6">
           <div className="flex min-w-0 flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
@@ -2331,84 +2399,6 @@ export default function MerchantDashboardPage() {
               <div className="flex justify-end pt-2 border-t border-slate-800">
                 <Button
                   onClick={() => setSelectedLogDetail(null)}
-                  className="bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs px-4"
-                >
-                  Close
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Notifications Modal */}
-      <AnimatePresence>
-        {isNotificationsModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg rounded-2xl border border-slate-800 bg-[#0e1628] p-6 shadow-2xl space-y-4"
-            >
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600/10 border border-violet-500/20 text-violet-300">
-                    🔔
-                  </span>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">Merchant Notifications</h3>
-                    <p className="text-[11px] text-slate-400">System broadcasts and administrative alerts.</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsNotificationsModalOpen(false)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <ScrollArea className="max-h-80">
-                {notifications.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400">
-                    No notifications received yet.
-                  </div>
-                ) : (
-                  <div className="space-y-2.5 pe-2">
-                    {notifications.map((n) => {
-                      const severityColors = {
-                        INFO: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
-                        SUCCESS: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-                        WARNING: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
-                        URGENT: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
-                      }[n.severity] || 'border-slate-700 bg-slate-800/50 text-slate-300'
-
-                      return (
-                        <div
-                          key={n.id}
-                          className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-3 space-y-1.5"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-white">{n.title}</span>
-                            <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${severityColors}`}>
-                              {n.severity}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-300 leading-5">{n.message}</p>
-                          <div className="text-[10px] text-slate-400">
-                            {new Date(n.createdAt).toLocaleString()}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </ScrollArea>
-
-              <div className="flex justify-end pt-2 border-t border-slate-800">
-                <Button
-                  onClick={() => setIsNotificationsModalOpen(false)}
                   className="bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs px-4"
                 >
                   Close
