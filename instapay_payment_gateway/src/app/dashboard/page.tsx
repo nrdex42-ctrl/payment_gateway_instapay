@@ -853,249 +853,73 @@ export default function MerchantDashboardPage() {
               </button>
             </div>
           ))}
-        <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,.28),transparent_34%),linear-gradient(135deg,rgba(15,23,42,.98),rgba(2,6,23,.92))] p-4 shadow-2xl shadow-black/20 sm:rounded-[2rem] sm:p-6">
-          <div className="flex min-w-0 flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
-                <Activity className="h-3.5 w-3.5" />
-                Live merchant operations
-              </div>
-              <h2 className="text-2xl font-black tracking-tight text-white sm:text-4xl">
-                Payments, billing, and integrations in one workspace.
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">
-                Monitor confirmation volume, manage the Android listener integration, subscribe to gateway plans, and troubleshoot webhook delivery from a single control plane.
-              </p>
-            </div>
-
-            <div className="grid w-full min-w-0 gap-3 sm:grid-cols-3 lg:max-w-xl">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Plan</div>
-                  <div className="mt-2 text-sm font-black text-white">{subscriptionLabel}</div>
-                  <div className="mt-1 text-xs text-slate-500">{client.businessType || (client.isFreeTrial ? 'Free trial' : 'Active merchant')}</div>
-                </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Setup</div>
-                <div className="mt-2 text-sm font-black text-white">{completedSetupItems}/{setupItems.length} complete</div>
-                <div className={`mt-1 text-xs ${setupComplete ? 'text-emerald-300' : 'text-amber-300'}`}>
-                  {setupComplete ? 'Production ready' : 'Action needed'}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Quota</div>
-                <div className={`mt-2 text-sm font-black ${quotaState === 'limit-reached' ? 'text-red-300' : quotaState === 'near-limit' ? 'text-amber-300' : 'text-emerald-300'}`}>
-                  {quotaState === 'limit-reached' ? 'Limit reached' : quotaState === 'near-limit' ? 'Near limit' : 'Healthy'}
-                </div>
-                <div className="mt-1 text-xs text-slate-500">{client.txCount.toLocaleString()} / {client.txLimit.toLocaleString()}</div>
-              </div>
-            </div>
-          </div>
-        </section>
-        {/* Merchant setup checklist */}
-        <div className={`rounded-2xl border p-5 ${
-          setupComplete
-            ? 'border-emerald-500/20 bg-emerald-500/5'
-            : 'border-indigo-500/20 bg-indigo-500/5'
-        }`}>
-          <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className={`h-5 w-5 ${setupComplete ? 'text-emerald-400' : 'text-indigo-300'}`} />
-                <h2 className="text-base font-bold text-white">
-                  {setupComplete ? 'Gateway setup complete' : 'Complete your gateway setup'}
-                </h2>
-              </div>
-              <p className="max-w-2xl text-xs leading-6 text-neutral-400">
-                Signup only creates your merchant account. Configure the operational details here before sending production checkout traffic.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-neutral-950/70 px-4 py-3 text-sm font-bold text-white">
-              {completedSetupItems} / {setupItems.length} completed
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {setupItems.map((item) => (
-              <div key={item.label} className="rounded-xl border border-neutral-900 bg-neutral-950/60 p-3">
-                <div className="flex items-center gap-2">
-                  <span className={`h-2.5 w-2.5 rounded-full ${item.done ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  <span className="text-xs font-bold text-neutral-200">{item.label}</span>
-                </div>
-                <p className="mt-2 truncate text-[10px] text-neutral-500">{item.hint}</p>
-              </div>
-            ))}
-          </div>
-
-          {!setupComplete && (
-            <div className="mt-4 flex justify-end">
-              <Button
-                type="button"
-                size="sm"
-                onClick={openIntegrationSetup}
-                className="rounded-xl bg-indigo-500 text-white hover:bg-indigo-400"
-              >
-                Open integration setup
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Subscription Usage Banner */}
-        <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-4 sm:p-5 flex min-w-0 flex-col md:flex-row items-stretch md:items-center justify-between gap-5 md:gap-6">
-          <div className="space-y-1.5 flex-1 w-full">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-white tracking-tight uppercase">
-                Plan: <span className="text-violet-400 font-extrabold">{subscriptionLabel}</span>
-              </h2>
-              {client.isFreeTrial && (
-                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-500 border border-amber-500/20">
-                  Free Trial
-                </span>
-              )}
-            </div>
-            
-            <p className="text-xs text-neutral-400">
-              {client.subscriptionEndsAt
-                ? (() => {
-                    const endDate = new Date(client.subscriptionEndsAt!)
-                    const remainMs = endDate.getTime() - Date.now()
-                    const remainDays = Math.ceil(remainMs / (1000 * 60 * 60 * 24))
-                    if (remainDays > 0) {
-                      return `Expires on ${formatShortDate(client.subscriptionEndsAt)} — ${remainDays} day${remainDays !== 1 ? 's' : ''} remaining`
-                    }
-                    return `Expired on ${formatShortDate(client.subscriptionEndsAt)}`
-                  })()
-                : 'Unlimited plan expiration'}
-            </p>
-
-            {/* Progress Bar Container */}
-            <div className="pt-2 w-full max-w-md">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs pb-1">
-                <span className="text-neutral-500 font-medium">Confirmed Transactions</span>
-                <span className="font-bold text-neutral-300">
-                  {client.txCount.toLocaleString()} / {client.txLimit.toLocaleString()}
-                </span>
-              </div>
-              <div className="h-2 w-full bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    quotaState === 'limit-reached'
-                      ? 'bg-red-500'
-                      : quotaState === 'near-limit'
-                      ? 'bg-amber-500'
-                      : 'bg-gradient-to-r from-violet-600 to-indigo-500'
-                  }`}
-                  style={{ width: `${usagePercent}%` }}
-                />
-              </div>
-              {quotaState === 'limit-reached' && (
-                <p className="text-[10px] text-red-400 pt-1">
-                  Your quota is fully used. Subscribe to a higher plan or renew from Billing.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col items-stretch md:items-end space-y-1 bg-neutral-950 p-4 rounded-xl border border-neutral-900 text-center md:text-right shrink-0">
-            <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider">Monthly billing</span>
-            <button type="button" onClick={() => setActiveTab('billing')} className="text-xs text-violet-300 hover:text-violet-200">
-              View plans and renew quota
-            </button>
-            <span className="text-sm font-bold text-white pt-1">{client.subscriptionPlan === 'BASIC' ? '200 EGP / month' : client.subscriptionPlan === 'PRO' ? '500 EGP / month' : client.subscriptionPlan === 'ENTERPRISE' ? '700 EGP / month' : 'Free'}</span>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        {stats && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard
-              icon={<Wallet className="h-5 w-5" />}
-              label="Today's Confirmed"
-              value={formatEgp(stats.today.totalEgp)}
-              unit="EGP"
-              sub={`${stats.today.count} payments confirmed`}
-              tone="emerald"
-            />
-            <StatCard
-              icon={<TrendingUp className="h-5 w-5" />}
-              label="Last 7 Days"
-              value={formatEgp(stats.sevenDays.totalEgp)}
-              unit="EGP"
-              sub={`${stats.sevenDays.count} payments confirmed`}
-              tone="violet"
-            />
-            <StatCard
-              icon={<Clock className="h-5 w-5" />}
-              label="Pending"
-              value={formatEgp(stats.pending.totalEgp)}
-              unit="EGP"
-              sub={`${stats.pending.count} transactions awaiting confirmation`}
-              tone="amber"
-            />
-          </div>
-        )}
-
-        {/* Merchant command center */}
-        <section className="grid gap-3 rounded-3xl border border-white/10 bg-neutral-950/70 p-3 shadow-2xl shadow-black/20 sm:grid-cols-2 sm:p-4 lg:grid-cols-4">
-          <button
-            type="button"
-            onClick={openIntegrationSetup}
-            className="group rounded-2xl border border-violet-500/20 bg-violet-500/10 p-4 text-left transition hover:border-violet-400/50 hover:bg-violet-500/15"
-          >
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-violet-200">
-              <Key className="h-4 w-4" />
-              Setup
-            </div>
-            <div className="mt-2 text-sm font-bold text-white">Configure gateway</div>
-            <p className="mt-1 text-xs leading-5 text-neutral-400">Payment link, webhook, API keys, and checkout TTL.</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('monitor')}
-            className="group rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-left transition hover:border-cyan-400/50 hover:bg-cyan-500/15"
-          >
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-              <Activity className="h-4 w-4" />
-              Monitor
-            </div>
-            <div className="mt-2 text-sm font-bold text-white">Watch live pipeline</div>
-            <p className="mt-1 text-xs leading-5 text-neutral-400">Detector, matching, webhook worker, and events.</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('billing')}
-            className="group rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-left transition hover:border-emerald-400/50 hover:bg-emerald-500/15"
-          >
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
-              <CreditCard className="h-4 w-4" />
-              Billing
-            </div>
-            <div className="mt-2 text-sm font-bold text-white">Manage quota</div>
-            <p className="mt-1 text-xs leading-5 text-neutral-400">{client.txCount.toLocaleString()} / {client.txLimit.toLocaleString()} transactions used.</p>
-          </button>
-
-          <Link
-            href="/dashboard/guide"
-            className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-white/20 hover:bg-white/[0.07]"
-          >
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-300">
-              <BookOpen className="h-4 w-4" />
-              Guide
-            </div>
-            <div className="mt-2 text-sm font-bold text-white">Integration docs</div>
-            <p className="mt-1 text-xs leading-5 text-neutral-400">Production API, webhook, and fulfillment reference.</p>
-          </Link>
-        </section>
-
         {/* Main Workspace: Active Tab Content */}
         <div ref={integrationSectionRef} tabIndex={-1} className="space-y-6 outline-none">
 
             {/* Tab: Process Monitor */}
             {activeTab === 'monitor' && (
               <div className="space-y-6">
+                {/* 4 Stat Cards */}
+                {stats && (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <StatCard
+                      icon={<Wallet className="h-5 w-5" />}
+                      label="Today's Confirmed"
+                      value={formatEgp(stats.today.totalEgp)}
+                      unit="EGP"
+                      sub={`${stats.today.count} payments confirmed`}
+                      tone="emerald"
+                    />
+                    <StatCard
+                      icon={<TrendingUp className="h-5 w-5" />}
+                      label="Last 7 Days"
+                      value={formatEgp(stats.sevenDays.totalEgp)}
+                      unit="EGP"
+                      sub={`${stats.sevenDays.count} payments confirmed`}
+                      tone="violet"
+                    />
+                    <StatCard
+                      icon={<Clock className="h-5 w-5" />}
+                      label="Pending"
+                      value={formatEgp(stats.pending.totalEgp)}
+                      unit="EGP"
+                      sub={`${stats.pending.count} awaiting confirmation`}
+                      tone="amber"
+                    />
+                    <StatCard
+                      icon={<CreditCard className="h-5 w-5" />}
+                      label="Plan Quota"
+                      value={`${usagePercent}%`}
+                      unit={`${client.txCount}/${client.txLimit}`}
+                      sub={client.isFreeTrial ? 'Free trial tier' : subscriptionLabel}
+                      tone="violet"
+                    />
+                  </div>
+                )}
+
+                {/* Gateway Setup Reminder (Only if incomplete) */}
+                {!setupComplete && (
+                  <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-amber-400" />
+                        <h3 className="text-sm font-bold text-white">Complete your gateway setup</h3>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        {completedSetupItems} of {setupItems.length} steps complete. Configure your receiving handle and webhook to start processing production payments.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={openIntegrationSetup}
+                      className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 shrink-0 font-semibold"
+                    >
+                      Open Setup
+                    </Button>
+                  </div>
+                )}
+
                 {/* Header & Status */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-neutral-900 bg-gradient-to-r from-violet-950/20 via-neutral-900/30 to-indigo-950/20 p-5">
                   <div className="space-y-1">
@@ -1360,6 +1184,73 @@ export default function MerchantDashboardPage() {
                       ))}
                     </div>
                   )}
+                </div>
+
+                {/* Support Workspace: Downloads, Links, Recent Activity */}
+                <div className="grid gap-6 xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.2fr)]">
+                  {/* APK Download & Demo */}
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+                    <h3 className="font-bold text-white text-sm">Listener Application</h3>
+                    <p className="text-xs text-neutral-400 leading-relaxed font-medium">
+                      Download the companion Android APK and install it on your Android device to start auto-detecting and confirming customer payments.
+                    </p>
+                    
+                    <div className="space-y-2">
+                      <Button
+                        asChild
+                        className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl h-10 font-semibold"
+                      >
+                        <a href="/apks/InstaPay-Detector.apk" download>
+                          <Download className="mr-1.5 h-4 w-4" />
+                          Download Detector APK
+                        </a>
+                      </Button>
+                      
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="w-full border-neutral-800 hover:bg-neutral-900 text-neutral-400 hover:text-white rounded-xl h-10 font-semibold"
+                      >
+                        <a href={`/pay/${client.slug}`} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="mr-1.5 h-4 w-4" />
+                          Open Checkout Demo
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Recent Merchant Activity */}
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 overflow-hidden">
+                    <div className="border-b border-neutral-900 px-4 py-3 bg-neutral-950/40">
+                      <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Recent Merchant Activity</span>
+                    </div>
+                    
+                    <ScrollArea className="h-[280px]">
+                      <div className="p-3 space-y-2">
+                        {recentTx.length === 0 ? (
+                          <div className="py-8 text-center text-xs text-neutral-600">No confirmed payments yet.</div>
+                        ) : (
+                          recentTx.map((tx) => (
+                            <div
+                              key={tx.sessionId}
+                              className="rounded-xl bg-neutral-950/50 p-3 border border-neutral-900 flex justify-between gap-2 text-xs"
+                            >
+                              <div className="min-w-0">
+                                <span className="font-bold text-white block truncate">{tx.senderHandle}</span>
+                                <span className="text-[10px] text-neutral-500 block mt-1 font-mono">{tx.detectedRef || tx.sessionId.slice(0, 12)}</span>
+                                <span className="text-[9px] text-neutral-600 block mt-0.5">{tx.detectedAtEgypt}</span>
+                              </div>
+                              
+                              <div className="text-right shrink-0">
+                                <span className="font-black text-emerald-400">+{formatEgp(tx.amountEgp)} EGP</span>
+                                <span className="block text-[9px] text-neutral-500 mt-1 uppercase font-semibold">{tx.status}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
                 </div>
               </div>
             )}
@@ -1916,13 +1807,75 @@ export default function MerchantDashboardPage() {
             {/* Tab: Plans & Billing */}
             {activeTab === 'billing' && (
               <div className="space-y-5 animate-fadeIn">
+                {/* Active Plan & Quota Card */}
+                <div className="rounded-2xl border border-neutral-900 bg-neutral-900/40 p-5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5">
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-white uppercase tracking-tight">
+                        Current Plan: <span className="text-violet-400 font-extrabold">{subscriptionLabel}</span>
+                      </h3>
+                      {client.isFreeTrial && (
+                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-500 border border-amber-500/20">
+                          Free Trial
+                        </span>
+                      )}
+                    </div>
+                    
+                    <p className="text-xs text-neutral-400">
+                      {client.subscriptionEndsAt
+                        ? (() => {
+                            const endDate = new Date(client.subscriptionEndsAt!)
+                            const remainMs = endDate.getTime() - Date.now()
+                            const remainDays = Math.ceil(remainMs / (1000 * 60 * 60 * 24))
+                            if (remainDays > 0) {
+                              return `Expires on ${formatShortDate(client.subscriptionEndsAt)} — ${remainDays} day${remainDays !== 1 ? 's' : ''} remaining`
+                            }
+                            return `Expired on ${formatShortDate(client.subscriptionEndsAt)}`
+                          })()
+                        : 'Unlimited plan expiration'}
+                    </p>
+
+                    {/* Progress Bar */}
+                    <div className="pt-2 w-full max-w-lg">
+                      <div className="flex items-center justify-between text-xs pb-1.5 font-medium">
+                        <span className="text-neutral-400">Monthly Quota Consumption</span>
+                        <span className="font-mono text-white font-bold">
+                          {client.txCount.toLocaleString()} / {client.txLimit.toLocaleString()} ({usagePercent}%)
+                        </span>
+                      </div>
+                      <div className="h-2 w-full bg-neutral-950 rounded-full overflow-hidden border border-neutral-800">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            quotaState === 'limit-reached'
+                              ? 'bg-red-500'
+                              : quotaState === 'near-limit'
+                              ? 'bg-amber-500'
+                              : 'bg-gradient-to-r from-violet-600 to-indigo-500'
+                          }`}
+                          style={{ width: `${usagePercent}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-start md:items-end justify-center rounded-xl bg-neutral-950/80 border border-neutral-850 p-4 shrink-0">
+                    <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider">Status</span>
+                    <span className={`text-xs font-black uppercase mt-1 ${quotaState === 'limit-reached' ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {quotaState === 'limit-reached' ? 'Quota Exceeded' : 'Active & Processing'}
+                    </span>
+                    <span className="text-[11px] text-neutral-400 mt-1">
+                      {client.subscriptionPlan === 'BASIC' ? '200 EGP/mo' : client.subscriptionPlan === 'PRO' ? '500 EGP/mo' : client.subscriptionPlan === 'ENTERPRISE' ? '700 EGP/mo' : 'Free Trial'}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-2">
                   <div className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-violet-400" />
-                    <h2 className="text-base font-bold text-white">Gateway Pricing</h2>
+                    <h2 className="text-base font-bold text-white">Available Upgrade Plans</h2>
                   </div>
                   <p className="text-xs text-neutral-400">
-                    Subscribe by paying the exact plan price through InstaPay. Once the subscription transaction is confirmed, your monthly quota is activated automatically.
+                    Select a plan and scan the QR code to subscribe or renew your transaction limit.
                   </p>
                 </div>
 
@@ -2270,73 +2223,6 @@ export default function MerchantDashboardPage() {
               </div>
             )}
 
-          {/* Support Workspace: Downloads, Links, Recent Activity */}
-          <div className="grid gap-6 xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.2fr)]">
-            
-            {/* APK Download & Demo */}
-            <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
-              <h3 className="font-bold text-white text-sm">Listener Application</h3>
-              <p className="text-xs text-neutral-400 leading-relaxed font-medium">
-                Download the companion Android APK and install it on your Android device to start auto-detecting and confirming customer payments.
-              </p>
-              
-              <div className="space-y-2">
-                <Button
-                  asChild
-                  className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl h-10 font-semibold"
-                >
-                  <a href="/apks/InstaPay-Detector.apk" download>
-                    <Download className="mr-1.5 h-4 w-4" />
-                    Download Detector APK
-                  </a>
-                </Button>
-                
-                <Button
-                  asChild
-                  variant="outline"
-                  className="w-full border-neutral-800 hover:bg-neutral-900 text-neutral-400 hover:text-white rounded-xl h-10 font-semibold"
-                >
-                  <a href={`/pay/${client.slug}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-1.5 h-4 w-4" />
-                    Open Checkout Demo
-                  </a>
-                </Button>
-              </div>
-            </div>
-
-            {/* Recent Merchant Activity */}
-            <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 overflow-hidden">
-              <div className="border-b border-neutral-900 px-4 py-3 bg-neutral-950/40 animate-pulse">
-                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Recent Merchant Activity</span>
-              </div>
-              
-              <ScrollArea className="h-[380px]">
-                <div className="p-3 space-y-2">
-                  {recentTx.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-neutral-600">No confirmed payments yet.</div>
-                  ) : (
-                    recentTx.map((tx) => (
-                      <div
-                        key={tx.sessionId}
-                        className="rounded-xl bg-neutral-950/50 p-3 border border-neutral-900 flex justify-between gap-2 text-xs"
-                      >
-                        <div className="min-w-0">
-                          <span className="font-bold text-white block truncate">{tx.senderHandle}</span>
-                          <span className="text-[10px] text-neutral-500 block mt-1 font-mono">{tx.detectedRef || tx.sessionId.slice(0, 12)}</span>
-                          <span className="text-[9px] text-neutral-600 block mt-0.5">{tx.detectedAtEgypt}</span>
-                        </div>
-                        
-                        <div className="text-right shrink-0">
-                          <span className="font-black text-emerald-400">+{formatEgp(tx.amountEgp)} EGP</span>
-                          <span className="block text-[9px] text-neutral-500 mt-1 uppercase font-semibold">{tx.status}</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-          </div>
         </div>
       </main>
 

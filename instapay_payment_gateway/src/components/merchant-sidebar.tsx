@@ -154,8 +154,8 @@ export function MerchantSidebar({
         {/* Sidebar Header */}
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-800/70 px-4">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-500 text-white shadow-md shadow-violet-900/30">
-              <Zap className="h-5 w-5" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-md shadow-violet-950/40">
+              <img src="/IPN.svg" alt="InstaPay" className="h-full w-full object-contain" />
             </div>
             {!isCollapsed && (
               <div className="flex flex-col truncate">
