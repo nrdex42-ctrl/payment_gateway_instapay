@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Globe } from 'lucide-react'
 import {
   LOCALE_COOKIE,
   LOCALE_STORAGE_KEY,
@@ -107,34 +108,53 @@ export function LanguageRuntime() {
     return () => observer.disconnect()
   }, [])
 
-  const toggleLocale = () => {
-    const nextLocale: Locale = locale === 'ar' ? 'en' : 'ar'
+  const setExactLocale = (nextLocale: Locale) => {
     persistLocale(nextLocale)
     setLocale(nextLocale)
     applyLocale(nextLocale)
   }
 
-  const button = (
-    <button
-      type="button"
-      onClick={toggleLocale}
-      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-2.5 text-[11px] font-bold text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:gap-2 sm:px-3 sm:text-xs"
-      aria-label={locale === 'ar' ? 'Switch language to English' : 'تغيير اللغة إلى العربية'}
+  const switcher = (
+    <div
+      className="inline-flex items-center rounded-xl border border-slate-800 bg-slate-900/90 p-1 shadow-inner"
       data-i18n-skip
     >
-      <span className="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-black text-slate-950 sm:px-2 sm:text-[10px]">
-        {locale === 'ar' ? 'AR' : 'EN'}
-      </span>
-      <span className="hidden sm:inline">{locale === 'ar' ? localeLabels.en : localeLabels.ar}</span>
-      <span className="sm:hidden">{locale === 'ar' ? 'EN' : 'AR'}</span>
-    </button>
+      <button
+        type="button"
+        onClick={() => setExactLocale('en')}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+          locale === 'en'
+            ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
+            : 'text-slate-400 hover:text-slate-200'
+        }`}
+        title="Switch language to English"
+        data-i18n-skip
+      >
+        <Globe className="h-3.5 w-3.5" />
+        <span>English</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setExactLocale('ar')}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+          locale === 'ar'
+            ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-500/30'
+            : 'text-slate-400 hover:text-slate-200'
+        }`}
+        title="التحويل للغة العربية"
+        data-i18n-skip
+      >
+        <span>العربية</span>
+        <span className="text-[10px] opacity-80">🇪🇬</span>
+      </button>
+    </div>
   )
 
   if (typeof window !== 'undefined' && window.location.pathname.startsWith('/docs')) {
     return null
   }
 
-  if (target) return createPortal(button, target)
+  if (target) return createPortal(switcher, target)
 
   return null
 }
