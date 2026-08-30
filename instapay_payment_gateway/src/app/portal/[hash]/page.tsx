@@ -145,7 +145,8 @@ function safeJsonFormat(value: string) {
 }
 
 function usagePercent(count: number, limit: number) {
-  return Math.min(100, (count / Math.max(limit, 1)) * 100)
+  const raw = Math.min(100, (count / Math.max(limit, 1)) * 100)
+  return Math.round(raw * 10) / 10
 }
 
 function daysRemaining(value: string | null) {

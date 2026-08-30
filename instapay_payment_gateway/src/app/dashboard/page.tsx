@@ -812,7 +812,8 @@ export default function MerchantDashboardPage() {
   ]
   const completedSetupItems = setupItems.filter((item) => item.done).length
   const setupComplete = completedSetupItems === setupItems.length
-  const usagePercent = client.txLimit > 0 ? Math.min(100, (client.txCount / client.txLimit) * 100) : 0
+  const rawUsagePercent = client.txLimit > 0 ? Math.min(100, (client.txCount / client.txLimit) * 100) : 0
+  const usagePercent = Math.round(rawUsagePercent * 10) / 10
   const quotaState = client.txLimit > 0 && client.txCount >= client.txLimit
     ? 'limit-reached'
     : client.txLimit > 0 && client.txCount >= client.txLimit * 0.8
