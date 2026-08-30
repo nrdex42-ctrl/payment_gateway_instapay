@@ -130,11 +130,11 @@ export function LanguageRuntime() {
     </button>
   )
 
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/docs')) {
+    return null
+  }
+
   if (target) return createPortal(button, target)
 
-  return (
-    <div className="fixed end-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[1000] sm:end-4" data-i18n-skip>
-      {button}
-    </div>
-  )
+  return null
 }

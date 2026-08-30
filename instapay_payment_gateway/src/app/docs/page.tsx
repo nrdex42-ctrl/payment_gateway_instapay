@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   BookOpen,
@@ -14,6 +14,7 @@ import {
   Webhook
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { getInitialLocale, persistLocale, Locale } from '@/lib/i18n-runtime'
 
 
 interface CodeSnippets {
@@ -456,8 +457,26 @@ const translations: Record<'en' | 'ar', DocTranslations> = {
 
 export default function DocsPage() {
   const [selectedSnippetTab, setSelectedSnippetTab] = useState<keyof CodeSnippets>('curl')
-  const [lang, setLang] = useState<'en' | 'ar'>('en')
+  const [lang, setLang] = useState<Locale>('en')
   const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const initial = getInitialLocale()
+    setLang(initial)
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = initial
+      document.documentElement.dir = initial === 'ar' ? 'rtl' : 'ltr'
+    }
+  }, [])
+
+  const handleLanguageChange = (nextLocale: Locale) => {
+    persistLocale(nextLocale)
+    setLang(nextLocale)
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = nextLocale
+      document.documentElement.dir = nextLocale === 'ar' ? 'rtl' : 'ltr'
+    }
+  }
 
   const t = translations[lang]
   const isRtl = lang === 'ar'
@@ -496,7 +515,7 @@ export default function DocsPage() {
             <div className="flex items-center rounded-xl border border-slate-800 bg-slate-900/90 p-1 shadow-inner">
               <button
                 type="button"
-                onClick={() => setLang('en')}
+                onClick={() => handleLanguageChange('en')}
                 className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
                   lang === 'en'
                     ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
@@ -509,7 +528,7 @@ export default function DocsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setLang('ar')}
+                onClick={() => handleLanguageChange('ar')}
                 className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
                   lang === 'ar'
                     ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-500/30'
