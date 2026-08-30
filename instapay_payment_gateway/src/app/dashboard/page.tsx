@@ -1460,8 +1460,10 @@ export default function MerchantDashboardPage() {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                        <div className="flex justify-center p-3 rounded-xl bg-white">
-                          <img src={quickResult.qrCodeDataUrl} alt="QR Code" className="h-44 w-44 object-contain" />
+                        <div className="flex items-center justify-center rounded-2xl border border-slate-800/80 bg-[#070a12] p-4 shadow-inner">
+                          <div className="rounded-xl bg-white p-2.5 shadow-lg shadow-black/40">
+                            <img src={quickResult.qrCodeDataUrl} alt="QR Code" className="h-40 w-40 object-contain" />
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <a
@@ -1888,8 +1890,10 @@ export default function MerchantDashboardPage() {
 
                 {subscriptionCheckout && (
                   <div className="rounded-2xl border border-violet-500/30 bg-violet-950/10 p-4 sm:p-5 grid grid-cols-1 md:grid-cols-[minmax(140px,180px)_minmax(0,1fr)] gap-5">
-                    <div className="mx-auto w-full max-w-[180px] rounded-xl bg-white p-2 md:max-w-none">
-                      <img src={subscriptionCheckout.qrCodeDataUrl} alt="Subscription payment QR" className="w-full h-auto" />
+                    <div className="mx-auto flex w-full max-w-[180px] items-center justify-center rounded-2xl border border-slate-800/80 bg-[#070a12] p-3 shadow-inner md:max-w-none">
+                      <div className="rounded-xl bg-white p-2 shadow-lg shadow-black/40">
+                        <img src={subscriptionCheckout.qrCodeDataUrl} alt="Subscription payment QR" className="w-full max-w-[140px] h-auto object-contain" />
+                      </div>
                     </div>
                     <div className="space-y-3">
                       <div>
