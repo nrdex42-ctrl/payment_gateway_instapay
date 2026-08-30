@@ -317,9 +317,10 @@ export default function MerchantDashboardPage() {
   const [quickError, setQuickError] = useState<string | null>(null)
   const [quickPollingStatus, setQuickPollingStatus] = useState<string | null>(null)
 
-  const loadTransactions = async () => {
+  const loadTransactions = async (options?: { silent?: boolean }) => {
     if (!client) return
-    setTxLoading(true)
+    const silent = !!options?.silent
+    if (!silent) setTxLoading(true)
     try {
       const headers = { Authorization: `Bearer ${client.apiKey}` }
       const params = new URLSearchParams()
@@ -339,7 +340,7 @@ export default function MerchantDashboardPage() {
     } catch (err) {
       console.error(err)
     } finally {
-      setTxLoading(false)
+      if (!silent) setTxLoading(false)
     }
   }
 
@@ -702,6 +703,24 @@ export default function MerchantDashboardPage() {
   }
 
   const handleUpdateTxStatus = async (sessionId: string, newStatus: string, detectedRef?: string) => {
+    // 1. Optimistic update: instantly update local list without any loading spinner or page refresh
+    setAllTransactions((prev) =>
+      prev.map((t) =>
+        t.sessionId === sessionId
+          ? {
+              ...t,
+              status: newStatus,
+              detectedRef: newStatus === 'CONFIRMED' ? (detectedRef || t.detectedRef || 'MANUAL_FIX') : t.detectedRef,
+            }
+          : t
+      )
+    )
+
+    if (quickResult && quickResult.sessionId === sessionId) {
+      setQuickPollingStatus(newStatus)
+    }
+
+    // 2. Perform API PATCH request silently in the background
     try {
       const res = await fetch('/api/transactions', {
         method: 'PATCH',
@@ -710,15 +729,16 @@ export default function MerchantDashboardPage() {
       })
       const data = await res.json()
       if (data.ok) {
-        if (quickResult && quickResult.sessionId === sessionId) {
-          setQuickPollingStatus(newStatus)
-        }
-        loadTransactions()
+        // Silently sync transactions and process monitor in background without UI flicker
+        loadTransactions({ silent: true })
+        if (activeTab === 'monitor') loadProcessMonitor()
       } else {
         alert(data.error || 'Failed to update transaction status.')
+        loadTransactions({ silent: true })
       }
     } catch {
       alert('Connection error.')
+      loadTransactions({ silent: true })
     }
   }
 
@@ -2093,7 +2113,7 @@ export default function MerchantDashboardPage() {
                     <div className="flex items-end gap-2 sm:col-span-2">
                       <Button
                         size="sm"
-                        onClick={loadTransactions}
+                        onClick={() => loadTransactions()}
                         disabled={txLoading}
                         className="h-8 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs flex-1"
                       >
