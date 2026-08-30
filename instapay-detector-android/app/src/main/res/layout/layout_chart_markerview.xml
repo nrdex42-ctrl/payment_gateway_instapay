@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_live_status"
+    android:paddingHorizontal="10dp"
+    android:paddingVertical="6dp"
+    android:elevation="4dp">
+
+    <TextView
+        android:id="@+id/tvMarkerDate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_secondary"
+        android:textSize="10sp"
+        android:fontFamily="sans-serif"
+        android:text="Aug 29" />
+
+    <TextView
+        android:id="@+id/tvMarkerValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_primary"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:text="EGP 1,250.00" />
+
+    <TextView
+        android:id="@+id/tvMarkerCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/live_green"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:text="3 payments" />
+</LinearLayout>

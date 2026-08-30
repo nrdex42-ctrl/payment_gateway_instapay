@@ -19,21 +19,69 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Admin Portal"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Native operations console"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:layout_marginTop="2dp" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Admin Portal"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Native operations console"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:id="@+id/btn_notifications"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_notification_btn"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="@string/notification_icon_desc">
+
+                <ImageView
+                    android:id="@+id/iv_notification_bell"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_bell"
+                    app:tint="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tv_notification_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="18dp"
+                    android:minWidth="18dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="@drawable/bg_notification_badge"
+                    android:gravity="center"
+                    android:paddingHorizontal="4dp"
+                    android:textColor="@color/bg_root"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </FrameLayout>
+        </LinearLayout>
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tab_layout"
@@ -44,6 +92,8 @@
             app:tabGravity="start"
             app:tabIndicatorColor="@color/brand_primary"
             app:tabMode="scrollable"
+            app:tabIconTint="@color/admin_nav_tint"
+            app:tabInlineLabel="true"
             app:tabSelectedTextColor="@color/text_primary"
             app:tabTextAppearance="@style/TextAppearance.InstaPayAdmin.Tab"
             app:tabTextColor="@color/text_tertiary" />

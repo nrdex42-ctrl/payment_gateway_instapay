@@ -83,14 +83,27 @@ class MerchantAdapter(
                 }
             }
 
-            // Subscription rendering
+            // Subscription rendering & Quota
             val txLimit = item.optInt("txLimit", 5)
             val txCount = item.optInt("txCount", 0)
-            binding.tvSubscription.text = (if (isFreeTrial) "TRIAL" else subscriptionPlan.uppercase()) + " ($txCount/$txLimit)"
+            val quotaPercent = if (txLimit > 0) ((txCount.toDouble() / txLimit) * 100).toInt().coerceIn(0, 100) else 0
+
+            binding.tvSubscription.text = (if (isFreeTrial) "TRIAL" else subscriptionPlan.uppercase())
             binding.tvSubscription.setTextColor(context.getColor(if (isFreeTrial) R.color.status_pending else R.color.status_confirmed))
             binding.tvSubscription.setBackgroundColor(context.getColor(if (isFreeTrial) R.color.status_pending_bg else R.color.status_confirmed_bg))
 
+            binding.tvQuotaLabel.text = "$txCount / $txLimit tx ($quotaPercent%)"
+            binding.pbQuota.progress = quotaPercent
+            if (quotaPercent >= 100) {
+                binding.pbQuota.progressTintList = android.content.res.ColorStateList.valueOf(context.getColor(R.color.status_denied))
+            } else if (quotaPercent >= 80) {
+                binding.pbQuota.progressTintList = android.content.res.ColorStateList.valueOf(context.getColor(R.color.status_pending))
+            } else {
+                binding.pbQuota.progressTintList = android.content.res.ColorStateList.valueOf(context.getColor(R.color.brand_primary))
+            }
+
             var isExpired = false
+            var daysRemaining: Long? = null
             if (subscriptionEndsAt.isNotEmpty() && subscriptionEndsAt != "null") {
                 try {
                     val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
@@ -98,7 +111,9 @@ class MerchantAdapter(
                     if (date != null) {
                         val displayFormat = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.US)
                         binding.tvSubscriptionEnds.text = displayFormat.format(date)
-                        if (date.time < System.currentTimeMillis()) {
+                        val diffMillis = date.time - System.currentTimeMillis()
+                        daysRemaining = diffMillis / (1000 * 60 * 60 * 24)
+                        if (diffMillis < 0) {
                             isExpired = true
                         }
                     } else {
@@ -111,8 +126,27 @@ class MerchantAdapter(
                 binding.tvSubscriptionEnds.text = "Lifetime"
             }
 
+            if (daysRemaining != null) {
+                binding.tvDaysRemaining.visibility = View.VISIBLE
+                if (daysRemaining < 0) {
+                    binding.tvDaysRemaining.text = "Expired"
+                    binding.tvDaysRemaining.setTextColor(context.getColor(R.color.status_denied))
+                    binding.tvDaysRemaining.setBackgroundColor(context.getColor(R.color.status_denied_bg))
+                } else if (daysRemaining == 0L) {
+                    binding.tvDaysRemaining.text = "Expires today"
+                    binding.tvDaysRemaining.setTextColor(context.getColor(R.color.status_pending))
+                    binding.tvDaysRemaining.setBackgroundColor(context.getColor(R.color.status_pending_bg))
+                } else {
+                    binding.tvDaysRemaining.text = "${daysRemaining}d left"
+                    binding.tvDaysRemaining.setTextColor(context.getColor(if (daysRemaining <= 3) R.color.status_pending else R.color.status_confirmed))
+                    binding.tvDaysRemaining.setBackgroundColor(context.getColor(if (daysRemaining <= 3) R.color.status_pending_bg else R.color.status_confirmed_bg))
+                }
+            } else {
+                binding.tvDaysRemaining.visibility = View.GONE
+            }
+
             if (isExpired || txCount >= txLimit) {
-                binding.tvSubscription.text = if (txCount >= txLimit) "LIMIT EXCEEDED" else "EXPIRED"
+                binding.tvSubscription.text = if (txCount >= txLimit) "QUOTA FULL" else "EXPIRED"
                 binding.tvSubscription.setTextColor(context.getColor(R.color.status_denied))
                 binding.tvSubscription.setBackgroundColor(context.getColor(R.color.status_denied_bg))
                 binding.tvSubscriptionEnds.setTextColor(context.getColor(R.color.status_denied))

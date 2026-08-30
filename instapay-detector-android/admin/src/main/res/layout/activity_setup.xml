@@ -79,22 +79,6 @@
                     android:orientation="vertical"
                     android:padding="24dp">
 
-                    <!-- Gateway URL -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        style="@style/Widget.InstaPayAdmin.TextInputLayout">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_gateway_url"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:hint="@string/hint_gateway_url"
-                            android:inputType="textUri"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
 
                     <!-- Email Address -->
                     <com.google.android.material.textfield.TextInputLayout

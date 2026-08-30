@@ -15,9 +15,28 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { instapayHandle, webhookUrl, instapayPaymentUrl, checkoutTtlMin, regenerateWebhookSecret, regenerateApiKey, regenerateDetectToken } = body || {}
+    const { businessName, businessType, instapayHandle, webhookUrl, instapayPaymentUrl, checkoutTtlMin, regenerateWebhookSecret, regenerateApiKey, regenerateDetectToken } = body || {}
 
     const data: Record<string, any> = {}
+
+    if (businessName !== undefined) {
+      const trimmedBusinessName = String(businessName || '').trim()
+      if (!trimmedBusinessName) {
+        return NextResponse.json({ ok: false, error: 'Business name is required.' }, { status: 400 })
+      }
+      if (trimmedBusinessName.length > 120) {
+        return NextResponse.json({ ok: false, error: 'Business name must be 120 characters or less.' }, { status: 400 })
+      }
+      data.businessName = trimmedBusinessName
+    }
+
+    if (businessType !== undefined) {
+      const trimmedBusinessType = String(businessType || '').trim()
+      if (trimmedBusinessType && trimmedBusinessType.length > 80) {
+        return NextResponse.json({ ok: false, error: 'Business type must be 80 characters or less.' }, { status: 400 })
+      }
+      data.businessType = trimmedBusinessType || null
+    }
 
     if (instapayHandle !== undefined) {
       const rawHandle = String(instapayHandle || '').trim().toLowerCase().replace(/^@/, '')
@@ -92,6 +111,7 @@ export async function PATCH(request: NextRequest) {
         id: updated.id,
         slug: updated.slug,
         businessName: updated.businessName,
+        businessType: updated.businessType,
         instapayHandle: updated.instapayHandle,
         instapayPaymentUrl: updated.instapayPaymentUrl,
         email: updated.email,

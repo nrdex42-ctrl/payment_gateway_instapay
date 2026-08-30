@@ -24,11 +24,16 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = await request.json()
-    const { businessName, email, password, verificationId, otp } = body || {}
+    const { businessName, businessType, email, password, verificationId, otp } = body || {}
     const normalizedEmail = normalizeEmail(email || '')
+    const normalizedBusinessType = String(businessType || '').trim()
 
-    if (!businessName?.trim() || !normalizedEmail || !password?.trim() || !verificationId?.trim() || !otp?.trim()) {
+    if (!businessName?.trim() || !normalizedBusinessType || !normalizedEmail || !password?.trim() || !verificationId?.trim() || !otp?.trim()) {
       return NextResponse.json({ ok: false, error: 'All fields are required.' }, { status: 400 })
+    }
+
+    if (normalizedBusinessType.length > 80) {
+      return NextResponse.json({ ok: false, error: 'Business type must be 80 characters or less.' }, { status: 400 })
     }
 
     const emailError = validateMerchantSignupEmail(normalizedEmail)
@@ -103,6 +108,7 @@ export async function POST(request: NextRequest) {
     const client = await db.client.create({
       data: {
         businessName: businessName.trim(),
+        businessType: normalizedBusinessType,
         slug,
         instapayHandle: provisionalHandle,
         email: normalizedEmail,
@@ -130,6 +136,7 @@ export async function POST(request: NextRequest) {
       client: {
         id: client.id,
         businessName: client.businessName,
+        businessType: client.businessType,
         slug: client.slug,
         email: client.email,
         approvalStatus: client.approvalStatus,

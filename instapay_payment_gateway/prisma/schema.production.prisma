@@ -43,6 +43,7 @@ model Client {
   id             String   @id @default(cuid())
   slug           String   @unique
   businessName   String
+  businessType   String?
   instapayHandle String
   instapayPaymentUrl String?
 

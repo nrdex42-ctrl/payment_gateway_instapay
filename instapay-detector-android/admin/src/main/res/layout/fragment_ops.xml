@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/swipe_refresh"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -16,11 +17,12 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <!-- Health Score & Risk Card -->
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.InstaPayAdmin.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp">
+                android:layout_marginBottom="14dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -28,29 +30,95 @@
                     android:orientation="vertical"
                     android:padding="20dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/ops_title"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/ops_title"
+                                android:textColor="@color/text_primary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Platform reliability &amp; health score"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_risk_pill"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_status_confirmed"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:text="HEALTHY"
+                            android:textColor="@color/status_confirmed"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Score bar -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Risk, health, reliability, and action readiness."
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="16dp">
+
+                        <TextView
+                            android:id="@+id/tv_health_score_num"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="100%"
+                            android:textColor="@color/text_primary"
+                            android:textSize="28sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_health_readiness"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="All systems operating normally"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/pb_health"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="10dp"
+                        android:max="100"
+                        android:progress="100"
+                        android:progressTint="@color/brand_primary"
+                        android:progressBackgroundTint="@color/bg_input" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Metrics 2x2 Grid -->
             <GridLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:columnCount="2"
-                android:useDefaultMargins="true">
+                android:useDefaultMargins="true"
+                android:layout_marginBottom="14dp">
 
                 <include
                     android:id="@+id/card_merchants"
@@ -81,36 +149,57 @@
                     android:layout_columnWeight="1" />
             </GridLayout>
 
+            <!-- Quick Action Shortcuts -->
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.InstaPayAdmin.Card"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp">
+                android:layout_height="wrap_content">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Platform state"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp" />
-
-                    <TextView
-                        android:id="@+id/tv_ops_state"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Loading"
+                        android:text="Quick Actions"
                         android:textColor="@color/text_primary"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="12dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btn_action_approvals"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1"
+                            android:text="Approvals"
+                            android:textColor="@color/text_primary"
+                            app:strokeColor="@color/border_medium"
+                            android:layout_marginEnd="6dp" />
+
+                        <Button
+                            android:id="@+id/btn_action_notify"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1"
+                            android:text="Broadcast"
+                            android:textColor="@color/text_primary"
+                            app:strokeColor="@color/border_medium"
+                            android:layout_marginStart="6dp" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

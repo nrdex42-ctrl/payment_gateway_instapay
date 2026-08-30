@@ -1,6 +1,5 @@
 package com.instapaydetector.admin
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -11,13 +10,12 @@ import com.instapaydetector.admin.databinding.ActivitySetupBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.IOException
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-
+import java.io.IOException
 
 class SetupActivity : AppCompatActivity() {
 
@@ -29,11 +27,10 @@ class SetupActivity : AppCompatActivity() {
 
         // Redirect if already configured
         val prefs = ApiClient.getPrefs(this)
-        val gatewayUrl = prefs.getString("gateway_url", null)
         val portalHash = prefs.getString("portal_hash", null)
         val ownerSecret = prefs.getString("owner_secret", null)
 
-        if (!gatewayUrl.isNullOrEmpty() && !portalHash.isNullOrEmpty() && !ownerSecret.isNullOrEmpty()) {
+        if (!portalHash.isNullOrEmpty() && !ownerSecret.isNullOrEmpty()) {
             startMainActivity()
             return
         }
@@ -41,27 +38,20 @@ class SetupActivity : AppCompatActivity() {
         binding = ActivitySetupBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Pre-fill default production server URL
-        binding.etGatewayUrl.setText("https://instapay-ruddy.vercel.app")
-
         binding.btnConnect.setOnClickListener {
             handleSetup()
         }
     }
 
     private fun handleSetup() {
-        val gatewayUrl = binding.etGatewayUrl.text?.toString()?.trim() ?: ""
+        val prefs = ApiClient.getPrefs(this)
+        val gatewayUrl = ApiClient.getGatewayUrl(this)
         val email = binding.etEmail.text?.toString()?.trim() ?: ""
         val password = binding.etPassword.text?.toString()?.trim() ?: ""
         val totp = binding.etTotp.text?.toString()?.trim() ?: ""
 
-        if (gatewayUrl.isEmpty() || email.isEmpty() || password.isEmpty() || totp.isEmpty()) {
-            showError(getString(R.string.error_invalid_fields))
-            return
-        }
-
-        if (!gatewayUrl.startsWith("http://") && !gatewayUrl.startsWith("https://")) {
-            showError("URL must start with http:// or https://")
+        if (email.isEmpty() || password.isEmpty() || totp.isEmpty()) {
+            showError("Please enter your email, password, and TOTP code.")
             return
         }
 
@@ -77,19 +67,18 @@ class SetupActivity : AppCompatActivity() {
                 performAdminLogin(cleanUrl, email, password, totp)
             }
             if (token != null) {
-                val prefs = ApiClient.getPrefs(this@SetupActivity)
                 prefs.edit()
                     .putString("gateway_url", cleanUrl)
                     .putString("portal_hash", "admin")
                     .putString("owner_secret", token)
                     .apply()
 
-                Toast.makeText(this@SetupActivity, "Setup Completed Successfully!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@SetupActivity, "Signed in successfully!", Toast.LENGTH_SHORT).show()
                 startMainActivity()
             } else {
                 binding.btnConnect.isEnabled = true
                 binding.btnConnect.text = getString(R.string.btn_connect)
-                showError("Connection or authentication failed. Check credentials/2FA.")
+                showError("Authentication failed. Check your email, password, or 2FA code.")
             }
         }
     }

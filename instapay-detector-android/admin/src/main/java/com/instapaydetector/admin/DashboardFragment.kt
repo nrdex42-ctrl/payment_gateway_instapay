@@ -183,6 +183,8 @@ open class DashboardFragment : Fragment() {
             binding.swipeRefresh.isRefreshing = true
             val response = ApiClient.post(requireContext(), "/api/admin/clients/$id/approve", JSONObject())
             if (response.isSuccessful) {
+                AdminNotificationHelper.dismissMerchantNotification(requireContext(), id)
+                (activity as? MainActivity)?.fetchPendingApprovals()
                 loadDashboardData()
             } else {
                 binding.swipeRefresh.isRefreshing = false
@@ -200,6 +202,8 @@ open class DashboardFragment : Fragment() {
                     binding.swipeRefresh.isRefreshing = true
                     val response = ApiClient.post(requireContext(), "/api/admin/clients/$id/reject", JSONObject())
                     if (response.isSuccessful) {
+                        AdminNotificationHelper.dismissMerchantNotification(requireContext(), id)
+                        (activity as? MainActivity)?.fetchPendingApprovals()
                         loadDashboardData()
                     } else {
                         binding.swipeRefresh.isRefreshing = false

@@ -38,3 +38,5 @@ local.properties
 Thumbs.db
 .vercel
 .env*
+.android_home/
+**/.android_home/

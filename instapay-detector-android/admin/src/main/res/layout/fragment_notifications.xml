@@ -12,124 +12,218 @@
         android:clipToPadding="false"
         android:padding="16dp">
 
-        <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.InstaPayAdmin.Card"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-            <LinearLayout
+            <!-- Notification Compose Card -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.InstaPayAdmin.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
+                android:layout_marginBottom="16dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Notifications"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Message merchants on website and detector APK."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-
-                <Spinner
-                    android:id="@+id/spinner_merchant"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp" />
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.InstaPayAdmin.TextInputLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/et_notification_title"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/ops_title_hint"
-                        android:textColor="@color/text_primary" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="4dp">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.InstaPayAdmin.TextInputLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp">
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_bell"
+                            app:tint="@color/brand_accent"
+                            android:contentDescription="@null" />
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/et_notification_message"
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ops_send_notification"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold"
+                            android:layout_marginStart="8dp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Dispatch alerts to merchant detector apps, web portals, and emails."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="18dp" />
+
+                    <!-- Recipient Target -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ops_target_merchant"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:layout_marginBottom="6dp" />
+
+                    <Spinner
+                        android:id="@+id/spinner_merchant"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_input_rounded"
+                        android:paddingHorizontal="12dp" />
+
+                    <!-- Delivery Channel Selection -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_delivery_channel"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginBottom="6dp" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chip_group_channel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="top"
-                        android:hint="@string/ops_message_hint"
-                        android:minLines="4"
-                        android:textColor="@color/text_primary" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
 
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chip_group_severity"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    app:selectionRequired="true"
-                    app:singleSelection="true">
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_channel_both"
+                            style="@style/Widget.InstaPayAdmin.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true"
+                            android:text="@string/channel_both" />
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_info"
-                        style="@style/Widget.InstaPayAdmin.Chip"
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_channel_detector"
+                            style="@style/Widget.InstaPayAdmin.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/channel_detector" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_channel_email"
+                            style="@style/Widget.InstaPayAdmin.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/channel_email" />
+                    </com.google.android.material.chip.ChipGroup>
+
+                    <!-- Title Input -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.InstaPayAdmin.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_notification_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="@string/ops_title_hint"
+                            android:textColor="@color/text_primary" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Message Input -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.InstaPayAdmin.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_notification_message"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="top"
+                            android:hint="@string/ops_message_hint"
+                            android:minLines="3"
+                            android:textColor="@color/text_primary" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Severity Selection -->
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:text="@string/ops_severity_info" />
+                        android:text="Severity / Priority"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:layout_marginTop="14dp"
+                        android:layout_marginBottom="6dp" />
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_success"
-                        style="@style/Widget.InstaPayAdmin.Chip"
-                        android:layout_width="wrap_content"
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chip_group_severity"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/ops_severity_success" />
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_warning"
-                        style="@style/Widget.InstaPayAdmin.Chip"
-                        android:layout_width="wrap_content"
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_info"
+                            style="@style/Widget.InstaPayAdmin.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true"
+                            android:text="@string/ops_severity_info" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_success"
+                            style="@style/Widget.InstaPayAdmin.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ops_severity_success" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_warning"
+                            style="@style/Widget.InstaPayAdmin.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ops_severity_warning" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_urgent"
+                            style="@style/Widget.InstaPayAdmin.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ops_severity_urgent" />
+                    </com.google.android.material.chip.ChipGroup>
+
+                    <Button
+                        android:id="@+id/btn_send_notification"
+                        style="@style/Widget.InstaPayAdmin.Button.Primary"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="18dp"
+                        android:text="@string/ops_send_notification" />
+
+                    <TextView
+                        android:id="@+id/tv_notification_result"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/ops_severity_warning" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_urgent"
-                        style="@style/Widget.InstaPayAdmin.Chip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/ops_severity_urgent" />
-                </com.google.android.material.chip.ChipGroup>
-
-                <Button
-                    android:id="@+id/btn_send_notification"
-                    style="@style/Widget.InstaPayAdmin.Button.Primary"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="16dp"
-                    android:text="@string/ops_send_notification" />
-
-                <TextView
-                    android:id="@+id/tv_notification_result"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    android:visibility="gone" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                        android:layout_marginTop="12dp"
+                        android:padding="12dp"
+                        android:background="@drawable/bg_input_rounded"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+

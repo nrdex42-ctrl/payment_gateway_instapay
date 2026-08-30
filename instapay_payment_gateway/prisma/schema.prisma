@@ -44,6 +44,7 @@ model Client {
   id             String   @id @default(cuid())
   slug           String   @unique  // URL-safe identifier, e.g. "ahmed-electronics"
   businessName   String
+  businessType   String?
   instapayHandle String             // their InstaPay handle, e.g. "ahmed_shop@instapay"
   instapayPaymentUrl String?        // exact static URL copied from InstaPay APK share/payment link
 

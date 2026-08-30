@@ -74,6 +74,7 @@
     <string name="search_transactions">Search by reference or handle…</string>
     <string name="chip_confirmed">Confirmed</string>
     <string name="chip_expired">Expired</string>
+    <string name="chip_underpaid">Underpaid</string>
     <string name="btn_export_csv">Export CSV</string>
     <string name="btn_force_confirm">Force Confirm</string>
     <string name="confirm_force_confirm">Are you sure you want to manually force-confirm this payment? This will directly confirm the transaction and trigger webhook notifications.</string>
@@ -86,22 +87,33 @@
     <string name="label_reference">Reference</string>
     <string name="label_detected_at">Detected At</string>
 
-    <!-- Operations -->
+    <!-- Operations & Notifications -->
     <string name="ops_title">Operations Center</string>
-    <string name="ops_subtitle">Notifications, webhooks, and audit visibility</string>
+    <string name="ops_subtitle">Health score, risk metrics, and quick actions</string>
     <string name="ops_send_notification">Send Notification</string>
-    <string name="ops_target_merchant">Target Merchant ID</string>
+    <string name="ops_target_merchant">Target Merchant</string>
     <string name="ops_title_hint">Notification title</string>
-    <string name="ops_message_hint">Message for the merchant</string>
+    <string name="ops_message_hint">Message for the merchant(s)</string>
     <string name="ops_severity_info">Info</string>
     <string name="ops_severity_success">Success</string>
     <string name="ops_severity_warning">Warning</string>
     <string name="ops_severity_urgent">Urgent</string>
     <string name="ops_recent_webhooks">Recent Webhooks</string>
     <string name="ops_audit_trail">Audit Trail</string>
-    <string name="ops_all_merchants">All merchants</string>
+    <string name="ops_all_merchants">📢 All Merchants (Broadcast)</string>
     <string name="ops_notification_sent">Notification sent successfully.</string>
     <string name="ops_notification_failed">Failed to send notification.</string>
+    <string name="label_delivery_channel">Delivery Channel</string>
+    <string name="channel_both">🔔 Both (App &amp; Email)</string>
+    <string name="channel_detector">📱 Detector APK &amp; Web</string>
+    <string name="channel_email">✉️ Merchant Email</string>
+    <string name="label_health_score">Health Score</string>
+    <string name="label_ready_accounts">Ready Accounts</string>
+    <string name="label_open_issues">Open Issues</string>
+    <string name="label_pending_tx">Pending Tx</string>
+    <string name="label_risk_healthy">Healthy</string>
+    <string name="label_risk_attention">Needs Attention</string>
+    <string name="label_risk_critical">Critical</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
@@ -118,6 +130,21 @@
     <string name="btn_reset_setup">Reset &amp; Reconnect</string>
     <string name="confirm_logout">Are you sure you want to sign out?</string>
     <string name="label_app_version">App Version</string>
+
+    <!-- Notifications & Approvals -->
+    <string name="notification_icon_desc">Pending Approvals Notifications</string>
+    <string name="notification_channel_name">Merchant Signups &amp; Reviews</string>
+    <string name="notification_channel_desc">Alerts when new merchants register and require administrative approval</string>
+    <string name="notif_new_merchant_title">New Merchant Review Required</string>
+    <string name="notif_new_merchant_body">%1$s has signed up and is waiting for review.</string>
+    <string name="notif_action_review">Review</string>
+    <string name="sheet_pending_title">Pending Merchant Reviews</string>
+    <string name="sheet_pending_subtitle">Merchants waiting for your approval to start accepting payments</string>
+    <string name="btn_view_in_merchants">Open in Merchants Console</string>
+    <string name="empty_pending_reviews_title">All Caught Up!</string>
+    <string name="empty_pending_reviews_desc">There are currently no new merchants awaiting review.</string>
+    <string name="toast_merchant_approved">Merchant approved successfully.</string>
+    <string name="toast_merchant_rejected">Merchant rejected.</string>
 
     <!-- General -->
     <string name="btn_refresh">Refresh</string>

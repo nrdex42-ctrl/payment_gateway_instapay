@@ -42,7 +42,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Invalid or expired verification code.' }, { status: 400 })
     }
     await db.emailVerification.update({ where: { id: verification.id }, data: { consumedAt: new Date() } })
-    const response = NextResponse.json({ ok: true, message: 'Logged in successfully.', apiKey: client.apiKey, detectToken: client.detectToken, instapayHandle: client.instapayHandle, businessName: client.businessName, email: client.email, subscriptionPlan: client.subscriptionPlan, subscriptionEndsAt: client.subscriptionEndsAt?.toISOString() || null })
+    const response = NextResponse.json({
+      ok: true,
+      message: 'Logged in successfully.',
+      apiKey: client.apiKey,
+      detectToken: client.detectToken,
+      instapayHandle: client.instapayHandle,
+      businessName: client.businessName,
+      businessType: client.businessType,
+      email: client.email,
+      subscriptionPlan: client.subscriptionPlan,
+      subscriptionEndsAt: client.subscriptionEndsAt?.toISOString() || null,
+      webhookUrl: client.webhookUrl,
+      instapayPaymentUrl: client.instapayPaymentUrl,
+      checkoutTtlMin: client.checkoutTtlMin,
+    })
     Object.entries(getRateLimitHeaders(rl)).forEach(([k, v]) => response.headers.set(k, v))
     return response
   } catch (err) {

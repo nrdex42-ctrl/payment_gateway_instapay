@@ -53,10 +53,28 @@ class GatewayConfig private constructor(ctx: Context) {
             prefs.edit().putString(KEY_MERCHANT_HANDLE, value.trim().lowercase()).apply()
         }
 
+    var merchantBusinessName: String
+        get() = prefs.getString(KEY_MERCHANT_BUSINESS_NAME, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_MERCHANT_BUSINESS_NAME, value.trim()).apply()
+        }
+
     var merchantEmail: String
         get() = prefs.getString(KEY_MERCHANT_EMAIL, "") ?: ""
         set(value) {
             prefs.edit().putString(KEY_MERCHANT_EMAIL, value.trim().lowercase()).apply()
+        }
+
+    var merchantWebhookUrl: String
+        get() = prefs.getString(KEY_MERCHANT_WEBHOOK_URL, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_MERCHANT_WEBHOOK_URL, value.trim()).apply()
+        }
+
+    var merchantPaymentUrl: String
+        get() = prefs.getString(KEY_MERCHANT_PAYMENT_URL, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_MERCHANT_PAYMENT_URL, value.trim()).apply()
         }
 
     var subscriptionPlan: String
@@ -81,20 +99,53 @@ class GatewayConfig private constructor(ctx: Context) {
         get() = prefs.getString(KEY_PENDING_VERIFICATION, "") ?: ""
         set(value) { prefs.edit().putString(KEY_PENDING_VERIFICATION, value).apply() }
 
+    fun syncFromMerchant(merchant: MerchantInfo, subscription: SubscriptionInfo? = null) {
+        val editor = prefs.edit()
+        if (merchant.handle.isNotBlank() && merchant.handle != "All Clients") {
+            editor.putString(KEY_MERCHANT_HANDLE, merchant.handle.trim().lowercase())
+        }
+        if (merchant.name.isNotBlank() && merchant.name != "Platform Overview") {
+            editor.putString(KEY_MERCHANT_BUSINESS_NAME, merchant.name.trim())
+        }
+        if (merchant.email.isNotBlank()) {
+            editor.putString(KEY_MERCHANT_EMAIL, merchant.email.trim().lowercase())
+        }
+        if (merchant.webhookUrl != null) {
+            editor.putString(KEY_MERCHANT_WEBHOOK_URL, merchant.webhookUrl.trim())
+        }
+        if (merchant.instapayPaymentUrl != null) {
+            editor.putString(KEY_MERCHANT_PAYMENT_URL, merchant.instapayPaymentUrl.trim())
+        }
+        if (!merchant.detectToken.isNullOrBlank()) {
+            editor.putString(KEY_TOKEN, merchant.detectToken.trim())
+        }
+        if (!merchant.apiKey.isNullOrBlank()) {
+            editor.putString(KEY_DASHBOARD_API_KEY, merchant.apiKey.trim())
+        }
+        if (subscription != null) {
+            editor.putString(KEY_SUBSCRIPTION_PLAN, subscription.plan.trim())
+            editor.putString(KEY_SUBSCRIPTION_ENDS_AT, subscription.subscriptionEndsAt?.trim())
+        }
+        editor.apply()
+    }
+
     companion object {
         private const val FILE_NAME = "gateway_config.xml"
         private const val KEY_URL = "gateway_url"
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_DASHBOARD_API_KEY = "dashboard_api_key"
         private const val KEY_MERCHANT_HANDLE = "merchant_handle"
+        private const val KEY_MERCHANT_BUSINESS_NAME = "merchant_business_name"
         private const val KEY_MERCHANT_EMAIL = "merchant_email"
+        private const val KEY_MERCHANT_WEBHOOK_URL = "merchant_webhook_url"
+        private const val KEY_MERCHANT_PAYMENT_URL = "merchant_payment_url"
         private const val KEY_SUBSCRIPTION_PLAN = "subscription_plan"
         private const val KEY_SUBSCRIPTION_ENDS_AT = "subscription_ends_at"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
         private const val KEY_PENDING_VERIFICATION = "pending_verification"
 
         private const val DEFAULT_URL =
-            "https://your-gateway.example.com/api/webhooks/instapay"
+            "https://instapay-ruddy.vercel.app/api/webhooks/instapay"
         private const val DEFAULT_TOKEN = "instapay-sandbox-detector-token-2026"
         private const val DEFAULT_MERCHANT_HANDLE = "mohammedshabana77@instapay"
 

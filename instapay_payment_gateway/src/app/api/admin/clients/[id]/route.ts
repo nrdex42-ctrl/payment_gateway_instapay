@@ -22,7 +22,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   try {
     const { id } = resolvedParams
     const body = await request.json()
-    const { businessName, instapayHandle, instapayPaymentUrl, webhookUrl, checkoutTtlMin, isActive, subscriptionPlan, isFreeTrial, subscriptionEndsAt, txLimit, txCount } = body || {}
+    const { businessName, businessType, instapayHandle, instapayPaymentUrl, webhookUrl, checkoutTtlMin, isActive, subscriptionPlan, isFreeTrial, subscriptionEndsAt, txLimit, txCount } = body || {}
 
     const client = await db.client.findUnique({ where: { id } })
     if (!client) {
@@ -31,6 +31,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const data: Record<string, unknown> = {}
     if (businessName !== undefined) data.businessName = String(businessName).trim()
+    if (businessType !== undefined) data.businessType = businessType ? String(businessType).trim().slice(0, 80) : null
     if (instapayPaymentUrl !== undefined) data.instapayPaymentUrl = instapayPaymentUrl ? normalizeInstaPayPaymentUrl(String(instapayPaymentUrl)) : null
     if (webhookUrl !== undefined) data.webhookUrl = webhookUrl ? String(webhookUrl).trim() : null
     if (checkoutTtlMin !== undefined) data.checkoutTtlMin = Number(checkoutTtlMin)

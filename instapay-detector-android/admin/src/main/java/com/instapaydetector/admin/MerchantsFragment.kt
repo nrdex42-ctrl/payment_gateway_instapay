@@ -99,6 +99,12 @@ class MerchantsFragment : Fragment() {
         }
     }
 
+    fun setPendingFilter() {
+        if (_binding != null) {
+            binding.chipPending.isChecked = true
+        }
+    }
+
     private fun loadMerchants() {
         lifecycleScope.launch {
             val response = ApiClient.get(requireContext(), "/api/admin/clients")
@@ -110,6 +116,7 @@ class MerchantsFragment : Fragment() {
                     allMerchants.add(array.getJSONObject(i))
                 }
                 applyFilters()
+                (activity as? MainActivity)?.fetchPendingApprovals()
             } else if (response.isUnauthorized) {
                 handleUnauthorized()
             } else {

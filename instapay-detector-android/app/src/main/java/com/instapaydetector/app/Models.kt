@@ -34,6 +34,11 @@ data class MerchantInfo(
     val handle: String,
     val name: String,
     val email: String,
+    val webhookUrl: String? = null,
+    val instapayPaymentUrl: String? = null,
+    val checkoutTtlMin: Int? = null,
+    val detectToken: String? = null,
+    val apiKey: String? = null,
 )
 
 data class SubscriptionInfo(

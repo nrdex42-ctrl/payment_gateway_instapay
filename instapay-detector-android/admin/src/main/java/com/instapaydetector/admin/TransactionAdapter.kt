@@ -63,6 +63,15 @@ class TransactionAdapter(
                         onForceConfirm(sessionId)
                     }
                 }
+                "UNDERPAID" -> {
+                    binding.tvStatusBadge.text = "UNDERPAID"
+                    binding.tvStatusBadge.setTextColor(context.getColor(R.color.accent_amber))
+                    binding.tvStatusBadge.setBackgroundColor(context.getColor(R.color.status_pending_bg))
+                    binding.btnForceConfirm.visibility = View.VISIBLE
+                    binding.btnForceConfirm.setOnClickListener {
+                        onForceConfirm(sessionId)
+                    }
+                }
                 "EXPIRED" -> {
                     binding.tvStatusBadge.text = "EXPIRED"
                     binding.tvStatusBadge.setTextColor(context.getColor(R.color.status_expired))

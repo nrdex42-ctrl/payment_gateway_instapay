@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/bg_surface"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="24dp">
+
+    <!-- Drag Handle -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_notification_badge"
+        android:backgroundTint="@color/border_medium" />
+
+    <!-- Sheet Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <FrameLayout
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_notification_badge"
+            android:backgroundTint="@color/accent_amber_bg">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_bell"
+                app:tint="@color/accent_amber" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp">
+
+            <TextView
+                android:id="@+id/tv_sheet_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sheet_pending_title"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sheet_pending_subtitle"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btn_close_sheet"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_notification_btn"
+            android:src="@drawable/ic_close"
+            app:tint="@color/text_tertiary"
+            android:contentDescription="@string/btn_cancel" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Progress Indicator -->
+    <ProgressBar
+        android:id="@+id/progress_loading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminateTint="@color/brand_primary"
+        android:visibility="gone"
+        android:layout_margin="16dp" />
+
+    <!-- Pending Merchant List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_pending_merchants"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="380dp"
+        android:nestedScrollingEnabled="false" />
+
+    <!-- Empty State -->
+    <LinearLayout
+        android:id="@+id/layout_empty_state"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingTop="20dp"
+        android:paddingBottom="20dp"
+        android:visibility="gone">
+
+        <FrameLayout
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_notification_badge"
+            android:backgroundTint="@color/status_confirmed_bg">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_check_circle"
+                app:tint="@color/status_confirmed" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/empty_pending_reviews_title"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:layout_marginTop="12dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/empty_pending_reviews_desc"
+            android:textColor="@color/text_muted"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:layout_marginTop="4dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginEnd="24dp" />
+    </LinearLayout>
+
+    <!-- Bottom Actions -->
+    <Button
+        android:id="@+id/btn_open_merchants_tab"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="12dp"
+        android:text="@string/btn_view_in_merchants"
+        android:textColor="@color/text_primary"
+        app:backgroundTint="@color/bg_card_elevated"
+        app:cornerRadius="12dp"
+        android:textAllCaps="false"
+        android:textSize="12sp" />
+
+</LinearLayout>

@@ -120,12 +120,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:layout_marginTop="4dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Ends:"
+                    android:text="Expires:"
                     android:textColor="@color/text_muted"
                     android:textSize="11sp" />
 
@@ -137,6 +138,59 @@
                     android:textSize="11sp"
                     android:fontFamily="monospace"
                     android:layout_marginStart="6dp" />
+
+                <TextView
+                    android:id="@+id/tv_days_remaining"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="1dp"
+                    android:background="@drawable/bg_avatar_pending"
+                    android:textColor="@color/accent_amber"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
+
+            <!-- Quota Usage Bar -->
+            <LinearLayout
+                android:id="@+id/layout_quota"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="6dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Plan Quota Usage"
+                        android:textColor="@color/text_muted"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/tv_quota_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="10sp"
+                        android:fontFamily="monospace" />
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/pb_quota"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="4dp"
+                    android:max="100"
+                    android:progressTint="@color/brand_accent"
+                    android:progressBackgroundTint="@color/bg_input" />
             </LinearLayout>
         </LinearLayout>
 

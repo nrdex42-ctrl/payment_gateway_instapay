@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
           id: client.id,
           slug: client.slug,
           businessName: client.businessName,
+          businessType: client.businessType,
           instapayHandle: client.instapayHandle,
           instapayPaymentUrl: client.instapayPaymentUrl,
           email: client.email,
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { businessName, instapayHandle, instapayPaymentUrl, email, password, webhookUrl, checkoutTtlMin } = body || {}
+    const { businessName, businessType, instapayHandle, instapayPaymentUrl, email, password, webhookUrl, checkoutTtlMin } = body || {}
 
     if (!businessName?.trim() || !instapayHandle?.trim() || !email?.trim()) {
       return NextResponse.json({ ok: false, error: 'businessName, instapayHandle, and email are required.' }, { status: 400 })
@@ -125,6 +126,7 @@ export async function POST(request: NextRequest) {
       data: {
         slug,
         businessName: businessName.trim(),
+        businessType: businessType ? String(businessType).trim().slice(0, 80) : null,
         instapayHandle: handle,
         instapayPaymentUrl: instapayPaymentUrl ? normalizeInstaPayPaymentUrl(String(instapayPaymentUrl)) : null,
         email: email.trim().toLowerCase(),
@@ -146,6 +148,7 @@ export async function POST(request: NextRequest) {
         id: client.id,
         slug: client.slug,
         businessName: client.businessName,
+        businessType: client.businessType,
         instapayHandle: client.instapayHandle,
         instapayPaymentUrl: client.instapayPaymentUrl,
         email: client.email,

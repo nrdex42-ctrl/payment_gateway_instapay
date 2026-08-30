@@ -42,9 +42,9 @@
                         android:orientation="horizontal">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            app:cardCornerRadius="24dp"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            app:cardCornerRadius="27dp"
                             app:cardElevation="0dp"
                             app:strokeWidth="1dp"
                             app:strokeColor="@color/border_subtle"
@@ -89,10 +89,19 @@
                                 android:textColor="@color/text_tertiary"
                                 android:textSize="10sp" />
                         </LinearLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
                         <LinearLayout
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
                             android:gravity="center_vertical"
                             android:orientation="horizontal"
                             android:background="@drawable/bg_live_status"
@@ -115,6 +124,39 @@
                                 android:textSize="11sp"
                                 android:textStyle="bold" />
                         </LinearLayout>
+
+                        <FrameLayout
+                            android:id="@+id/btnNotifications"
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:layout_marginStart="10dp"
+                            android:background="@drawable/bg_live_status"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_bell"
+                                app:tint="@color/text_primary" />
+
+                            <TextView
+                                android:id="@+id/tvNotifBadge"
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:layout_gravity="top|end"
+                                android:layout_marginTop="2dp"
+                                android:layout_marginEnd="2dp"
+                                android:background="@drawable/bg_badge"
+                                android:gravity="center"
+                                android:textColor="@color/text_on_primary"
+                                android:textSize="9sp"
+                                android:textStyle="bold"
+                                android:visibility="gone"
+                                tools:text="3"
+                                tools:visibility="visible" />
+                        </FrameLayout>
                     </LinearLayout>
 
                     <TextView
@@ -209,52 +251,64 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Stat cards: 2x2 grid -->
+            <!-- Stat cards: responsive 2x2 grid using only platform layouts -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="2">
+                android:layout_marginTop="2dp"
+                android:orientation="vertical">
 
-                <include
-                    android:id="@+id/cardToday"
-                    layout="@layout/item_stat_card"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="6dp" />
+                    android:orientation="horizontal">
 
-                <include
-                    android:id="@+id/card7days"
-                    layout="@layout/item_stat_card"
+                    <include
+                        android:id="@+id/cardToday"
+                        layout="@layout/item_stat_card"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <Space
+                        android:layout_width="8dp"
+                        android:layout_height="0dp" />
+
+                    <include
+                        android:id="@+id/card7days"
+                        layout="@layout/item_stat_card"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+                </LinearLayout>
+
+                <Space
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp" />
-            </LinearLayout>
+                    android:layout_height="8dp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="2"
-                android:layout_marginTop="8dp">
-
-                <include
-                    android:id="@+id/cardPending"
-                    layout="@layout/item_stat_card"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="6dp" />
+                    android:orientation="horizontal">
 
-                <include
-                    android:id="@+id/cardAvg"
-                    layout="@layout/item_stat_card"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp" />
+                    <include
+                        android:id="@+id/cardPending"
+                        layout="@layout/item_stat_card"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <Space
+                        android:layout_width="8dp"
+                        android:layout_height="0dp" />
+
+                    <include
+                        android:id="@+id/cardAvg"
+                        layout="@layout/item_stat_card"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+                </LinearLayout>
             </LinearLayout>
 
             <!-- Revenue Trend Section -->
@@ -265,30 +319,118 @@
                 android:layout_marginTop="12dp">
 
                 <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                    <TextView
+                    <!-- Chart Header & Metric Switcher -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/dash_revenue_trend"
-                        android:textColor="@color/text_primary"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tvChartTitle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/dash_revenue_trend"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.button.MaterialButtonToggleGroup
+                            android:id="@+id/metricToggleGroup"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:singleSelection="true"
+                            app:selectionRequired="true">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnMetricRevenue"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="32dp"
+                                android:text="EGP"
+                                android:paddingHorizontal="10dp"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnMetricCount"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="32dp"
+                                android:text="Count"
+                                android:paddingHorizontal="10dp"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
+                    </LinearLayout>
+
+                    <!-- Range Selector Toggle (7D / 14D / 30D / 90D) -->
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/rangeToggleGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        app:singleSelection="true"
+                        app:selectionRequired="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRange7d"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1"
+                            android:text="7D"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRange14d"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1"
+                            android:text="14D"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRange30d"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1"
+                            android:text="30D"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRange90d"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1"
+                            android:text="90D"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
 
                     <!-- Native LineChart -->
                     <com.github.mikephil.charting.charts.LineChart
                         android:id="@+id/chart"
                         android:layout_width="match_parent"
-                        android:layout_height="200dp"
+                        android:layout_height="220dp"
                         android:layout_marginTop="12dp" />
 
                     <TextView
                         android:id="@+id/chartEmpty"
                         android:layout_width="match_parent"
-                        android:layout_height="200dp"
+                        android:layout_height="220dp"
                         android:gravity="center"
                         android:text="@string/dash_no_recent"
                         android:textColor="@color/text_tertiary"

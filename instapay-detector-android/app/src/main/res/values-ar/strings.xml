@@ -48,8 +48,10 @@
     <string name="title_settings">إعدادات الربط</string>
     <string name="title_status">الحالة</string>
 
-    <string name="gateway_url_label">رابط بوابة الدفع (Webhook URL)</string>
-    <string name="gateway_url_hint">https://your-gateway.example.com/api/webhooks/instapay</string>
+    <string name="gateway_url_label">نقطة استقبال الكاشف (Gateway Endpoint)</string>
+    <string name="gateway_url_hint">https://instapay-ruddy.vercel.app/api/webhooks/instapay</string>
+    <string name="merchant_webhook_url_label">رابط الـ Webhook الخاص بمتجرك</string>
+    <string name="merchant_webhook_url_hint">يتم ضبطه من لوحة التحكم</string>
     <string name="auth_token_label">رمز المصادقة (Auth token)</string>
     <string name="auth_token_hint">يجب أن يتطابق مع DETECT_TOKEN في البوابة</string>
     <string name="save_button">حفظ التغييرات</string>

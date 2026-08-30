@@ -1,0 +1,3 @@
+# Ignore Android detector app and premium storefront during payment gateway deployment
+instapay-detector-android
+premium service

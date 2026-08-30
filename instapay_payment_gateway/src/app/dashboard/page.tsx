@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Activity,
+  BookOpen,
   Clock,
   Copy,
   Download,
@@ -20,17 +22,27 @@ import {
   Eye,
   CheckCircle2,
   AlertCircle,
-  CreditCard
+  CreditCard,
+  Zap,
+  Play,
+  Send,
+  Radio,
+  Layers,
+  ShieldCheck,
+  Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { MerchantSidebar, DashboardTab } from '@/components/merchant-sidebar'
+import { MerchantHeader } from '@/components/merchant-header'
 
 interface ClientSession {
   id: string
   slug: string
   businessName: string
+  businessType: string | null
   instapayHandle: string
   instapayPaymentUrl: string | null
   email: string
@@ -61,22 +73,36 @@ interface RecentTx {
   currency: string
   status: string
   detectedRef: string | null
+  detectedAt: string | null
   detectedAtEgypt: string | null
   createdAt: string
+  createdAtEgypt: string
 }
 
-interface TransactionLog extends RecentTx {
-  createdAtEgypt?: string
+interface TransactionLog {
+  id?: string
+  sessionId: string
+  senderHandle: string
+  recipientHandle: string
+  amountEgp: number
+  currency: string
+  status: string
+  detectedRef: string | null
+  detectedAt: string | null
+  detectedAtEgypt?: string | null
+  createdAt: string
+  createdAtEgypt?: string | null
+  note?: string | null
 }
 
 interface WebhookLog {
   id: string
-  event: string
   url: string
-  isSuccess: boolean
-  statusCode: number | null
+  event: string
   payload: string
+  statusCode: number | null
   response: string | null
+  isSuccess: boolean
   createdAt: string
 }
 
@@ -108,14 +134,56 @@ interface SubscriptionCheckout {
   expiresAt: string
 }
 
-type DashboardTab = 'integration' | 'billing' | 'transactions' | 'webhooks'
+interface ProcessMonitorData {
+  detector: {
+    isActive: boolean
+    lastSeenAt: string | null
+    lastSeenMinsAgo: number | null
+    configuredHandle: string
+    tokenConfigured: boolean
+  }
+  matcher: {
+    pendingSessions: number
+    confirmedTotal: number
+    expiredTotal: number
+    avgConfirmationSpeedSec: number
+    matchRatePercent: number
+  }
+  webhookWorker: {
+    endpointUrl: string | null
+    secretConfigured: boolean
+    totalDispatched: number
+    successfulDispatched: number
+    failedDispatched: number
+    pendingRetriesCount: number
+    successRatePercent: number
+  }
+  apiGateway: {
+    keyLastUsedAt: string | null
+    plan: string
+    quotaUsed: number
+    quotaLimit: number
+    checkoutTtlMin: number
+  }
+  pipelineEvents: Array<{
+    id: string
+    type: string
+    title: string
+    description: string
+    timestamp: string
+    timestampEgypt: string
+    status: 'success' | 'warning' | 'pending' | 'error'
+    meta?: Record<string, any>
+  }>
+}
 
-const tabItems: Array<{ id: DashboardTab; label: string; description: string; icon: React.ReactNode }> = [
-  { id: 'integration', label: 'Developers', description: 'API keys, webhooks, checkout setup', icon: <Key className="h-4 w-4" /> },
-  { id: 'billing', label: 'Billing', description: 'Plans, quota, subscription checkout', icon: <CreditCard className="h-4 w-4" /> },
-  { id: 'transactions', label: 'Transactions', description: 'Search, filter, export history', icon: <Activity className="h-4 w-4" /> },
-  { id: 'webhooks', label: 'Webhooks', description: 'Delivery attempts and failures', icon: <Globe className="h-4 w-4" /> },
-]
+interface MerchantNotification {
+  id: string
+  title: string
+  message: string
+  severity: string
+  createdAt: string
+}
 
 function formatEgp(value: number) {
   return new Intl.NumberFormat('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
@@ -147,14 +215,29 @@ export default function MerchantDashboardPage() {
   const [client, setClient] = useState<ClientSession | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Sidebar & Layout state
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false)
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+
   // Dashboard state
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentTx, setRecentTx] = useState<RecentTx[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const [snippets, setSnippets] = useState<Snippets | null>(null)
   const [selectedSnippetTab, setSelectedSnippetTab] = useState<keyof Snippets>('curl')
+  const [notifications, setNotifications] = useState<MerchantNotification[]>([])
+  const [dashboardTimezone, setDashboardTimezone] = useState<{
+    timeZone: string
+    dstMode: 'AUTO' | 'SUMMER' | 'WINTER'
+    dstActive: boolean
+    currentEgyptTime: string
+  } | null>(null)
 
   // Integration settings form state
+  const [businessNameInput, setBusinessNameInput] = useState('')
+  const [businessTypeInput, setBusinessTypeInput] = useState('')
   const [instapayHandleInput, setInstapayHandleInput] = useState('')
   const [webhookUrlInput, setWebhookUrlInput] = useState('')
   const [instapayPaymentUrlInput, setInstapayPaymentUrlInput] = useState('')
@@ -167,7 +250,7 @@ export default function MerchantDashboardPage() {
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null)
 
   // Advanced features states
-  const [activeTab, setActiveTab] = useState<DashboardTab>('integration')
+  const [activeTab, setActiveTab] = useState<DashboardTab>('monitor')
   const [allTransactions, setAllTransactions] = useState<TransactionLog[]>([])
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([])
   const [plans, setPlans] = useState<Plan[]>([])
@@ -180,6 +263,29 @@ export default function MerchantDashboardPage() {
   const [webhookLoading, setWebhookLoading] = useState(false)
   const [selectedLogDetail, setSelectedLogDetail] = useState<WebhookLog | null>(null)
   const integrationSectionRef = useRef<HTMLDivElement | null>(null)
+
+  // Process Monitor State
+  const [monitorData, setMonitorData] = useState<ProcessMonitorData | null>(null)
+  const [monitorLoading, setMonitorLoading] = useState(false)
+
+  // Webhook Simulator State
+  const [simUrl, setSimUrl] = useState('')
+  const [simEvent, setSimEvent] = useState('payment.confirmed')
+  const [simAmount, setSimAmount] = useState('150.00')
+  const [simSender, setSimSender] = useState('customer@instapay')
+  const [simNote, setSimNote] = useState('Test Order #999')
+  const [simLoading, setSimLoading] = useState(false)
+  const [simResult, setSimResult] = useState<any | null>(null)
+  const [simError, setSimError] = useState<string | null>(null)
+
+  // Quick Checkout Generator State
+  const [quickAmount, setQuickAmount] = useState('50.00')
+  const [quickSender, setQuickSender] = useState('customer@instapay')
+  const [quickNote, setQuickNote] = useState('Demo Checkout Test')
+  const [quickLoading, setQuickLoading] = useState(false)
+  const [quickResult, setQuickResult] = useState<any | null>(null)
+  const [quickError, setQuickError] = useState<string | null>(null)
+  const [quickPollingStatus, setQuickPollingStatus] = useState<string | null>(null)
 
   const loadTransactions = async () => {
     if (!client) return
@@ -258,6 +364,23 @@ export default function MerchantDashboardPage() {
     })
   }
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem('instapay_sidebar_collapsed')
+      if (stored === 'true') setIsSidebarCollapsed(true)
+    }
+  }, [])
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('instapay_sidebar_collapsed', String(next))
+      }
+      return next
+    })
+  }
+
   const loadDashboardData = async () => {
     if (!client) return
     setRefreshing(true)
@@ -268,7 +391,15 @@ export default function MerchantDashboardPage() {
       if (data.ok) {
         setStats(data.stats)
         setRecentTx(data.recent)
+        if (data.timezoneInfo) setDashboardTimezone(data.timezoneInfo)
       }
+      try {
+        const notifRes = await fetch('/api/merchant/notifications', { cache: 'no-store' })
+        const notifData = await notifRes.json()
+        if (notifData.ok && Array.isArray(notifData.notifications)) {
+          setNotifications(notifData.notifications)
+        }
+      } catch {}
     } catch (err) {
       console.error(err)
     } finally {
@@ -352,6 +483,8 @@ export default function MerchantDashboardPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          businessName: businessNameInput || null,
+          businessType: businessTypeInput || null,
           instapayHandle: instapayHandleInput || null,
           webhookUrl: webhookUrlInput || null,
           instapayPaymentUrl: instapayPaymentUrlInput || null,
@@ -426,6 +559,8 @@ export default function MerchantDashboardPage() {
         const data = await res.json()
         if (data.ok) {
           setClient(data.client)
+          setBusinessNameInput(data.client.businessName || '')
+          setBusinessTypeInput(data.client.businessType || '')
           setInstapayHandleInput(data.client.instapayHandle || '')
           setWebhookUrlInput(data.client.webhookUrl || '')
           setInstapayPaymentUrlInput(data.client.instapayPaymentUrl || '')
@@ -450,9 +585,115 @@ export default function MerchantDashboardPage() {
     }
   }, [client])
 
+  const loadProcessMonitor = async () => {
+    if (!client) return
+    setMonitorLoading(true)
+    try {
+      const headers = { Authorization: `Bearer ${client.apiKey}` }
+      const res = await fetch('/api/dashboard/processes', { headers })
+      const data = await res.json()
+      if (data.ok) {
+        setMonitorData(data.monitor)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setMonitorLoading(false)
+    }
+  }
+
+  const handleRunWebhookSimulation = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!client) return
+    setSimLoading(true)
+    setSimError(null)
+    setSimResult(null)
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${client.apiKey}`,
+      }
+      const res = await fetch('/api/dashboard/webhook-test', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          targetUrl: simUrl || client.webhookUrl,
+          event: simEvent,
+          amountEgp: parseFloat(simAmount) || 150,
+          senderHandle: simSender,
+          note: simNote,
+        }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setSimResult(data.testResult)
+      } else {
+        setSimError(data.error || 'Webhook simulation failed.')
+      }
+    } catch {
+      setSimError('Connection failed.')
+    } finally {
+      setSimLoading(false)
+    }
+  }
+
+  const handleCreateQuickCheckout = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!client) return
+    setQuickLoading(true)
+    setQuickError(null)
+    setQuickResult(null)
+    setQuickPollingStatus('PENDING')
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${client.apiKey}`,
+      }
+      const res = await fetch('/api/v1/checkout/create', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          amountEgp: parseFloat(quickAmount) || 50,
+          senderHandle: quickSender,
+          note: quickNote,
+        }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setQuickResult(data.checkout)
+      } else {
+        setQuickError(data.error || 'Failed to create test checkout.')
+      }
+    } catch {
+      setQuickError('Connection failed.')
+    } finally {
+      setQuickLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!quickResult || quickPollingStatus !== 'PENDING') return
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/v1/checkout/status?sessionId=${quickResult.sessionId}`)
+        const data = await res.json()
+        if (data.ok && data.transaction) {
+          setQuickPollingStatus(data.transaction.status)
+        }
+      } catch (err) {
+        console.error(err)
+      }
+    }, 3000)
+    return () => clearInterval(id)
+  }, [quickResult?.sessionId, quickPollingStatus])
+
   useEffect(() => {
     if (client) {
-      if (activeTab === 'transactions') {
+      if (activeTab === 'monitor') {
+        loadProcessMonitor()
+        const id = setInterval(() => loadProcessMonitor(), 8000)
+        return () => clearInterval(id)
+      } else if (activeTab === 'transactions') {
         loadTransactions()
       } else if (activeTab === 'webhooks') {
         loadWebhookLogs()
@@ -510,60 +751,40 @@ export default function MerchantDashboardPage() {
   const displaySlug = client.slug?.trim()
 
   return (
-    <div className="min-h-screen bg-[#070a12] text-neutral-100 flex flex-col font-sans">
-      {/* Header */}
-      <header className="border-b border-white/10 bg-[#070a12]/85 backdrop-blur-xl sticky top-0 z-40">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg shadow-indigo-950/40">
-              <img src="/IPN.svg" alt="InstaPay Gateway" className="h-full w-full object-contain" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="truncate text-base font-bold text-white">{client.businessName}</h1>
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-300 border border-emerald-500/30">
-                  Approved
-                </span>
-              </div>
-              <p className="truncate text-xs text-neutral-500">
-                Merchant console
-                {displaySlug && (
-                  <>
-                    {' · '}
-                    <span className="font-semibold text-neutral-400">/{displaySlug}</span>
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col lg:flex-row font-sans">
+      {/* Collapsible Sidebar */}
+      <MerchantSidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        client={client}
+        pendingTxCount={stats?.pending?.count || 0}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onLogout={handleLogout}
+        onCopyDetectToken={() => {
+          if (client.detectToken) copyToClipboard(client.detectToken, 'APK Token')
+        }}
+        copiedToken={copiedLabel === 'APK Token'}
+      />
 
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadDashboardData}
-              disabled={refreshing}
-              className="rounded-xl text-neutral-300 border-white/10 bg-white/[0.03] hover:bg-white/10 hover:text-white"
-            >
-              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
-            <div data-language-toggle-slot data-i18n-skip />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="rounded-xl text-neutral-500 hover:text-red-300 hover:bg-red-500/10"
-            >
-              <LogOut className="h-4 w-4 mr-1.5" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      {/* Main Content Viewport */}
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ps-20' : 'lg:ps-64'}`}>
+        <MerchantHeader
+          activeTab={activeTab}
+          onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
+          egyptTime={dashboardTimezone?.currentEgyptTime || null}
+          dstActive={dashboardTimezone?.dstActive}
+          unreadNotifications={notifications.length}
+          onOpenNotifications={() => setIsNotificationsModalOpen(true)}
+          onQuickSimulate={() => setActiveTab('tools')}
+          isCollapsed={isSidebarCollapsed}
+        />
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 py-5 sm:px-6 sm:py-6 space-y-5 sm:space-y-6">
+        {/* Main Content Area */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-6">
         <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,.28),transparent_34%),linear-gradient(135deg,rgba(15,23,42,.98),rgba(2,6,23,.92))] p-4 shadow-2xl shadow-black/20 sm:rounded-[2rem] sm:p-6">
           <div className="flex min-w-0 flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
@@ -580,11 +801,11 @@ export default function MerchantDashboardPage() {
             </div>
 
             <div className="grid w-full min-w-0 gap-3 sm:grid-cols-3 lg:max-w-xl">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Plan</div>
-                <div className="mt-2 text-sm font-black text-white">{subscriptionLabel}</div>
-                <div className="mt-1 text-xs text-slate-500">{client.isFreeTrial ? 'Free trial' : 'Active merchant'}</div>
-              </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Plan</div>
+                  <div className="mt-2 text-sm font-black text-white">{subscriptionLabel}</div>
+                  <div className="mt-1 text-xs text-slate-500">{client.businessType || (client.isFreeTrial ? 'Free trial' : 'Active merchant')}</div>
+                </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Setup</div>
                 <div className="mt-2 text-sm font-black text-white">{completedSetupItems}/{setupItems.length} complete</div>
@@ -747,34 +968,569 @@ export default function MerchantDashboardPage() {
           </div>
         )}
 
-        {/* Dashboard Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Navigable Tabs System */}
-          <div className="lg:col-span-2 space-y-5">
-            {/* Tabs Navigation */}
-            <div ref={integrationSectionRef} tabIndex={-1} className="scroll-mt-28 grid gap-2 border-b border-neutral-900 pb-3 outline-none sm:grid-cols-2 xl:grid-cols-4">
-              {tabItems.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveTab(t.id)}
-                  className={`flex items-start gap-3 rounded-2xl border p-3 text-left transition-all ${
-                    activeTab === t.id
-                      ? 'bg-violet-600/10 border-violet-500/60 text-violet-200 shadow-lg shadow-violet-950/20'
-                      : 'text-neutral-500 border-neutral-900 bg-neutral-900/20 hover:text-neutral-300 hover:bg-neutral-900/50'
-                  }`}
-                >
-                  <span className={`mt-0.5 ${activeTab === t.id ? 'text-violet-300' : 'text-neutral-500'}`}>{t.icon}</span>
-                  <span>
-                    <span className="block text-xs font-black tracking-wide">{t.label}</span>
-                    <span className="mt-1 block text-[10px] leading-4 text-neutral-500">{t.description}</span>
-                  </span>
-                </button>
-              ))}
+        {/* Merchant command center */}
+        <section className="grid gap-3 rounded-3xl border border-white/10 bg-neutral-950/70 p-3 shadow-2xl shadow-black/20 sm:grid-cols-2 sm:p-4 lg:grid-cols-4">
+          <button
+            type="button"
+            onClick={openIntegrationSetup}
+            className="group rounded-2xl border border-violet-500/20 bg-violet-500/10 p-4 text-left transition hover:border-violet-400/50 hover:bg-violet-500/15"
+          >
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-violet-200">
+              <Key className="h-4 w-4" />
+              Setup
             </div>
+            <div className="mt-2 text-sm font-bold text-white">Configure gateway</div>
+            <p className="mt-1 text-xs leading-5 text-neutral-400">Payment link, webhook, API keys, and checkout TTL.</p>
+          </button>
 
-            {/* TAB CONTENTS */}
-            
-            {/* Tab: Developer Integration */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('monitor')}
+            className="group rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-left transition hover:border-cyan-400/50 hover:bg-cyan-500/15"
+          >
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
+              <Activity className="h-4 w-4" />
+              Monitor
+            </div>
+            <div className="mt-2 text-sm font-bold text-white">Watch live pipeline</div>
+            <p className="mt-1 text-xs leading-5 text-neutral-400">Detector, matching, webhook worker, and events.</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('billing')}
+            className="group rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-left transition hover:border-emerald-400/50 hover:bg-emerald-500/15"
+          >
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
+              <CreditCard className="h-4 w-4" />
+              Billing
+            </div>
+            <div className="mt-2 text-sm font-bold text-white">Manage quota</div>
+            <p className="mt-1 text-xs leading-5 text-neutral-400">{client.txCount.toLocaleString()} / {client.txLimit.toLocaleString()} transactions used.</p>
+          </button>
+
+          <Link
+            href="/dashboard/guide"
+            className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-white/20 hover:bg-white/[0.07]"
+          >
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+              <BookOpen className="h-4 w-4" />
+              Guide
+            </div>
+            <div className="mt-2 text-sm font-bold text-white">Integration docs</div>
+            <p className="mt-1 text-xs leading-5 text-neutral-400">Production API, webhook, and fulfillment reference.</p>
+          </Link>
+        </section>
+
+        {/* Main Workspace: Active Tab Content */}
+        <div ref={integrationSectionRef} tabIndex={-1} className="space-y-6 outline-none">
+
+            {/* Tab: Process Monitor */}
+            {activeTab === 'monitor' && (
+              <div className="space-y-6">
+                {/* Header & Status */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-neutral-900 bg-gradient-to-r from-violet-950/20 via-neutral-900/30 to-indigo-950/20 p-5">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Radio className="h-5 w-5 text-emerald-400 animate-pulse" />
+                      <h2 className="text-base font-bold text-white">Live Process & Service Monitor</h2>
+                    </div>
+                    <p className="text-xs text-neutral-400">
+                      Real-time status of your detection pipeline, listener APK, matching engine, and webhook dispatcher.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-neutral-500 font-mono">Auto-refreshes every 8s</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={loadProcessMonitor}
+                      disabled={monitorLoading}
+                      className="h-8 rounded-xl border-neutral-800 text-neutral-300 hover:text-white bg-neutral-950 text-xs px-3"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${monitorLoading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 4 Process Health Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Detector APK Card */}
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/40 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                          <Activity className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold text-white">Listener APK Service</h3>
+                          <p className="text-[10px] text-neutral-500">Android companion app</p>
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        monitorData?.detector.isActive
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                      }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${monitorData?.detector.isActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                        {monitorData?.detector.isActive ? 'Active' : 'Standby / Idle'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-900/80 text-[11px]">
+                      <div>
+                        <span className="text-[10px] text-neutral-500 block">Monitored Handle</span>
+                        <span className="font-mono text-neutral-300 font-semibold truncate block">{client.instapayHandle}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-500 block">Last Activity</span>
+                        <span className="text-neutral-300">
+                          {monitorData?.detector.lastSeenMinsAgo !== null && monitorData?.detector.lastSeenMinsAgo !== undefined
+                            ? (monitorData.detector.lastSeenMinsAgo === 0 ? 'Just now' : `${monitorData.detector.lastSeenMinsAgo}m ago`)
+                            : 'Awaiting first event'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Matcher Engine Card */}
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/40 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                          <Zap className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold text-white">Matcher Engine</h3>
+                          <p className="text-[10px] text-neutral-500">Auto-confirmation worker</p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        Operational
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-900/80 text-[11px]">
+                      <div>
+                        <span className="text-[10px] text-neutral-500 block">Pending</span>
+                        <span className="font-mono text-amber-400 font-bold">{monitorData?.matcher.pendingSessions ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-500 block">Avg Latency</span>
+                        <span className="font-mono text-neutral-300 font-bold">{monitorData?.matcher.avgConfirmationSpeedSec ?? 0}s</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-500 block">Match Rate</span>
+                        <span className="font-mono text-emerald-400 font-bold">{monitorData?.matcher.matchRatePercent ?? 100}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Webhook Worker Card */}
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/40 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                          <Globe className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold text-white">Webhook Dispatcher</h3>
+                          <p className="text-[10px] text-neutral-500">Store notification relay</p>
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        client.webhookUrl
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-neutral-800 text-neutral-400'
+                      }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${client.webhookUrl ? 'bg-emerald-400' : 'bg-neutral-500'}`} />
+                        {client.webhookUrl ? 'Configured' : 'Not Set'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-900/80 text-[11px]">
+                      <div>
+                        <span className="text-[10px] text-neutral-500 block">Delivered</span>
+                        <span className="font-mono text-neutral-300 font-bold">{monitorData?.webhookWorker.successfulDispatched ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-500 block">Failed</span>
+                        <span className="font-mono text-red-400 font-bold">{monitorData?.webhookWorker.failedDispatched ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-500 block">Success Rate</span>
+                        <span className="font-mono text-emerald-400 font-bold">{monitorData?.webhookWorker.successRatePercent ?? 100}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Gateway Plan & Quota Card */}
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-900/40 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-xl bg-pink-500/10 text-pink-400 border border-pink-500/20">
+                          <CreditCard className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold text-white">Gateway Quota & TTL</h3>
+                          <p className="text-[10px] text-neutral-500">Plan & session limits</p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/15 text-violet-300 border border-violet-500/30">
+                        {client.subscriptionPlan.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-900/80 text-[11px]">
+                      <div>
+                        <span className="text-[10px] text-neutral-500 block">Transactions Used</span>
+                        <span className="font-mono text-neutral-300 font-bold">{client.txCount} / {client.txLimit}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-500 block">Checkout TTL</span>
+                        <span className="font-mono text-neutral-300 font-bold">{client.checkoutTtlMin} mins</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interactive Process Pipeline Visualizer */}
+                <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-5 w-5 text-violet-400" />
+                      <h3 className="text-sm font-bold text-white">End-to-End Pipeline Stages</h3>
+                    </div>
+                    <span className="text-[10px] text-neutral-500 font-mono">Live processing flow</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-center text-xs">
+                    <div className="p-3 rounded-xl border border-neutral-900 bg-neutral-950/80 space-y-1">
+                      <div className="text-[10px] font-bold text-violet-400 uppercase">1. Checkout</div>
+                      <div className="text-[11px] font-semibold text-white">Store Creates API</div>
+                      <div className="text-[10px] text-neutral-500">POST /v1/checkout</div>
+                    </div>
+
+                    <div className="p-3 rounded-xl border border-neutral-900 bg-neutral-950/80 space-y-1">
+                      <div className="text-[10px] font-bold text-indigo-400 uppercase">2. Customer</div>
+                      <div className="text-[11px] font-semibold text-white">Sends InstaPay</div>
+                      <div className="text-[10px] text-neutral-500">via App / IPN Link</div>
+                    </div>
+
+                    <div className="p-3 rounded-xl border border-neutral-900 bg-neutral-950/80 space-y-1">
+                      <div className="text-[10px] font-bold text-cyan-400 uppercase">3. Detector</div>
+                      <div className="text-[11px] font-semibold text-white">Intercepts Push</div>
+                      <div className="text-[10px] text-neutral-500">Extracts EGP & Sender</div>
+                    </div>
+
+                    <div className="p-3 rounded-xl border border-neutral-900 bg-neutral-950/80 space-y-1">
+                      <div className="text-[10px] font-bold text-emerald-400 uppercase">4. Matcher</div>
+                      <div className="text-[11px] font-semibold text-white">Matches Session</div>
+                      <div className="text-[10px] text-neutral-500">Sets CONFIRMED</div>
+                    </div>
+
+                    <div className="p-3 rounded-xl border border-neutral-900 bg-neutral-950/80 space-y-1">
+                      <div className="text-[10px] font-bold text-pink-400 uppercase">5. Webhook</div>
+                      <div className="text-[11px] font-semibold text-white">Store Fulfillment</div>
+                      <div className="text-[10px] text-neutral-500">Signed HMAC POST</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Unified Live Events Feed */}
+                <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-emerald-400" />
+                      <h3 className="text-sm font-bold text-white">Live Event Stream & Activity Feed</h3>
+                    </div>
+                    <span className="text-[10px] text-neutral-500 font-mono">Egypt Timezone (UTC+2 / UTC+3)</span>
+                  </div>
+
+                  {monitorLoading && !monitorData ? (
+                    <div className="py-12 text-center text-xs text-neutral-500">
+                      <RefreshCw className="h-5 w-5 animate-spin mx-auto text-violet-500 mb-2" />
+                      Loading process telemetry...
+                    </div>
+                  ) : !monitorData?.pipelineEvents || monitorData.pipelineEvents.length === 0 ? (
+                    <div className="py-10 text-center text-xs text-neutral-600 border border-neutral-900 rounded-xl bg-neutral-900/10">
+                      No recent activity recorded yet. Create a checkout or test webhook to start telemetry.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {monitorData.pipelineEvents.map((evt) => (
+                        <div
+                          key={evt.id}
+                          className="rounded-xl border border-neutral-900 bg-neutral-950/70 p-3 flex items-start justify-between gap-3 text-xs"
+                        >
+                          <div className="space-y-0.5 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`h-2 w-2 rounded-full shrink-0 ${
+                                evt.status === 'success' ? 'bg-emerald-500 shadow-sm shadow-emerald-500' :
+                                evt.status === 'warning' ? 'bg-amber-500 shadow-sm shadow-amber-500' :
+                                evt.status === 'error' ? 'bg-red-500 shadow-sm shadow-red-500' :
+                                'bg-violet-500 shadow-sm shadow-violet-500'
+                              }`} />
+                              <span className="font-bold text-white truncate">{evt.title}</span>
+                              <span className={`px-1.5 py-0.2 text-[9px] font-mono font-bold rounded uppercase ${
+                                evt.type === 'payment_confirmed' ? 'bg-emerald-500/15 text-emerald-400' :
+                                evt.type === 'checkout_created' ? 'bg-violet-500/15 text-violet-300' :
+                                evt.type === 'webhook_dispatched' ? 'bg-cyan-500/15 text-cyan-300' :
+                                'bg-amber-500/15 text-amber-300'
+                              }`}>
+                                {evt.type.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-neutral-400 pl-4">{evt.description}</p>
+                          </div>
+                          <div className="text-right shrink-0 text-[10px] text-neutral-500 font-mono">
+                            {evt.timestampEgypt || new Date(evt.timestamp).toLocaleTimeString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Simulation & Developer Tools */}
+            {activeTab === 'tools' && (
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="rounded-2xl border border-neutral-900 bg-gradient-to-r from-indigo-950/20 via-neutral-900/30 to-violet-950/20 p-5 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="h-5 w-5 text-violet-400" />
+                    <h2 className="text-base font-bold text-white">Developer Simulation & Testing Sandbox</h2>
+                  </div>
+                  <p className="text-xs text-neutral-400">
+                    Test your webhook handler with live HMAC-SHA256 signatures, create on-demand checkout sessions, and verify integrations without sending real money.
+                  </p>
+                </div>
+
+                {/* Tool 1: Interactive Webhook Simulator */}
+                <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-cyan-400" />
+                      <h3 className="text-sm font-bold text-white">Interactive Webhook Simulator</h3>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/90 font-mono bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">HMAC-SHA256 Signed</span>
+                  </div>
+                  <p className="text-xs text-neutral-400">
+                    Dispatches a real HTTP POST request to your store endpoint signed with your webhook secret. Test your verification logic, error handling, and response timing.
+                  </p>
+
+                  <form onSubmit={handleRunWebhookSimulation} className="space-y-4 bg-neutral-950 p-4 rounded-xl border border-neutral-900">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="space-y-1">
+                        <Label className="text-neutral-300 text-[11px]">Destination Webhook URL</Label>
+                        <Input
+                          value={simUrl || (client.webhookUrl || '')}
+                          onChange={(e) => setSimUrl(e.target.value)}
+                          placeholder="https://yourstore.com/api/webhooks/instapay"
+                          className="bg-neutral-900 border-neutral-800 text-xs font-mono"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-neutral-300 text-[11px]">Event Type</Label>
+                        <select
+                          value={simEvent}
+                          onChange={(e) => setSimEvent(e.target.value)}
+                          className="w-full h-9 rounded-md bg-neutral-900 border border-neutral-800 px-3 text-xs text-neutral-200 focus:outline-none"
+                        >
+                          <option value="payment.confirmed">payment.confirmed (Full Success)</option>
+                          <option value="payment.underpaid">payment.underpaid (Partial Payment)</option>
+                          <option value="payment.expired">payment.expired (Session Timeout)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-neutral-300 text-[11px]">Amount (EGP)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={simAmount}
+                          onChange={(e) => setSimAmount(e.target.value)}
+                          className="bg-neutral-900 border-neutral-800 text-xs font-mono"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-neutral-300 text-[11px]">Customer Sender Handle</Label>
+                        <Input
+                          value={simSender}
+                          onChange={(e) => setSimSender(e.target.value)}
+                          className="bg-neutral-900 border-neutral-800 text-xs font-mono"
+                          required
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 space-y-1">
+                        <Label className="text-neutral-300 text-[11px]">Order Reference / Note</Label>
+                        <Input
+                          value={simNote}
+                          onChange={(e) => setSimNote(e.target.value)}
+                          className="bg-neutral-900 border-neutral-800 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={simLoading}
+                      className="w-full bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold"
+                    >
+                      <Send className="mr-1.5 h-3.5 w-3.5" />
+                      {simLoading ? 'Dispatching Test Webhook…' : 'Send Signed Test Webhook'}
+                    </Button>
+                  </form>
+
+                  {simError && (
+                    <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+                      {simError}
+                    </div>
+                  )}
+
+                  {simResult && (
+                    <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 space-y-3 text-xs">
+                      <div className="flex items-center justify-between border-b border-neutral-900 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                            simResult.isSuccess ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            HTTP {simResult.statusCode || 'Failed'}
+                          </span>
+                          <span className="text-white font-semibold">{simResult.isSuccess ? 'Delivery Successful' : 'Endpoint Returned Error'}</span>
+                        </div>
+                        <span className="text-neutral-400 font-mono text-[11px]">Roundtrip: {simResult.roundtripLatencyMs}ms</span>
+                      </div>
+
+                      <div className="space-y-2 text-[11px]">
+                        <div>
+                          <span className="text-neutral-500 block">Server Response Body:</span>
+                          <pre className="mt-1 p-2 rounded bg-neutral-900/80 font-mono text-neutral-300 overflow-x-auto text-[10px]">{simResult.responseBody}</pre>
+                        </div>
+
+                        <div>
+                          <span className="text-neutral-500 block">Sent Headers (Includes HMAC Signature):</span>
+                          <pre className="mt-1 p-2 rounded bg-neutral-900/80 font-mono text-cyan-300 overflow-x-auto text-[10px]">{JSON.stringify(simResult.sentHeaders, null, 2)}</pre>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tool 2: Quick Checkout Generator Sandbox */}
+                <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Play className="h-5 w-5 text-emerald-400" />
+                    <h3 className="text-sm font-bold text-white">Quick Checkout Generator Sandbox</h3>
+                  </div>
+                  <p className="text-xs text-neutral-400">
+                    Instantly create a test checkout session and interact with the live QR code, deep link, and automatic status polling.
+                  </p>
+
+                  <form onSubmit={handleCreateQuickCheckout} className="space-y-4 bg-neutral-950 p-4 rounded-xl border border-neutral-900">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div className="space-y-1">
+                        <Label className="text-neutral-300 text-[11px]">Amount (EGP)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={quickAmount}
+                          onChange={(e) => setQuickAmount(e.target.value)}
+                          className="bg-neutral-900 border-neutral-800 text-xs font-mono"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-neutral-300 text-[11px]">Expected Sender Handle</Label>
+                        <Input
+                          value={quickSender}
+                          onChange={(e) => setQuickSender(e.target.value)}
+                          className="bg-neutral-900 border-neutral-800 text-xs font-mono"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-neutral-300 text-[11px]">Order Note</Label>
+                        <Input
+                          value={quickNote}
+                          onChange={(e) => setQuickNote(e.target.value)}
+                          className="bg-neutral-900 border-neutral-800 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={quickLoading}
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold"
+                    >
+                      <Zap className="mr-1.5 h-3.5 w-3.5" />
+                      {quickLoading ? 'Generating Session…' : 'Create Live Test Checkout'}
+                    </Button>
+                  </form>
+
+                  {quickError && (
+                    <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+                      {quickError}
+                    </div>
+                  )}
+
+                  {quickResult && (
+                    <div className="rounded-xl border border-emerald-500/20 bg-neutral-950 p-5 space-y-4 text-xs">
+                      <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+                        <div className="space-y-0.5">
+                          <span className="font-bold text-white text-sm">Session: {quickResult.sessionId}</span>
+                          <p className="text-[11px] text-neutral-400">Total: {quickResult.amountEgp} EGP • Recipient: {quickResult.recipientHandle}</p>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+                          quickPollingStatus === 'CONFIRMED'
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse'
+                        }`}>
+                          {quickPollingStatus}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                        <div className="flex justify-center p-3 rounded-xl bg-white">
+                          <img src={quickResult.qrCodeDataUrl} alt="QR Code" className="h-44 w-44 object-contain" />
+                        </div>
+                        <div className="space-y-2">
+                          <a
+                            href={quickResult.deepLinkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <Button className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold">
+                              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                              Open InstaPay Deep Link
+                            </Button>
+                          </a>
+                          <Link href={`/pay/${client.slug}?amount=${quickResult.amountEgp}&sender=${quickResult.senderHandle}`} target="_blank">
+                            <Button variant="outline" className="w-full border-neutral-800 text-neutral-300 hover:text-white rounded-xl text-xs">
+                              Open Customer Payment Portal
+                            </Button>
+                          </Link>
+                          <p className="text-[10px] text-neutral-500 text-center">
+                            Session will auto-update status when detector reports the transfer.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {activeTab === 'integration' && (
               <div className="space-y-6">
                 {/* Integration Keys Card */}
@@ -873,10 +1629,62 @@ export default function MerchantDashboardPage() {
                     <h2 className="text-base font-bold text-white">Payment Link & Webhook Settings</h2>
                   </div>
 
-                  <form onSubmit={handleUpdateSettings} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="instapayHandle" className="text-xs text-neutral-400">
-                        Receiving InstaPay Handle
+	                  <form onSubmit={handleUpdateSettings} className="space-y-4">
+	                    <div className="rounded-2xl border border-neutral-900 bg-neutral-950/60 p-4">
+	                      <div className="mb-4 flex items-center justify-between gap-3">
+	                        <div>
+	                          <h3 className="text-sm font-bold text-white">Business profile</h3>
+	                          <p className="mt-1 text-[10px] leading-5 text-neutral-500">
+	                            Keep your public merchant identity accurate for reviews, support, billing, and future checkout pages.
+	                          </p>
+	                        </div>
+	                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-bold text-neutral-400">
+	                          Editable
+	                        </span>
+	                      </div>
+	                      <div className="grid gap-4 md:grid-cols-2">
+	                        <div className="space-y-1.5">
+	                          <Label htmlFor="businessName" className="text-xs text-neutral-400">
+	                            Business Name
+	                          </Label>
+	                          <Input
+	                            id="businessName"
+	                            type="text"
+	                            placeholder="Example Store"
+	                            value={businessNameInput}
+	                            onChange={(e) => setBusinessNameInput(e.target.value)}
+	                            className="h-10 rounded-xl border-neutral-800 bg-neutral-950 text-white placeholder-neutral-700 focus-visible:ring-violet-500"
+	                            maxLength={120}
+	                          />
+	                        </div>
+	                        <div className="space-y-1.5">
+	                          <Label htmlFor="businessType" className="text-xs text-neutral-400">
+	                            Business Type
+	                          </Label>
+	                          <select
+	                            id="businessType"
+	                            value={businessTypeInput}
+	                            onChange={(e) => setBusinessTypeInput(e.target.value)}
+	                            className="h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-sm text-white outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/35"
+	                          >
+	                            <option value="">Select business type</option>
+	                            <option value="E-commerce">E-commerce</option>
+	                            <option value="Retail store">Retail store</option>
+	                            <option value="Digital services">Digital services</option>
+	                            <option value="Food and beverage">Food and beverage</option>
+	                            <option value="Education">Education</option>
+	                            <option value="Healthcare">Healthcare</option>
+	                            <option value="Freelancer">Freelancer</option>
+	                            <option value="Nonprofit">Nonprofit</option>
+	                            <option value="Other">Other</option>
+	                          </select>
+	                        </div>
+	                      </div>
+	                    </div>
+
+	                    <div className="space-y-1.5">
+	                      <Label htmlFor="instapayHandle" className="text-xs text-neutral-400">
+	                        Receiving InstaPay Handle
                       </Label>
                       <Input
                         id="instapayHandle"
@@ -1015,6 +1823,25 @@ export default function MerchantDashboardPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Full Integration Guide Link */}
+                <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-r from-violet-950/20 to-indigo-950/20 p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-5 w-5 text-violet-400" />
+                        <h3 className="text-sm font-bold text-white">Full Integration Guide</h3>
+                      </div>
+                      <p className="text-xs text-neutral-400">Step-by-step guide with your live credentials, payment flow diagrams, webhook verification examples, and code samples in Node.js, Python, and PHP.</p>
+                    </div>
+                    <Link href="/dashboard/guide">
+                      <Button className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-semibold px-6 whitespace-nowrap">
+                        <BookOpen className="mr-1.5 h-4 w-4" />
+                        Open Guide
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1374,10 +2201,9 @@ export default function MerchantDashboardPage() {
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Right Column: Downloads, Links, Recent Activity */}
-          <div className="space-y-6">
+          {/* Support Workspace: Downloads, Links, Recent Activity */}
+          <div className="grid gap-6 xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.2fr)]">
             
             {/* APK Download & Demo */}
             <div className="rounded-2xl border border-neutral-900 bg-neutral-900/30 p-5 space-y-4">
@@ -1502,10 +2328,10 @@ export default function MerchantDashboardPage() {
                 </div>
               </ScrollArea>
 
-              <div className="flex justify-end pt-2 border-t border-neutral-850">
+              <div className="flex justify-end pt-2 border-t border-slate-800">
                 <Button
                   onClick={() => setSelectedLogDetail(null)}
-                  className="bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-xs px-4"
+                  className="bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs px-4"
                 >
                   Close
                 </Button>
@@ -1515,11 +2341,175 @@ export default function MerchantDashboardPage() {
         )}
       </AnimatePresence>
 
+      {/* Notifications Modal */}
+      <AnimatePresence>
+        {isNotificationsModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg rounded-2xl border border-slate-800 bg-[#0e1628] p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600/10 border border-violet-500/20 text-violet-300">
+                    🔔
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Merchant Notifications</h3>
+                    <p className="text-[11px] text-slate-400">System broadcasts and administrative alerts.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsNotificationsModalOpen(false)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <ScrollArea className="max-h-80">
+                {notifications.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    No notifications received yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 pe-2">
+                    {notifications.map((n) => {
+                      const severityColors = {
+                        INFO: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
+                        SUCCESS: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+                        WARNING: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+                        URGENT: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+                      }[n.severity] || 'border-slate-700 bg-slate-800/50 text-slate-300'
+
+                      return (
+                        <div
+                          key={n.id}
+                          className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-3 space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-white">{n.title}</span>
+                            <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${severityColors}`}>
+                              {n.severity}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-300 leading-5">{n.message}</p>
+                          <div className="text-[10px] text-slate-400">
+                            {new Date(n.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+
+              <div className="flex justify-end pt-2 border-t border-slate-800">
+                <Button
+                  onClick={() => setIsNotificationsModalOpen(false)}
+                  className="bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs px-4"
+                >
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {isSettingsModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg rounded-2xl border border-slate-800 bg-[#0e1628] p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                <h3 className="text-sm font-bold text-white">Merchant Account & Gateway Settings</h3>
+                <button
+                  onClick={() => setIsSettingsModalOpen(false)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateSettings} className="space-y-4">
+                <div>
+                  <Label className="text-xs text-slate-300">Business Name</Label>
+                  <Input
+                    value={businessNameInput}
+                    onChange={(e) => setBusinessNameInput(e.target.value)}
+                    className="mt-1 bg-slate-900 border-slate-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-300">InstaPay Handle</Label>
+                  <Input
+                    value={instapayHandleInput}
+                    onChange={(e) => setInstapayHandleInput(e.target.value)}
+                    className="mt-1 bg-slate-900 border-slate-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-300">Webhook URL</Label>
+                  <Input
+                    value={webhookUrlInput}
+                    onChange={(e) => setWebhookUrlInput(e.target.value)}
+                    className="mt-1 bg-slate-900 border-slate-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-300">Checkout TTL (Minutes)</Label>
+                  <Input
+                    type="number"
+                    value={checkoutTtlInput}
+                    onChange={(e) => setCheckoutTtlInput(e.target.value)}
+                    className="mt-1 bg-slate-900 border-slate-700 text-white"
+                  />
+                </div>
+
+                {settingsError && (
+                  <p className="text-xs text-rose-400">{settingsError}</p>
+                )}
+                {settingsSuccess && (
+                  <p className="text-xs text-emerald-400">Settings saved successfully.</p>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsSettingsModalOpen(false)}
+                    className="text-slate-400 hover:text-white"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={updatingSettings}
+                    className="bg-violet-600 hover:bg-violet-500 text-white font-bold"
+                  >
+                    {updatingSettings ? 'Saving...' : 'Save Settings'}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Footer */}
-      <footer className="mt-auto border-t border-neutral-900 py-6 bg-neutral-950 text-center text-xs text-neutral-600">
-        InstaPay Gateway · Merchant Dashboard
+      <footer className="mt-auto border-t border-slate-800/80 py-6 bg-[#070a12] text-center text-xs text-slate-400">
+        InstaPay Gateway · Merchant Operations Console
       </footer>
     </div>
+  </div>
   )
 }
 

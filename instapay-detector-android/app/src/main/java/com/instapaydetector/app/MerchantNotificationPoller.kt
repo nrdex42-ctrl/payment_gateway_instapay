@@ -83,6 +83,12 @@ object MerchantNotificationPoller {
             if (config.dashboardApiKey.isBlank() && config.authToken.isBlank()) return
 
             val apiClient = DashboardApiClient(context)
+            try {
+                apiClient.fetchDashboard()
+            } catch (e: Exception) {
+                Log.d(TAG, "Background dashboard sync: ${e.message}")
+            }
+
             val notifications = apiClient.fetchNotifications().getOrElse { error ->
                 Log.w(TAG, "Failed to fetch merchant notifications: ${error.message}")
                 return
@@ -91,6 +97,17 @@ object MerchantNotificationPoller {
 
             val postedIds = mutableListOf<String>()
             notifications.forEach { item ->
+                // Record to local Notification History
+                try {
+                    NotificationHistoryManager.get(context).addNotification(
+                        type = if (item.severity.equals("ERROR", ignoreCase = true) || item.severity.equals("WARNING", ignoreCase = true)) "WARNING" else "SYSTEM",
+                        title = item.title,
+                        body = item.message
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to record to NotificationHistoryManager: ${e.message}")
+                }
+
                 if (postNotification(context, item)) {
                     postedIds.add(item.id)
                 }

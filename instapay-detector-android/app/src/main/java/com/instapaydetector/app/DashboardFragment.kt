@@ -32,6 +32,10 @@ class DashboardFragment : Fragment() {
 
     private lateinit var recentAdapter: TransactionAdapter
 
+    private var selectedDays = 30
+    private var selectedMetric = "REVENUE" // "REVENUE" or "COUNT"
+    private var currentChartData: ChartData? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -53,6 +57,39 @@ class DashboardFragment : Fragment() {
         // Configure swipe-to-refresh
         binding.swipeRefresh.setOnRefreshListener { loadAll() }
 
+        // Setup notification history button & badge
+        updateNotificationBadge()
+        binding.btnNotifications.setOnClickListener {
+            val sheet = NotificationHistoryBottomSheet.newInstance()
+            sheet.onDismissCallback = {
+                updateNotificationBadge()
+            }
+            sheet.show(parentFragmentManager, NotificationHistoryBottomSheet.TAG)
+        }
+
+        // Setup Chart Range Toggle Group (7D / 14D / 30D / 90D)
+        binding.rangeToggleGroup.check(R.id.btnRange30d)
+        binding.rangeToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                selectedDays = when (checkedId) {
+                    R.id.btnRange7d -> 7
+                    R.id.btnRange14d -> 14
+                    R.id.btnRange90d -> 90
+                    else -> 30
+                }
+                loadChartData()
+            }
+        }
+
+        // Setup Chart Metric Switcher (EGP vs Count)
+        binding.metricToggleGroup.check(R.id.btnMetricRevenue)
+        binding.metricToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                selectedMetric = if (checkedId == R.id.btnMetricCount) "COUNT" else "REVENUE"
+                currentChartData?.let { renderChart(it) }
+            }
+        }
+
         // Wire up WebSocket for real-time updates
         wsClient.onConnectionChange = { connected ->
             requireActivity().runOnUiThread {
@@ -67,6 +104,7 @@ class DashboardFragment : Fragment() {
         wsClient.onPaymentConfirmed = { event ->
             requireActivity().runOnUiThread {
                 paymentFeedback.celebrate()
+                updateNotificationBadge()
                 loadAll()
             }
         }
@@ -82,13 +120,25 @@ class DashboardFragment : Fragment() {
         loadAll()
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateNotificationBadge()
+    }
+
+    private fun updateNotificationBadge() {
+        val unreadCount = NotificationHistoryManager.get(requireContext()).getUnreadCount()
+        if (unreadCount > 0) {
+            binding.tvNotifBadge.visibility = View.VISIBLE
+            binding.tvNotifBadge.text = if (unreadCount > 99) "99+" else unreadCount.toString()
+        } else {
+            binding.tvNotifBadge.visibility = View.GONE
+        }
+    }
+
     private fun loadAll() {
         binding.swipeRefresh.isRefreshing = true
         viewLifecycleOwner.lifecycleScope.launch {
-            // Load dashboard stats + chart in parallel
             val dashResult = apiClient.fetchDashboard()
-            val chartResult = apiClient.fetchChart(days = 30)
-
             binding.swipeRefresh.isRefreshing = false
 
             dashResult.onSuccess { dash -> renderDashboard(dash) }
@@ -97,10 +147,19 @@ class DashboardFragment : Fragment() {
                     binding.errorText.text = "Failed to load: ${e.message}"
                 }
 
-            chartResult.onSuccess { chart -> renderChart(chart) }
-                .onFailure {
-                    // Chart failure is non-critical — just leave it empty
-                }
+            loadChartData()
+        }
+    }
+
+    private fun loadChartData() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val chartResult = apiClient.fetchChart(days = selectedDays)
+            chartResult.onSuccess { chart ->
+                currentChartData = chart
+                renderChart(chart)
+            }.onFailure {
+                // Chart failure is non-critical
+            }
         }
     }
 
@@ -188,8 +247,12 @@ class DashboardFragment : Fragment() {
     }
 
     private fun renderChart(chart: ChartData) {
+        val isRevenue = (selectedMetric == "REVENUE")
+        binding.tvChartTitle.text = if (isRevenue) "Revenue Trend (EGP)" else "Payments Volume (Count)"
+
         val entries = chart.series.mapIndexed { i, point ->
-            Entry(i.toFloat(), point.totalEgp.toFloat())
+            val yVal = if (isRevenue) point.totalEgp.toFloat() else point.count.toFloat()
+            Entry(i.toFloat(), yVal)
         }
 
         if (entries.isEmpty()) {
@@ -201,18 +264,22 @@ class DashboardFragment : Fragment() {
         binding.chart.visibility = View.VISIBLE
         binding.chartEmpty.visibility = View.GONE
 
-        val dataSet = LineDataSet(entries, "Revenue (EGP)").apply {
-            color = resources.getColor(R.color.brand_primary, null)
+        val dataSet = LineDataSet(entries, if (isRevenue) "Revenue (EGP)" else "Payments Count").apply {
+            color = resources.getColor(if (isRevenue) R.color.brand_primary else R.color.live_green, null)
             setDrawValues(false)
             setDrawCircles(true)
-            setCircleColor(resources.getColor(R.color.brand_primary, null))
-            circleRadius = 3.5f
-            setDrawCircleHole(false)
+            setCircleColor(resources.getColor(if (isRevenue) R.color.brand_primary else R.color.live_green, null))
+            circleRadius = 4f
+            setDrawCircleHole(true)
+            circleHoleColor = resources.getColor(R.color.bg_card, null)
+            circleHoleRadius = 2f
             lineWidth = 2.5f
             mode = LineDataSet.Mode.CUBIC_BEZIER
             setDrawFilled(true)
             fillDrawable = resources.getDrawable(R.drawable.bg_chart_gradient, null)
             highLightColor = resources.getColor(R.color.brand_secondary, null)
+            highlightLineWidth = 1.5f
+            setDrawHorizontalHighlightIndicator(false)
         }
 
         val lineData = LineData(dataSet)
@@ -223,8 +290,14 @@ class DashboardFragment : Fragment() {
             legend.isEnabled = false
             setDrawGridBackground(false)
             setTouchEnabled(true)
+            isDragEnabled = true
             setScaleEnabled(false)
-            animateY(600)
+            setPinchZoom(false)
+
+            // Setup Custom Floating MarkerView Tooltip
+            marker = ChartMarkerView(requireContext(), R.layout.layout_chart_markerview, chart.series)
+
+            animateY(500)
 
             xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM
@@ -239,7 +312,6 @@ class DashboardFragment : Fragment() {
                         val idx = value.toInt()
                         if (idx < 0 || idx >= chart.series.size) return ""
                         return chart.series[idx].date.let {
-                            // Parse YYYY-MM-DD and format as "MMM d"
                             try {
                                 val parts = it.split("-")
                                 fmt.format(java.util.GregorianCalendar(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt()).time)
@@ -257,7 +329,11 @@ class DashboardFragment : Fragment() {
                 axisMinimum = 0f
                 valueFormatter = object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
-                        return if (value >= 1000) "%.1fk".format(value / 1000) else "%.0f".format(value)
+                        return if (isRevenue) {
+                            if (value >= 1000) "%.1fk".format(value / 1000) else "%.0f".format(value)
+                        } else {
+                            "%.0f".format(value)
+                        }
                     }
                 }
             }

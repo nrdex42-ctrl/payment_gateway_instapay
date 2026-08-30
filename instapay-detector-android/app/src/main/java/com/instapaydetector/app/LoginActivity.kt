@@ -97,6 +97,10 @@ class LoginActivity : AppCompatActivity() {
                     val plan = responseJson.optString("subscriptionPlan", "FREE_TRIAL")
                     val subscriptionEndsAt = responseJson.optString("subscriptionEndsAt", "")
 
+                    val businessName = responseJson.optString("businessName", "")
+                    val webhookUrl = responseJson.optString("webhookUrl", "")
+                    val paymentUrl = responseJson.optString("instapayPaymentUrl", "")
+
                     if (responseJson.optBoolean("otpRequired", false)) {
                         config.pendingVerificationId = responseJson.optString("verificationId")
                         startOtpCountdown(responseJson.optInt("expiresInSeconds", 600))
@@ -108,7 +112,10 @@ class LoginActivity : AppCompatActivity() {
                         config.dashboardApiKey = apiKey
                         config.authToken = detectToken
                         config.merchantHandle = instapayHandle
+                        config.merchantBusinessName = businessName
                         config.merchantEmail = responseEmail
+                        config.merchantWebhookUrl = webhookUrl
+                        config.merchantPaymentUrl = paymentUrl
                         config.subscriptionPlan = plan
                         config.subscriptionEndsAt = subscriptionEndsAt.ifBlank { null }
                         config.pendingVerificationId = ""

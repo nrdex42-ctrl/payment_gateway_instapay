@@ -46,9 +46,11 @@ class SettingsFragment : Fragment() {
         binding.gatewayUrlInput.setText(config.gatewayUrl)
         binding.authTokenInput.setText(config.authToken)
         binding.merchantHandleInput.setText(config.merchantHandle)
+        binding.merchantWebhookUrlInput.setText(config.merchantWebhookUrl.ifBlank { "Not configured" })
         binding.gatewayUrlInput.isEnabled = false
         binding.authTokenInput.isEnabled = false
         binding.merchantHandleInput.isEnabled = false
+        binding.merchantWebhookUrlInput.isEnabled = false
         
         // Always hide myHandle input since CLIENT mode is removed
         binding.myHandleInputLayout.visibility = View.GONE
@@ -66,6 +68,9 @@ class SettingsFragment : Fragment() {
             // Reset to defaults
             config.authToken = "instapay-sandbox-detector-token-2026"
             config.merchantHandle = "mohammedshabana77@instapay"
+            config.merchantBusinessName = ""
+            config.merchantWebhookUrl = ""
+            config.merchantPaymentUrl = ""
             config.dashboardApiKey = ""
             config.merchantEmail = ""
             config.subscriptionPlan = "FREE_TRIAL"
@@ -107,6 +112,7 @@ class SettingsFragment : Fragment() {
                 null
             }
             if (!isAdded || _binding == null) return@launch
+            updateSummaryHeader()
             if (stats != null) {
                 binding.summaryPlanText.text = stats.subscription?.plan?.replace("_", " ") ?: config.subscriptionPlan.replace("_", " ")
                 val sub = stats.subscription
@@ -172,7 +178,10 @@ class SettingsFragment : Fragment() {
     }
 
     private fun updateSummaryHeader() {
-        binding.summaryMerchantName.text = config.merchantHandle.substringBefore('@').replaceFirstChar { it.uppercaseChar() }
+        val displayName = config.merchantBusinessName.ifBlank {
+            config.merchantHandle.substringBefore('@').replaceFirstChar { it.uppercaseChar() }
+        }
+        binding.summaryMerchantName.text = displayName
         binding.summaryMerchantHandle.text = config.merchantHandle
         binding.summaryMerchantEmail.text = config.merchantEmail.ifBlank { "Email unavailable" }
         binding.summaryGatewayUrl.text = config.gatewayUrl.removeSuffix("/api/webhooks/instapay").trimEnd('/')
@@ -182,6 +191,11 @@ class SettingsFragment : Fragment() {
         binding.summarySetupText.text = "Open the web dashboard to manage profile, quota, and integration settings."
         binding.summaryQuotaText.text = if (config.subscriptionEndsAt.isNullOrBlank()) "Unavailable" else "Subscription active"
         binding.monitoredHandleLabel.text = getString(R.string.monitored_handle_label, config.merchantHandle)
+
+        binding.gatewayUrlInput.setText(config.gatewayUrl)
+        binding.authTokenInput.setText(config.authToken)
+        binding.merchantHandleInput.setText(config.merchantHandle)
+        binding.merchantWebhookUrlInput.setText(config.merchantWebhookUrl.ifBlank { "Not configured" })
     }
 
     private fun formatSubscriptionDuration(value: String?): String {

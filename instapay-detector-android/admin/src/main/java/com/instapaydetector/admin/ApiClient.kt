@@ -17,6 +17,7 @@ object ApiClient {
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
 
+    const val DEFAULT_GATEWAY_URL = "https://instapay-ruddy.vercel.app"
     private const val PREFS_NAME = "admin_prefs"
     private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
@@ -36,7 +37,8 @@ object ApiClient {
 
     fun getGatewayUrl(context: Context): String {
         val prefs = getPrefs(context)
-        return prefs.getString("gateway_url", "") ?: ""
+        val url = prefs.getString("gateway_url", "") ?: ""
+        return if (url.isNotEmpty()) url else DEFAULT_GATEWAY_URL
     }
 
     fun getPortalHash(context: Context): String {

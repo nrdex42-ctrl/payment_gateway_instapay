@@ -108,6 +108,12 @@ export async function GET(request: NextRequest) {
         handle: client ? client.instapayHandle : 'All Clients',
         name: client ? client.businessName : 'Platform Overview',
         email: client ? client.email : '',
+        slug: client ? client.slug : '',
+        webhookUrl: client ? client.webhookUrl : null,
+        instapayPaymentUrl: client ? client.instapayPaymentUrl : null,
+        checkoutTtlMin: client ? client.checkoutTtlMin : 10,
+        detectToken: client ? client.detectToken : null,
+        apiKey: client ? client.apiKey : null,
       },
       stats: {
         today: {

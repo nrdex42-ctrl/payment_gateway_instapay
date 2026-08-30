@@ -109,6 +109,7 @@ class TransactionsFragment : Fragment() {
                 R.id.chip_pending -> "PENDING"
                 R.id.chip_confirmed -> "CONFIRMED"
                 R.id.chip_expired -> "EXPIRED"
+                R.id.chip_underpaid -> "UNDERPAID"
                 else -> ""
             }
             loadTransactions()

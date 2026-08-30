@@ -17,6 +17,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
 import java.util.Date
+import java.util.Locale
 import java.util.regex.Pattern
 
 /**
@@ -98,6 +99,21 @@ class InstaPayNotificationListener : NotificationListenerService() {
             TAG,
             "Detected InstaPay payment: amount=${payload.amount}, sender=${payload.senderHandle}, ref=${payload.reference}, confidence=${payload.confidence}"
         )
+
+        // Record to local Notification History
+        try {
+            NotificationHistoryManager.get(this).addNotification(
+                type = "PAYMENT",
+                title = "Payment Detected: +${String.format(Locale.US, "%.2f", payload.amount)} EGP",
+                body = "From ${payload.senderHandle ?: "Customer"} • Ref: ${payload.reference ?: "N/A"}",
+                amountEgp = payload.amount,
+                senderHandle = payload.senderHandle,
+                reference = payload.reference,
+                rawText = payload.rawText
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to record to NotificationHistoryManager: ${e.message}")
+        }
 
         scope.launch {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager

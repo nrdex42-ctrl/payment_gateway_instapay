@@ -59,6 +59,7 @@ class NotificationsFragment : Fragment() {
         val title = binding.etNotificationTitle.text?.toString()?.trim().orEmpty()
         val message = binding.etNotificationMessage.text?.toString()?.trim().orEmpty()
         val merchantIndex = binding.spinnerMerchant.selectedItemPosition
+
         val severity = when (binding.chipGroupSeverity.checkedChipId) {
             R.id.chip_success -> "SUCCESS"
             R.id.chip_warning -> "WARNING"
@@ -66,15 +67,32 @@ class NotificationsFragment : Fragment() {
             else -> "INFO"
         }
 
-        if (title.isEmpty() || message.isEmpty()) return showResult("Title and message are required.", true)
-        if (merchantIndex <= 0 || merchants.isEmpty()) return showResult("Select a merchant.", true)
+        val channel = when (binding.chipGroupChannel.checkedChipId) {
+            R.id.chip_channel_detector -> "DETECTOR"
+            R.id.chip_channel_email -> "EMAIL"
+            else -> "BOTH"
+        }
+
+        if (title.isEmpty() || message.isEmpty()) {
+            return showResult("Title and message are required.", true)
+        }
+
+        // merchantIndex 0 is "ALL" broadcast
+        val targetClientId = if (merchantIndex == 0) {
+            "ALL"
+        } else if (merchantIndex > 0 && merchantIndex <= merchants.size) {
+            merchants[merchantIndex - 1].optString("id")
+        } else {
+            return showResult("Please select a valid merchant.", true)
+        }
 
         binding.btnSendNotification.isEnabled = false
         binding.btnSendNotification.text = getString(R.string.loading)
 
         lifecycleScope.launch {
             val body = JSONObject().apply {
-                put("clientId", merchants[merchantIndex - 1].optString("id"))
+                put("clientId", targetClientId)
+                put("channel", channel)
                 put("title", title)
                 put("message", message)
                 put("severity", severity)
@@ -82,10 +100,12 @@ class NotificationsFragment : Fragment() {
             val response = ApiClient.post(requireContext(), "/api/admin/notifications", body)
             binding.btnSendNotification.isEnabled = true
             binding.btnSendNotification.text = getString(R.string.ops_send_notification)
-            if (response.isSuccessful) {
+
+            if (response.isSuccessful && response.json != null) {
                 binding.etNotificationTitle.setText("")
                 binding.etNotificationMessage.setText("")
-                showResult(getString(R.string.ops_notification_sent), false)
+                val serverMsg = response.json.optString("message", getString(R.string.ops_notification_sent))
+                showResult(serverMsg, false)
             } else {
                 showResult(response.errorMessage ?: getString(R.string.ops_notification_failed), true)
             }
@@ -95,7 +115,9 @@ class NotificationsFragment : Fragment() {
     private fun showResult(message: String, isError: Boolean) {
         binding.tvNotificationResult.visibility = View.VISIBLE
         binding.tvNotificationResult.text = message
-        binding.tvNotificationResult.setTextColor(requireContext().getColor(if (isError) R.color.status_denied else R.color.status_confirmed))
+        binding.tvNotificationResult.setTextColor(
+            requireContext().getColor(if (isError) R.color.status_denied else R.color.status_confirmed)
+        )
     }
 
     private fun handleUnauthorized() {

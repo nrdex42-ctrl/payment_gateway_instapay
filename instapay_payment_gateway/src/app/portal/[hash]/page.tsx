@@ -224,7 +224,8 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
   const [auditLoading, setAuditLoading] = useState(false)
   const [selectedLogDetail, setSelectedLogDetail] = useState<WebhookLog | null>(null)
   const [subscriptionUpdatingId, setSubscriptionUpdatingId] = useState<string | null>(null)
-  const [notificationClientId, setNotificationClientId] = useState('')
+  const [notificationClientId, setNotificationClientId] = useState('ALL')
+  const [notificationChannel, setNotificationChannel] = useState<'BOTH' | 'DETECTOR' | 'EMAIL'>('BOTH')
   const [notificationTitle, setNotificationTitle] = useState('')
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationSeverity, setNotificationSeverity] = useState('INFO')
@@ -243,12 +244,27 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
     setNotificationSending(true)
     setNotificationResult(null)
     try {
-      const res = await fetch('/api/admin/notifications', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ clientId: notificationClientId, title: notificationTitle, message: notificationMessage, severity: notificationSeverity }) })
+      const res = await fetch('/api/admin/notifications', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: notificationClientId,
+          channel: notificationChannel,
+          title: notificationTitle,
+          message: notificationMessage,
+          severity: notificationSeverity,
+        }),
+      })
       const data = await res.json()
       if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to send notification')
-      setNotificationTitle(''); setNotificationMessage(''); setNotificationResult('Notification sent successfully.')
-    } catch (error) { setNotificationResult(error instanceof Error ? error.message : 'Failed to send notification.') }
-    finally { setNotificationSending(false) }
+      setNotificationTitle('')
+      setNotificationMessage('')
+      setNotificationResult(data.message || 'Notification dispatched successfully.')
+    } catch (error) {
+      setNotificationResult(error instanceof Error ? error.message : 'Failed to send notification.')
+    } finally {
+      setNotificationSending(false)
+    }
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -896,6 +912,25 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
             <Button
               variant="outline"
               size="sm"
+              onClick={() => {
+                setMerchantFilters((prev) => ({ ...prev, status: 'ALL' }))
+                setActiveTab('merchants')
+                const el = document.getElementById('pending-merchant-approvals-section')
+                if (el) el.scrollIntoView({ behavior: 'smooth' })
+              }}
+              title={pendingApprovals.length > 0 ? `${pendingApprovals.length} merchant approvals pending` : 'No pending approvals'}
+              className="relative rounded-xl text-neutral-300 border-white/10 bg-white/[0.03] hover:bg-white/10 hover:text-white"
+            >
+              <Bell className="h-4 w-4" />
+              {pendingApprovals.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black text-black ring-2 ring-[#070a12] animate-pulse">
+                  {pendingApprovals.length > 99 ? '99+' : pendingApprovals.length}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={loadData}
               disabled={refreshing}
               className="rounded-xl text-neutral-300 border-white/10 bg-white/[0.03] hover:bg-white/10 hover:text-white"
@@ -994,7 +1029,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
 
         {/* Pending Approvals Section */}
         {pendingApprovals.length > 0 && (
-          <div className="rounded-2xl border border-amber-900/50 bg-amber-950/5 p-5 space-y-4">
+          <div id="pending-merchant-approvals-section" className="rounded-2xl border border-amber-900/50 bg-amber-950/5 p-5 space-y-4">
             <div className="flex items-center gap-2 text-amber-400">
               <UserCheck className="h-5 w-5 animate-pulse" />
               <h2 className="text-base font-bold">Pending Merchant Approvals ({pendingApprovals.length})</h2>
@@ -1627,20 +1662,95 @@ export default function AdminPortalPage({ params }: { params: Promise<{ hash: st
             )}
 
             {/* Tab: Billing */}
+            {/* Tab: Notifications */}
             {activeTab === 'notifications' && (
               <form onSubmit={sendMerchantNotification} className="space-y-5 rounded-2xl border border-violet-500/20 bg-neutral-900/30 p-5">
-                <div><h2 className="flex items-center gap-2 text-base font-bold text-white"><Bell className="h-4 w-4 text-violet-300" />Merchant notifications</h2><p className="mt-1 text-xs leading-6 text-neutral-500">Send a message that appears on the merchant website and as an Android detector notification.</p></div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="sm:col-span-2"><Label className="text-xs text-neutral-400">Merchant</Label><select required value={notificationClientId} onChange={(e) => setNotificationClientId(e.target.value)} className="mt-2 h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-sm text-white"><option value="">Select a merchant</option>{clients.filter((client) => client.isActive).map((client) => <option key={client.id} value={client.id}>{client.businessName} · {client.email}</option>)}</select></div>
-                  <div><Label className="text-xs text-neutral-400">Title</Label><Input required maxLength={120} value={notificationTitle} onChange={(e) => setNotificationTitle(e.target.value)} className="mt-2 border-neutral-800 bg-neutral-950 text-white" placeholder="System update" /></div>
-                  <div><Label className="text-xs text-neutral-400">Priority</Label><select value={notificationSeverity} onChange={(e) => setNotificationSeverity(e.target.value)} className="mt-2 h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-sm text-white"><option>INFO</option><option>SUCCESS</option><option>WARNING</option><option>URGENT</option></select></div>
-                  <div className="sm:col-span-2"><Label className="text-xs text-neutral-400">Message</Label><textarea required maxLength={2000} value={notificationMessage} onChange={(e) => setNotificationMessage(e.target.value)} className="mt-2 min-h-32 w-full rounded-xl border border-neutral-800 bg-neutral-950 p-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Write the message for this merchant..." /></div>
+                <div>
+                  <h2 className="flex items-center gap-2 text-base font-bold text-white">
+                    <Bell className="h-4 w-4 text-violet-300" />
+                    Merchant notifications & alerts
+                  </h2>
+                  <p className="mt-1 text-xs leading-6 text-neutral-500">
+                    Broadcast or target notifications directly to merchant Android Detector APKs, web consoles, and emails.
+                  </p>
                 </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label className="text-xs text-neutral-400">Target Recipients</Label>
+                    <select
+                      value={notificationClientId}
+                      onChange={(e) => setNotificationClientId(e.target.value)}
+                      className="mt-2 h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-sm text-white"
+                    >
+                      <option value="ALL">📢 All Merchants (Broadcast - {clients.filter((c) => c.isActive).length} active)</option>
+                      {clients.filter((client) => client.isActive).map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.businessName} · {client.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-neutral-400">Delivery Channel</Label>
+                    <select
+                      value={notificationChannel}
+                      onChange={(e) => setNotificationChannel(e.target.value as 'BOTH' | 'DETECTOR' | 'EMAIL')}
+                      className="mt-2 h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-sm text-white"
+                    >
+                      <option value="BOTH">🔔 Both (Detector App &amp; Merchant Email)</option>
+                      <option value="DETECTOR">📱 Detector APK &amp; Web Dashboard Only</option>
+                      <option value="EMAIL">✉️ Merchant Email Only</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-neutral-400">Title</Label>
+                    <Input
+                      required
+                      maxLength={120}
+                      value={notificationTitle}
+                      onChange={(e) => setNotificationTitle(e.target.value)}
+                      className="mt-2 border-neutral-800 bg-neutral-950 text-white"
+                      placeholder="e.g. System Maintenance Notice"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-neutral-400">Severity / Priority</Label>
+                    <select
+                      value={notificationSeverity}
+                      onChange={(e) => setNotificationSeverity(e.target.value)}
+                      className="mt-2 h-10 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 text-sm text-white"
+                    >
+                      <option value="INFO">INFO (Normal)</option>
+                      <option value="SUCCESS">SUCCESS (Confirmation)</option>
+                      <option value="WARNING">WARNING (Action Recommended)</option>
+                      <option value="URGENT">URGENT (Critical Notice)</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs text-neutral-400">Message Content</Label>
+                    <textarea
+                      required
+                      maxLength={2000}
+                      value={notificationMessage}
+                      onChange={(e) => setNotificationMessage(e.target.value)}
+                      className="mt-2 min-h-32 w-full rounded-xl border border-neutral-800 bg-neutral-950 p-3 text-sm text-white outline-none focus:border-violet-500"
+                      placeholder="Type the message to deliver to the merchant(s)..."
+                    />
+                  </div>
+                </div>
+
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className={`min-h-4 text-xs ${notificationResult?.includes('successfully') ? 'text-emerald-400' : 'text-amber-400'}`}>{notificationResult}</p>
+                  <p className={`min-h-4 text-xs ${notificationResult?.includes('failed') || notificationResult?.includes('Error') ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    {notificationResult}
+                  </p>
                   <Button disabled={notificationSending} className="w-full bg-violet-600 text-white hover:bg-violet-700 sm:w-auto">
                     <Bell className="mr-2 h-4 w-4" />
-                    {notificationSending ? 'Sending...' : 'Send notification'}
+                    {notificationSending ? 'Dispatching...' : 'Dispatch Notification'}
                   </Button>
                 </div>
               </form>

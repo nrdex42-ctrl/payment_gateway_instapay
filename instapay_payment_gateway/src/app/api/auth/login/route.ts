@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
       client: {
         id: client.id,
         businessName: client.businessName,
+        businessType: client.businessType,
         slug: client.slug,
         email: client.email,
         instapayHandle: client.instapayHandle,

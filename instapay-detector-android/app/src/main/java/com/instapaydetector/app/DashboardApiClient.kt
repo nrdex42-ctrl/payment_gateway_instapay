@@ -60,7 +60,9 @@ class DashboardApiClient(private val ctx: Context) {
                 .putString(KEY_DASHBOARD_JSON, res.body)
                 .putLong(KEY_DASHBOARD_CACHED_AT, System.currentTimeMillis())
                 .apply()
-            Result.success(parseDashboard(json))
+            val parsed = parseDashboard(json)
+            config.syncFromMerchant(parsed.merchant, parsed.subscription)
+            Result.success(parsed)
         } catch (e: Exception) {
             Log.e(TAG, "fetchDashboard failed: ${e.message}", e)
             loadCachedDashboard()?.let { return@withContext Result.success(it) }
@@ -169,12 +171,19 @@ class DashboardApiClient(private val ctx: Context) {
             )
         } else null
 
+        val merchantInfo = MerchantInfo(
+            handle = merchant.optString("handle", config.merchantHandle),
+            name = merchant.optString("name", config.merchantBusinessName.ifBlank { "Merchant account" }),
+            email = merchant.optString("email", config.merchantEmail),
+            webhookUrl = if (merchant.has("webhookUrl") && !merchant.isNull("webhookUrl")) merchant.getString("webhookUrl") else null,
+            instapayPaymentUrl = if (merchant.has("instapayPaymentUrl") && !merchant.isNull("instapayPaymentUrl")) merchant.getString("instapayPaymentUrl") else null,
+            checkoutTtlMin = if (merchant.has("checkoutTtlMin")) merchant.optInt("checkoutTtlMin", 10) else null,
+            detectToken = if (merchant.has("detectToken") && !merchant.isNull("detectToken")) merchant.getString("detectToken") else null,
+            apiKey = if (merchant.has("apiKey") && !merchant.isNull("apiKey")) merchant.getString("apiKey") else null,
+        )
+
         return DashboardStats(
-            merchant = MerchantInfo(
-                handle = merchant.getString("handle"),
-                name = merchant.getString("name"),
-                email = merchant.optString("email", config.merchantEmail),
-            ),
+            merchant = merchantInfo,
             stats = StatsBreakdown(
                 today = parseBucket(stats.getJSONObject("today")),
                 sevenDays = parseBucket(stats.getJSONObject("sevenDays")),

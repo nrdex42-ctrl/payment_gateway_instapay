@@ -44,6 +44,7 @@ function passwordScore(password: string) {
 
 export default function RegisterPage() {
   const [businessName, setBusinessName] = useState('')
+  const [businessType, setBusinessType] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [otp, setOtp] = useState('')
@@ -89,7 +90,7 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName, email, password, verificationId, otp }),
+        body: JSON.stringify({ businessName, businessType, email, password, verificationId, otp }),
       })
       const data = await res.json()
       if (data.ok) {
@@ -255,6 +256,37 @@ export default function RegisterPage() {
                     disabled={submitting}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="businessType" className="text-xs font-semibold text-slate-300">
+                  Business type
+                </Label>
+                <div className="relative">
+                  <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <select
+                    id="businessType"
+                    value={businessType}
+                    onChange={(e) => setBusinessType(e.target.value)}
+                    className="h-12 w-full rounded-2xl border border-white/10 bg-[#0b1020] pl-10 pr-4 text-sm text-white outline-none ring-offset-background transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-50"
+                    required
+                    disabled={submitting}
+                  >
+                    <option value="">Select business type</option>
+                    <option value="E-commerce">E-commerce</option>
+                    <option value="Retail store">Retail store</option>
+                    <option value="Digital services">Digital services</option>
+                    <option value="Food and beverage">Food and beverage</option>
+                    <option value="Education">Education</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Freelancer">Freelancer</option>
+                    <option value="Nonprofit">Nonprofit</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <p className="text-xs text-slate-500">
+                  This helps the admin review your account and tune your gateway setup.
+                </p>
               </div>
 
               <div className="space-y-2">
