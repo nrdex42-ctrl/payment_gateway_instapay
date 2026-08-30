@@ -47,9 +47,19 @@ class TransactionAdapter :
 
             // Amount with sign based on status
             val amountText = when (tx.status) {
-                "CONFIRMED" -> "+${formatAmount(tx.amountEgp)} ${tx.currency}"
+                "CONFIRMED" -> {
+                    if (tx.detectedAmountEgp != null && tx.detectedAmountEgp > tx.amountEgp) {
+                        "+${formatAmount(tx.detectedAmountEgp)} ${tx.currency} (Overpaid)"
+                    } else {
+                        "+${formatAmount(tx.amountEgp)} ${tx.currency}"
+                    }
+                }
                 "PENDING" -> "~${formatAmount(tx.amountEgp)} ${tx.currency}"
                 "EXPIRED" -> "${formatAmount(tx.amountEgp)} ${tx.currency}"
+                "UNDERPAID" -> {
+                    val rec = tx.detectedAmountEgp ?: 0.0
+                    "${formatAmount(rec)} / ${formatAmount(tx.amountEgp)} ${tx.currency} (Underpaid)"
+                }
                 else -> "${formatAmount(tx.amountEgp)} ${tx.currency}"
             }
             binding.amount.text = amountText

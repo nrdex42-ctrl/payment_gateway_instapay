@@ -294,6 +294,7 @@ class DashboardApiClient(private val ctx: Context) {
                 senderHandle = t.getString("senderHandle"),
                 recipientHandle = t.getString("recipientHandle"),
                 amountEgp = t.getDouble("amountEgp"),
+                detectedAmountEgp = if (t.isNull("detectedAmountEgp")) null else t.optDouble("detectedAmountEgp"),
                 currency = t.getString("currency"),
                 status = t.getString("status"),
                 note = if (t.isNull("note")) null else t.getString("note"),

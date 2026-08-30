@@ -10,8 +10,9 @@ data class Transaction(
     val senderHandle: String,
     val recipientHandle: String,
     val amountEgp: Double,
+    val detectedAmountEgp: Double? = null,
     val currency: String,
-    val status: String, // PENDING | CONFIRMED | EXPIRED
+    val status: String, // PENDING | CONFIRMED | EXPIRED | UNDERPAID
     val note: String?,
     val deepLinkUrl: String?,
     val deepLinkToken: String?,

@@ -39,6 +39,7 @@ class TransactionDetailDialog : DialogFragment() {
                 senderHandle = it.getString("senderHandle", ""),
                 recipientHandle = it.getString("recipientHandle", ""),
                 amountEgp = it.getDouble("amountEgp", 0.0),
+                detectedAmountEgp = if (it.containsKey("detectedAmountEgp")) it.getDouble("detectedAmountEgp") else null,
                 currency = it.getString("currency", "EGP"),
                 status = it.getString("status", ""),
                 note = it.getString("note"),
@@ -62,7 +63,13 @@ class TransactionDetailDialog : DialogFragment() {
         detailTitle.text = "${tx.status.lowercase().replaceFirstChar { it.uppercase() }} payment"
         view.findViewById<TextView>(R.id.detailFrom).text = tx.senderHandle
         view.findViewById<TextView>(R.id.detailTo).text = tx.recipientHandle
-        view.findViewById<TextView>(R.id.detailAmount).text = "${String.format(Locale.US, "%,.2f", tx.amountEgp)} ${tx.currency}"
+        
+        val amountStr = if (tx.detectedAmountEgp != null && tx.detectedAmountEgp > tx.amountEgp) {
+            "${String.format(Locale.US, "%,.2f", tx.detectedAmountEgp)} ${tx.currency} (Overpaid • Req: ${String.format(Locale.US, "%,.2f", tx.amountEgp)})"
+        } else {
+            "${String.format(Locale.US, "%,.2f", tx.amountEgp)} ${tx.currency}"
+        }
+        view.findViewById<TextView>(R.id.detailAmount).text = amountStr
         detailStatus.text = tx.status
         view.findViewById<TextView>(R.id.detailReference).text = tx.detectedRef ?: "—"
         view.findViewById<TextView>(R.id.detailDate).text = formatDate(tx.detectedAt ?: tx.createdAt)
@@ -155,6 +162,9 @@ class TransactionDetailDialog : DialogFragment() {
                     putString("detectedAt", tx.detectedAt)
                     putString("createdAt", tx.createdAt)
                     putString("expiresAt", tx.expiresAt)
+                    if (tx.detectedAmountEgp != null) {
+                        putDouble("detectedAmountEgp", tx.detectedAmountEgp)
+                    }
                 }
             }
         }
