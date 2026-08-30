@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd instapay_payment_gateway && if [ \"$VERCEL\" = \"1\" ]; then cp prisma/schema.production.prisma prisma/schema.prisma && prisma generate && prisma db push --accept-data-loss; fi && next build",
+  "outputDirectory": "instapay_payment_gateway/.next",
+  "installCommand": "cd instapay_payment_gateway && npm install"
+}

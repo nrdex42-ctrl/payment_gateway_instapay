@@ -1,0 +1,14 @@
+{
+  "name": "instapay-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix instapay_payment_gateway run dev",
+    "build": "npm --prefix instapay_payment_gateway run build",
+    "start": "npm --prefix instapay_payment_gateway run start",
+    "postinstall": "npm --prefix instapay_payment_gateway install"
+  },
+  "dependencies": {
+    "next": "^16.1.1"
+  }
+}
