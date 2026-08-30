@@ -24,12 +24,15 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = await request.json()
-    const { businessName, businessType, email, password, verificationId, otp } = body || {}
+    const { firstName, lastName, whatsappNumber, businessName, businessType, email, password, verificationId, otp } = body || {}
     const normalizedEmail = normalizeEmail(email || '')
     const normalizedBusinessType = String(businessType || '').trim()
+    const cleanFirstName = String(firstName || '').trim()
+    const cleanLastName = String(lastName || '').trim()
+    const cleanWhatsapp = String(whatsappNumber || '').trim()
 
-    if (!businessName?.trim() || !normalizedBusinessType || !normalizedEmail || !password?.trim() || !verificationId?.trim() || !otp?.trim()) {
-      return NextResponse.json({ ok: false, error: 'All fields are required.' }, { status: 400 })
+    if (!cleanFirstName || !cleanLastName || !cleanWhatsapp || !businessName?.trim() || !normalizedBusinessType || !normalizedEmail || !password?.trim() || !verificationId?.trim() || !otp?.trim()) {
+      return NextResponse.json({ ok: false, error: 'All fields (including first/last name and WhatsApp number) are required.' }, { status: 400 })
     }
 
     if (normalizedBusinessType.length > 80) {
@@ -107,6 +110,9 @@ export async function POST(request: NextRequest) {
 
     const client = await db.client.create({
       data: {
+        firstName: cleanFirstName,
+        lastName: cleanLastName,
+        whatsappNumber: cleanWhatsapp,
         businessName: businessName.trim(),
         businessType: normalizedBusinessType,
         slug,

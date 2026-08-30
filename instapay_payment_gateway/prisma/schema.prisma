@@ -48,7 +48,10 @@ model Client {
   instapayHandle String             // their InstaPay handle, e.g. "ahmed_shop@instapay"
   instapayPaymentUrl String?        // exact static URL copied from InstaPay APK share/payment link
 
-  // Self-registration fields
+  // Self-registration contact & credentials
+  firstName      String?
+  lastName       String?
+  whatsappNumber String?
   email          String   @unique
   passwordHash   String
 

@@ -41,6 +41,9 @@ export async function GET(request: NextRequest) {
         return {
           id: client.id,
           slug: client.slug,
+          firstName: client.firstName,
+          lastName: client.lastName,
+          whatsappNumber: client.whatsappNumber,
           businessName: client.businessName,
           businessType: client.businessType,
           instapayHandle: client.instapayHandle,

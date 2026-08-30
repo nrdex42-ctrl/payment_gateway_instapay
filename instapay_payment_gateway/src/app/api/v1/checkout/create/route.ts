@@ -5,6 +5,8 @@ import { resolveInstaPayPaymentLink, normalizeHandle } from '@/lib/merchant'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
 import { toEgpCents } from '@/lib/money'
 
+import QRCode from 'qrcode'
+
 export async function POST(request: NextRequest) {
   // Enforce Rate Limit: max 60 checkout creations per 1 minute
   const rl = checkRateLimit(request, 60, 60 * 1000)
@@ -69,6 +71,17 @@ export async function POST(request: NextRequest) {
     )
     const expiresAt = new Date(Date.now() + client.checkoutTtlMin * 60 * 1000)
 
+    // Render the deep link as a QR code
+    const qrCodeDataUrl = await QRCode.toDataURL(deepLinkUrl, {
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 320,
+      color: {
+        dark: '#111827',
+        light: '#FFFFFF',
+      },
+    })
+
     const transaction = await db.transaction.create({
       data: {
         clientId: client.id,
@@ -97,6 +110,7 @@ export async function POST(request: NextRequest) {
         note: transaction.note,
         deepLinkUrl: transaction.deepLinkUrl,
         deepLinkToken: transaction.deepLinkToken,
+        qrCodeDataUrl,
         createdAt: transaction.createdAt.toISOString(),
         expiresAt: transaction.expiresAt.toISOString(),
       },

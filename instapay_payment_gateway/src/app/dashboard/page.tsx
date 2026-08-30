@@ -701,6 +701,27 @@ export default function MerchantDashboardPage() {
     }
   }
 
+  const handleUpdateTxStatus = async (sessionId: string, newStatus: string, detectedRef?: string) => {
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, newStatus, detectedRef }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        if (quickResult && quickResult.sessionId === sessionId) {
+          setQuickPollingStatus(newStatus)
+        }
+        loadTransactions()
+      } else {
+        alert(data.error || 'Failed to update transaction status.')
+      }
+    } catch {
+      alert('Connection error.')
+    }
+  }
+
   useEffect(() => {
     if (!quickResult || quickPollingStatus !== 'PENDING') return
     const id = setInterval(async () => {
@@ -1462,7 +1483,11 @@ export default function MerchantDashboardPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                         <div className="flex items-center justify-center rounded-2xl border border-slate-800/80 bg-[#070a12] p-4 shadow-inner">
                           <div className="rounded-xl bg-white p-2.5 shadow-lg shadow-black/40">
-                            <img src={quickResult.qrCodeDataUrl} alt="QR Code" className="h-40 w-40 object-contain" />
+                            <img
+                              src={quickResult.qrCodeDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(quickResult.deepLinkUrl || '')}`}
+                              alt="QR Code"
+                              className="h-40 w-40 object-contain"
+                            />
                           </div>
                         </div>
                         <div className="space-y-2">
@@ -1472,18 +1497,29 @@ export default function MerchantDashboardPage() {
                             rel="noopener noreferrer"
                             className="block"
                           >
-                            <Button className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold">
+                            <Button className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold h-9">
                               <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                               Open InstaPay Deep Link
                             </Button>
                           </a>
-                          <Link href={`/pay/${client.slug}?amount=${quickResult.amountEgp}&sender=${quickResult.senderHandle}`} target="_blank">
-                            <Button variant="outline" className="w-full border-neutral-800 text-neutral-300 hover:text-white rounded-xl text-xs">
+                          <Link href={`/pay/${client.slug}?amount=${quickResult.amountEgp}&sender=${quickResult.senderHandle}`} target="_blank" className="block">
+                            <Button className="w-full bg-slate-800/90 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 border border-slate-700/80 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 h-9">
+                              <ExternalLink className="h-3.5 w-3.5" />
                               Open Customer Payment Portal
                             </Button>
                           </Link>
+                          {quickPollingStatus === 'PENDING' && (
+                            <Button
+                              type="button"
+                              onClick={() => handleUpdateTxStatus(quickResult.sessionId, 'CONFIRMED', 'SIMULATOR_TEST')}
+                              className="w-full bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 h-9"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Mark As Confirmed (Fix Status)
+                            </Button>
+                          )}
                           <p className="text-[10px] text-neutral-500 text-center">
-                            Session will auto-update status when detector reports the transfer.
+                            Session auto-updates status via detector or manual fix above.
                           </p>
                         </div>
                       </div>
@@ -2119,8 +2155,43 @@ export default function MerchantDashboardPage() {
                             Created: {tx.createdAtEgypt} {tx.detectedAtEgypt && ` · Confirmed: ${tx.detectedAtEgypt}`}
                           </p>
                         </div>
-                        <div className="text-right shrink-0">
+                        <div className="text-right shrink-0 flex flex-col items-end gap-2">
                           <span className="font-black text-white text-sm">+{formatEgp(tx.amountEgp)} EGP</span>
+                          <div className="flex items-center gap-1.5">
+                            {tx.status === 'PENDING' ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateTxStatus(tx.sessionId, 'CONFIRMED', 'MANUAL_MERCHANT_FIX')}
+                                  className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold transition flex items-center gap-1"
+                                  title="Mark as Confirmed"
+                                >
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Confirm
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateTxStatus(tx.sessionId, 'EXPIRED')}
+                                  className="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white border border-neutral-700 text-[10px] font-medium transition"
+                                  title="Mark as Expired"
+                                >
+                                  Expire
+                                </button>
+                              </>
+                            ) : (
+                              <select
+                                value={tx.status}
+                                onChange={(e) => handleUpdateTxStatus(tx.sessionId, e.target.value)}
+                                className="h-6 px-1.5 rounded-lg border border-neutral-800 bg-neutral-950 text-neutral-300 text-[10px] outline-none hover:border-neutral-700"
+                              >
+                                <option value="CONFIRMED">CONFIRMED</option>
+                                <option value="PENDING">PENDING</option>
+                                <option value="EXPIRED">EXPIRED</option>
+                                <option value="UNDERPAID">UNDERPAID</option>
+                                <option value="FAILED">FAILED</option>
+                              </select>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))

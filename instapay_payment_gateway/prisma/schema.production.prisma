@@ -47,7 +47,10 @@ model Client {
   instapayHandle String
   instapayPaymentUrl String?
 
-  // Self-registration fields
+  // Self-registration contact & credentials
+  firstName      String?
+  lastName       String?
+  whatsappNumber String?
   email          String   @unique
   passwordHash   String
 

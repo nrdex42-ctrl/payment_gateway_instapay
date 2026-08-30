@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { formatEgyptTime, getEgyptDstMode } from '@/lib/timezone'
-import { authenticateByApiKey, authenticateByDetectToken, authenticateOwner } from '@/lib/auth'
+import { authenticateByApiKey, authenticateByDetectToken, authenticateOwner, getSessionClient } from '@/lib/auth'
+import { forwardToClientWebhook } from '@/lib/webhook'
 import { egpAmountFromRow } from '@/lib/money'
 
 /**
@@ -135,5 +136,103 @@ export async function GET(request: NextRequest) {
       { ok: false, error: `Failed to load transactions: ${message}` },
       { status: 500 }
     )
+  }
+}
+
+/**
+ * Manually update transaction status (e.g. mark PENDING as CONFIRMED, EXPIRED, UNDERPAID, or CANCELLED)
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const isOwner = await authenticateOwner(request)
+    let authedClientId = ''
+
+    if (!isOwner) {
+      const client = (await getSessionClient(request)) ?? (await authenticateByApiKey(request))
+      if (!client) {
+        return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 })
+      }
+      authedClientId = client.id
+    }
+
+    const body = await request.json()
+    const { sessionId, newStatus, detectedRef } = body || {}
+
+    const validStatuses = ['CONFIRMED', 'PENDING', 'EXPIRED', 'UNDERPAID', 'FAILED', 'CANCELLED']
+    const normalizedStatus = String(newStatus || '').toUpperCase()
+
+    if (!sessionId || !validStatuses.includes(normalizedStatus)) {
+      return NextResponse.json(
+        { ok: false, error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
+    const tx = await db.transaction.findUnique({
+      where: { sessionId },
+      include: { client: true },
+    })
+
+    if (!tx) {
+      return NextResponse.json({ ok: false, error: 'Transaction not found.' }, { status: 404 })
+    }
+
+    if (!isOwner && tx.clientId !== authedClientId) {
+      return NextResponse.json({ ok: false, error: 'Forbidden.' }, { status: 403 })
+    }
+
+    const now = new Date()
+    const wasPending = tx.status === 'PENDING'
+    const isNowConfirmed = normalizedStatus === 'CONFIRMED'
+
+    const updated = await db.transaction.update({
+      where: { id: tx.id },
+      data: {
+        status: normalizedStatus,
+        detectedAt: isNowConfirmed ? (tx.detectedAt || now) : tx.detectedAt,
+        detectedRef: isNowConfirmed ? (detectedRef?.trim() || tx.detectedRef || 'MANUAL_OVERRIDE') : tx.detectedRef,
+      },
+    })
+
+    // If confirmed manually, increment client quota and dispatch webhook if configured
+    if (isNowConfirmed && wasPending) {
+      await db.client.update({
+        where: { id: tx.clientId },
+        data: { txCount: { increment: 1 } },
+      }).catch(() => {})
+
+      if (tx.client.webhookUrl) {
+        await forwardToClientWebhook(tx.clientId, tx.client.webhookUrl, tx.client.webhookSecret, {
+          event: 'payment.confirmed',
+          clientId: tx.clientId,
+          businessName: tx.client.businessName,
+          transaction: {
+            sessionId: updated.sessionId,
+            senderHandle: updated.senderHandle,
+            recipientHandle: updated.recipientHandle,
+            amountEgp: updated.amountEgp,
+            currency: updated.currency,
+            status: updated.status,
+            detectedRef: updated.detectedRef,
+            detectedAt: updated.detectedAt?.toISOString() ?? null,
+            note: updated.note,
+            createdAt: updated.createdAt.toISOString(),
+          },
+        }).catch(() => {})
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      transaction: {
+        sessionId: updated.sessionId,
+        status: updated.status,
+        detectedRef: updated.detectedRef,
+        detectedAt: updated.detectedAt?.toISOString() ?? null,
+      },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return NextResponse.json({ ok: false, error: `Failed to update transaction: ${message}` }, { status: 500 })
   }
 }

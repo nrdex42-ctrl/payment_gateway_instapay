@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   Sparkles,
   UserPlus,
+  User,
+  Phone,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,6 +45,9 @@ function passwordScore(password: string) {
 }
 
 export default function RegisterPage() {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [whatsappNumber, setWhatsappNumber] = useState('')
   const [businessName, setBusinessName] = useState('')
   const [businessType, setBusinessType] = useState('')
   const [email, setEmail] = useState('')
@@ -90,7 +95,17 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName, businessType, email, password, verificationId, otp }),
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          whatsappNumber,
+          businessName,
+          businessType,
+          email,
+          password,
+          verificationId,
+          otp,
+        }),
       })
       const data = await res.json()
       if (data.ok) {
@@ -239,6 +254,70 @@ export default function RegisterPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+              {/* Merchant Representative Name (First & Last) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName" className="text-xs font-semibold text-slate-300">
+                    First name
+                  </Label>
+                  <div className="relative">
+                    <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="Ahmed"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="h-12 rounded-2xl border-white/10 bg-white/[0.04] pl-10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500"
+                      required
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lastName" className="text-xs font-semibold text-slate-300">
+                    Last name
+                  </Label>
+                  <div className="relative">
+                    <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Hassan"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="h-12 rounded-2xl border-white/10 bg-white/[0.04] pl-10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500"
+                      required
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* WhatsApp Phone Number */}
+              <div className="space-y-2">
+                <Label htmlFor="whatsappNumber" className="text-xs font-semibold text-slate-300">
+                  WhatsApp phone number
+                </Label>
+                <div className="relative">
+                  <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-400" />
+                  <Input
+                    id="whatsappNumber"
+                    type="tel"
+                    placeholder="+20 10 1234 5678"
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    className="h-12 rounded-2xl border-white/10 bg-white/[0.04] pl-10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500"
+                    required
+                    disabled={submitting}
+                  />
+                </div>
+                <p className="text-xs text-slate-500">
+                  Our onboarding team will contact you on WhatsApp to review and activate your account.
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="businessName" className="text-xs font-semibold text-slate-300">
                   Business name
