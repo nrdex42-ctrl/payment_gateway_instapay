@@ -3,11 +3,21 @@ import { db } from '@/lib/db'
 import { getSessionClient, generateSecureToken, hashSecret } from '@/lib/auth'
 import { isAllowedWebhookUrl } from '@/lib/webhook'
 import { normalizeInstaPayPaymentUrl } from '@/lib/merchant'
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
 
 /**
  * PATCH: Update merchant custom integration settings.
  */
 export async function PATCH(request: NextRequest) {
+  // Enforce Rate Limit: max 30 settings requests per minute
+  const rl = checkRateLimit(request, 30, 60 * 1000)
+  if (!rl.success) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many settings update requests. Please slow down.' },
+      { status: 429, headers: getRateLimitHeaders(rl) }
+    )
+  }
+
   try {
     const client = await getSessionClient(request)
     if (!client) {
@@ -104,7 +114,7 @@ export async function PATCH(request: NextRequest) {
       data,
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       ok: true,
       message: 'Integration settings updated successfully.',
       client: {
@@ -128,6 +138,13 @@ export async function PATCH(request: NextRequest) {
         txCount: updated.txCount,
       },
     })
+
+    const rlHeaders = getRateLimitHeaders(rl)
+    Object.entries(rlHeaders).forEach(([k, v]) => {
+      response.headers.set(k, v)
+    })
+
+    return response
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ ok: false, error: `Failed to update settings: ${message}` }, { status: 500 })

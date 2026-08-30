@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { detectedEgpAmountFromRow, egpAmountFromRow } from '@/lib/money'
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
 
 export async function GET(request: NextRequest) {
+  // Enforce Rate Limit: max 120 status checks per minute
+  const rl = checkRateLimit(request, 120, 60 * 1000)
+  if (!rl.success) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many status check requests. Please slow down.' },
+      { status: 429, headers: getRateLimitHeaders(rl) }
+    )
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const sessionId = searchParams.get('sessionId')

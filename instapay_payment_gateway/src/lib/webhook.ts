@@ -9,15 +9,51 @@ export function isAllowedWebhookUrl(rawUrl: string): boolean {
     if (url.protocol === 'http:' && process.env.ALLOW_HTTP_WEBHOOKS !== '1') return false
 
     const hostname = url.hostname.toLowerCase()
-    const privateHost =
+    
+    // Explicit Cloud Metadata & Loopback Hostnames
+    if (
       hostname === 'localhost' ||
-      hostname === '::1' ||
-      hostname.startsWith('127.') ||
-      hostname.startsWith('10.') ||
-      hostname.startsWith('192.168.') ||
-      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+      hostname === 'metadata.google.internal' ||
+      hostname === 'instance-data' ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.local')
+    ) {
+      return process.env.ALLOW_PRIVATE_WEBHOOKS === '1'
+    }
 
-    return !privateHost || process.env.ALLOW_PRIVATE_WEBHOOKS === '1'
+    // Block Private IPv4, Link-Local (Cloud Metadata), and Reserved Ranges
+    const isPrivateOrCloudMetadataIpv4 =
+      hostname === '0.0.0.0' ||
+      hostname.startsWith('127.') ||            // Loopback (127.0.0.0/8)
+      hostname.startsWith('10.') ||             // Class A Private (10.0.0.0/8)
+      hostname.startsWith('192.168.') ||        // Class C Private (192.168.0.0/16)
+      hostname.startsWith('169.254.') ||        // Link-Local & Cloud Metadata (169.254.0.0/16, e.g. 169.254.169.254)
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname) || // Class B Private (172.16.0.0/12)
+      hostname.startsWith('100.64.') ||         // Carrier-Grade NAT (100.64.0.0/10)
+      /^2(2[4-9]|[3-5][0-9])\./.test(hostname)  // Multicast & Reserved (224.0.0.0/4)
+
+    // Block IPv6 Loopback, Link-Local, and Unique Local
+    const isPrivateIpv6 =
+      hostname === '::1' ||
+      hostname === '[::1]' ||
+      hostname.startsWith('[fe80:') ||          // Link-Local (fe80::/10)
+      hostname.startsWith('[fc00:') ||          // Unique Local (fc00::/7)
+      hostname.startsWith('[fd00:')
+
+    if (isPrivateOrCloudMetadataIpv4 || isPrivateIpv6) {
+      return process.env.ALLOW_PRIVATE_WEBHOOKS === '1'
+    }
+
+    // Block dangerous internal ports
+    if (url.port) {
+      const portNum = Number(url.port)
+      const dangerousPorts = [21, 22, 23, 25, 53, 110, 143, 3306, 5432, 6379, 11211, 27017, 28017]
+      if (dangerousPorts.includes(portNum)) {
+        return false
+      }
+    }
+
+    return true
   } catch {
     return false
   }
