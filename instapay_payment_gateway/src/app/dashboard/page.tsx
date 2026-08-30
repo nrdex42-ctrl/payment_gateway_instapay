@@ -1258,6 +1258,29 @@ export default function MerchantDashboardPage() {
                         </a>
                       </Button>
                     </div>
+
+                    <div className="pt-3 border-t border-neutral-900/60 space-y-2">
+                      <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Help &amp; Customer Support</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <a
+                          href="https://wa.me/201114671033"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-800/40 text-emerald-300 text-xs font-semibold transition-colors"
+                        >
+                          💬 WhatsApp Support
+                        </a>
+                        <a
+                          href="mailto:instapay.payment.gateway@gmail.com"
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/40 text-indigo-300 text-xs font-semibold transition-colors"
+                        >
+                          ✉️ Email Support
+                        </a>
+                      </div>
+                      <div className="text-[10px] text-neutral-500 text-center font-mono">
+                        WhatsApp: +201114671033 • instapay.payment.gateway@gmail.com
+                      </div>
+                    </div>
                   </div>
 
                   {/* Recent Merchant Activity */}

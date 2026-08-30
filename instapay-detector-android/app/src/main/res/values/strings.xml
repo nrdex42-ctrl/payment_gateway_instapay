@@ -106,4 +106,10 @@
     <string name="tx_status_confirmed_badge">✓ Payment Confirmed &amp; Webhook Dispatched</string>
     <string name="tx_status_updated">Transaction status updated successfully</string>
     <string name="tx_status_update_failed">Failed to update transaction status</string>
+
+    <!-- Support -->
+    <string name="support_title">Help &amp; Customer Support</string>
+    <string name="support_desc">Need assistance with gateway setup, APK detection, or transactions?</string>
+    <string name="support_whatsapp_btn">💬 WhatsApp: +201114671033</string>
+    <string name="support_email_btn">✉️ Email: instapay.payment.gateway@gmail.com</string>
 </resources>

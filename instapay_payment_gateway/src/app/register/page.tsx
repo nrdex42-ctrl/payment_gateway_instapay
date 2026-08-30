@@ -502,7 +502,7 @@ export default function RegisterPage() {
               By creating an account, you confirm this is a business payment integration request.
               Already approved? <a href="/login" className="font-semibold text-indigo-300 hover:text-indigo-200">Sign in</a>.
               <br />
-              Need help? <a href={`mailto:${SYSTEM_EMAIL}`} className="font-semibold text-indigo-300 hover:text-indigo-200">{SYSTEM_EMAIL}</a>
+              Need help? <a href="https://wa.me/201114671033" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-400 hover:text-emerald-300">WhatsApp: +201114671033</a> • <a href={`mailto:${SYSTEM_EMAIL}`} className="font-semibold text-indigo-300 hover:text-indigo-200">{SYSTEM_EMAIL}</a>
             </p>
           </div>
         </section>

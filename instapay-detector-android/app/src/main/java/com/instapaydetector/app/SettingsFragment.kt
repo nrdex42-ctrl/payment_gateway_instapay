@@ -95,6 +95,27 @@ class SettingsFragment : Fragment() {
                 Toast.makeText(requireContext(), "Failed to open settings: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
+
+        binding.btnSupportWhatsapp.setOnClickListener {
+            try {
+                val whatsappIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/201114671033"))
+                startActivity(whatsappIntent)
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Unable to open WhatsApp: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.btnSupportEmail.setOnClickListener {
+            try {
+                val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                    data = Uri.parse("mailto:instapay.payment.gateway@gmail.com")
+                    putExtra(Intent.EXTRA_SUBJECT, "InstaPay Gateway Support Request")
+                }
+                startActivity(emailIntent)
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Unable to open Email client: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onResume() {

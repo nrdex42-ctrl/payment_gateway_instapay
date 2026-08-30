@@ -458,7 +458,7 @@ if (\`v1=\${expected}\` !== signatureHeader) {
 
       <footer className="border-t border-white/10 bg-[#050710]">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
             <div>
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5">
@@ -494,6 +494,22 @@ if (\`v1=\${expected}\` !== signatureHeader) {
               <ul className="mt-4 space-y-2.5 text-sm text-slate-500">
                 <li><a href="/register" className="hover:text-slate-300">Create account</a></li>
                 <li><a href="/login" className="hover:text-slate-300">Merchant sign in</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-400">Customer Support</div>
+              <ul className="mt-4 space-y-2.5 text-sm text-slate-400">
+                <li>
+                  <a href="https://wa.me/201114671033" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-emerald-400">
+                    <span>💬 WhatsApp:</span> <span className="font-mono text-xs text-white">+201114671033</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:instapay.payment.gateway@gmail.com" className="flex items-center gap-1.5 hover:text-indigo-400">
+                    <span>✉️ Email:</span> <span className="font-mono text-[11px] text-white">instapay.payment.gateway@gmail.com</span>
+                  </a>
+                </li>
               </ul>
             </div>
           </div>

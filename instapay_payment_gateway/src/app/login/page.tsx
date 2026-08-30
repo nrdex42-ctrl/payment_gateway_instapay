@@ -402,7 +402,7 @@ export default function LoginPage() {
             <p className="mt-6 text-center text-xs leading-6 text-slate-500">
               Don&apos;t have an account? <a href="/register" className="font-semibold text-indigo-300 hover:text-indigo-200">Create merchant account</a>.
               <br />
-              Need help? <a href={`mailto:${SYSTEM_EMAIL}`} className="font-semibold text-indigo-300 hover:text-indigo-200">{SYSTEM_EMAIL}</a>
+              Need help? <a href="https://wa.me/201114671033" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-400 hover:text-emerald-300">WhatsApp: +201114671033</a> • <a href={`mailto:${SYSTEM_EMAIL}`} className="font-semibold text-indigo-300 hover:text-indigo-200">{SYSTEM_EMAIL}</a>
             </p>
           </div>
         </section>

@@ -106,4 +106,10 @@
     <string name="tx_status_confirmed_badge">✓ العملية مؤكدة ومحدثة مع المتجر</string>
     <string name="tx_status_updated">تم تحديث حالة العملية بنجاح</string>
     <string name="tx_status_update_failed">فشل تحديث حالة العملية</string>
+
+    <!-- Support (Arabic) -->
+    <string name="support_title">المساعدة والدعم الفني</string>
+    <string name="support_desc">هل تحتاج إلى مساعدة في ربط البوابة، تشغيل الكاشف، أو متابعة العمليات؟</string>
+    <string name="support_whatsapp_btn">💬 تواصل عبر واتساب: +201114671033</string>
+    <string name="support_email_btn">✉️ مراسلة الدعم: instapay.payment.gateway@gmail.com</string>
 </resources>
