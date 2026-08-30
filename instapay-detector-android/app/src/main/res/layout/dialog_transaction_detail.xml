@@ -231,6 +231,34 @@
             android:gravity="end" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/statusActionsLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="12dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConfirmTx"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:text="@string/tx_action_confirm"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="6dp"
+            app:cornerRadius="8dp"
+            app:backgroundTint="@color/status_confirmed" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExpireTx"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:text="@string/tx_action_expire"
+            android:textSize="12sp"
+            app:cornerRadius="8dp"
+            app:backgroundTint="@color/border_medium" />
+    </LinearLayout>
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/closeButton"
         android:layout_width="match_parent"

@@ -84,4 +84,25 @@
     <string name="pref_lang_label">Application Language</string>
     <string name="pref_lang_en">English</string>
     <string name="pref_lang_ar">العربية (Arabic)</string>
+
+    <!-- Permissions Setup Popup -->
+    <string name="perm_dialog_title">Required Permissions</string>
+    <string name="perm_dialog_subtitle">To automatically detect InstaPay transfers and keep notifications running in the background, please grant the following permissions:</string>
+    <string name="perm_notification_listener_title">Notification Listener Access</string>
+    <string name="perm_notification_listener_desc">Required to read incoming InstaPay transfer notifications and confirm customer payments.</string>
+    <string name="perm_post_notifications_title">Notification Alerts (Post Notifications)</string>
+    <string name="perm_post_notifications_desc">Keeps the background detector service active and alerts you when money is received.</string>
+    <string name="perm_battery_optimization_title">Background Battery Exemption</string>
+    <string name="perm_battery_optimization_desc">Prevents Android from stopping the detector when screen is locked or asleep.</string>
+    <string name="perm_grant_btn">Grant</string>
+    <string name="perm_granted">Granted ✓</string>
+    <string name="perm_done_btn">🚀 Start Detecting Transfers</string>
+    <string name="perm_remind_later">Remind me later</string>
+
+    <!-- Transaction Status Actions -->
+    <string name="tx_action_confirm">Mark as Confirmed (Fix)</string>
+    <string name="tx_action_expire">Mark as Expired</string>
+    <string name="tx_action_cancel">Mark as Cancelled</string>
+    <string name="tx_status_updated">Transaction status updated successfully</string>
+    <string name="tx_status_update_failed">Failed to update transaction status</string>
 </resources>

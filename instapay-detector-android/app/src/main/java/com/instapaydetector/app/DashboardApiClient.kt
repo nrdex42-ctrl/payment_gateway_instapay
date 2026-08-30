@@ -143,6 +143,40 @@ class DashboardApiClient(private val ctx: Context) {
         }
     }
 
+    suspend fun updateTransactionStatus(
+        sessionId: String,
+        newStatus: String,
+        detectedRef: String? = null
+    ): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val json = JSONObject().apply {
+                put("sessionId", sessionId)
+                put("newStatus", newStatus)
+                if (!detectedRef.isNullOrBlank()) {
+                    put("detectedRef", detectedRef)
+                }
+            }
+            val body = json.toString().toRequestBody("application/json".toMediaType())
+            val bearer = config.dashboardApiKey.ifBlank { config.authToken }
+            val request = Request.Builder()
+                .url("${baseUrl()}/api/transactions")
+                .addHeader("Authorization", "Bearer $bearer")
+                .patch(body)
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    Result.success(true)
+                } else {
+                    Result.failure(Exception("HTTP ${response.code}"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "updateTransactionStatus failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
     // --- JSON parsers ---
 
     private fun loadCachedDashboard(): DashboardStats? {

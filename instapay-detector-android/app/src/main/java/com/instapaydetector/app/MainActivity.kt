@@ -118,6 +118,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        PermissionSetupDialog.showIfNeeded(supportFragmentManager, this)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         wsClient.stop()

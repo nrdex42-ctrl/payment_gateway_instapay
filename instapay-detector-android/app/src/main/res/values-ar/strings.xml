@@ -84,4 +84,25 @@
     <string name="pref_lang_label">لغة التطبيق</string>
     <string name="pref_lang_en">English</string>
     <string name="pref_lang_ar">العربية (Arabic)</string>
+
+    <!-- Permissions Setup Popup (Arabic) -->
+    <string name="perm_dialog_title">الأذونات والصلاحيات المطلوبة</string>
+    <string name="perm_dialog_subtitle">لكي يقوم التطبيق بكشف تحويلات إنستا باي تلقائياً والعمل في الخلفية بشكل مستمر، يرجى تفعيل الأذونات التالية:</string>
+    <string name="perm_notification_listener_title">قراءة الإشعارات (كشف التحويلات)</string>
+    <string name="perm_notification_listener_desc">ضروري جداً لقراءة إشعارات تحويلات إنستا باي وتأكيد دفعات العملاء لحظياً.</string>
+    <string name="perm_post_notifications_title">تنبيهات الإشعارات</string>
+    <string name="perm_post_notifications_desc">لإبقاء خدمة الكاشف نشطة في الخلفية وتنبيهك فور استلام أي مبالغ جديدة.</string>
+    <string name="perm_battery_optimization_title">العمل بالخلفية (استثناء البطارية)</string>
+    <string name="perm_battery_optimization_desc">يمنع أندرويد من إيقاف تطبيق الكاشف عند إغلاق الشاشة أو تفعيل توفير الطاقة.</string>
+    <string name="perm_grant_btn">تفعيل</string>
+    <string name="perm_granted">مفعل ✓</string>
+    <string name="perm_done_btn">🚀 بدء كشف واستماع التحويلات</string>
+    <string name="perm_remind_later">تذكيري لاحقاً</string>
+
+    <!-- Transaction Status Actions (Arabic) -->
+    <string name="tx_action_confirm">تأكيد العملية (تعديل الحالة)</string>
+    <string name="tx_action_expire">تعليم كمنتهية الصلاحية</string>
+    <string name="tx_action_cancel">إلغاء العملية</string>
+    <string name="tx_status_updated">تم تحديث حالة العملية بنجاح</string>
+    <string name="tx_status_update_failed">فشل تحديث حالة العملية</string>
 </resources>

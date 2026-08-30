@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.DialogFragment
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.Date
@@ -53,15 +54,58 @@ class TransactionDetailDialog : DialogFragment() {
             return view
         }
 
-        view.findViewById<TextView>(R.id.detailTitle).text = "${tx.status.lowercase().replaceFirstChar { it.uppercase() }} payment"
+        val detailTitle = view.findViewById<TextView>(R.id.detailTitle)
+        val detailStatus = view.findViewById<TextView>(R.id.detailStatus)
+        val btnConfirmTx = view.findViewById<MaterialButton>(R.id.btnConfirmTx)
+        val btnExpireTx = view.findViewById<MaterialButton>(R.id.btnExpireTx)
+
+        detailTitle.text = "${tx.status.lowercase().replaceFirstChar { it.uppercase() }} payment"
         view.findViewById<TextView>(R.id.detailFrom).text = tx.senderHandle
         view.findViewById<TextView>(R.id.detailTo).text = tx.recipientHandle
         view.findViewById<TextView>(R.id.detailAmount).text = "${String.format(Locale.US, "%,.2f", tx.amountEgp)} ${tx.currency}"
-        view.findViewById<TextView>(R.id.detailStatus).text = tx.status
+        detailStatus.text = tx.status
         view.findViewById<TextView>(R.id.detailReference).text = tx.detectedRef ?: "—"
         view.findViewById<TextView>(R.id.detailDate).text = formatDate(tx.detectedAt ?: tx.createdAt)
         view.findViewById<TextView>(R.id.detailNote).text = tx.note ?: "—"
         view.findViewById<TextView>(R.id.detailSession).text = tx.sessionId
+
+        if (tx.status == "CONFIRMED") {
+            btnConfirmTx.visibility = View.GONE
+        }
+
+        btnConfirmTx.setOnClickListener {
+            btnConfirmTx.isEnabled = false
+            kotlinx.coroutines.MainScope().launch {
+                val client = DashboardApiClient(requireContext())
+                val res = client.updateTransactionStatus(tx.sessionId, "CONFIRMED", "APK_MANUAL_FIX")
+                if (res.isSuccess) {
+                    detailStatus.text = "CONFIRMED"
+                    detailTitle.text = "Confirmed payment"
+                    btnConfirmTx.visibility = View.GONE
+                    android.widget.Toast.makeText(requireContext(), R.string.tx_status_updated, android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    btnConfirmTx.isEnabled = true
+                    android.widget.Toast.makeText(requireContext(), R.string.tx_status_update_failed, android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        btnExpireTx.setOnClickListener {
+            btnExpireTx.isEnabled = false
+            kotlinx.coroutines.MainScope().launch {
+                val client = DashboardApiClient(requireContext())
+                val res = client.updateTransactionStatus(tx.sessionId, "EXPIRED")
+                if (res.isSuccess) {
+                    detailStatus.text = "EXPIRED"
+                    detailTitle.text = "Expired payment"
+                    btnExpireTx.visibility = View.GONE
+                    android.widget.Toast.makeText(requireContext(), R.string.tx_status_updated, android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    btnExpireTx.isEnabled = true
+                    android.widget.Toast.makeText(requireContext(), R.string.tx_status_update_failed, android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
 
         view.findViewById<MaterialButton>(R.id.closeButton).setOnClickListener { dismiss() }
 
